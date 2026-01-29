@@ -15,7 +15,7 @@ int PacketProc::DO_GAME_LOOPBACK(CPlayer* pTarget, CPacket& pReqPacket)
     CPacket req;
     req << reqPacket;
 
-	EnqueueSendReq(pTarget->GetSessionHandle(), GAME::LOOPBACK, &req);
+	TrySend(pTarget->GetSessionHandle(), GAME::LOOPBACK, &req);
 
     return 0;
 }

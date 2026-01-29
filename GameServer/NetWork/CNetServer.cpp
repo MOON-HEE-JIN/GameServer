@@ -232,13 +232,30 @@ unsigned __stdcall WorkerThread(void* arg)
 	return 0;
 }
 
-void EnqueueSendReq(const SESSION_HANDLE& key, int type, CPacket* pPacket)
+bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket)
 {
-	g_SendReqQueue.Enqueue(SEND_REQ(key, type, *pPacket));
+	CSession* pSession = CNetServer::GetSession(key.Handle);
+	if (pSession == nullptr)
+		return false;
+	
+	// 연결 및 재사용 횟수 체크
+	if (!pSession->GetBoolConnect()) return false;
+	if (pSession->GetConnectGen() != key.Gen) return false;
 
-	PostQueuedCompletionStatus(CNetServer::GetCICP(), 0, KEY_SEND_WAKE, NULL);
+	// 사용 증가
+	if (!pSession->AddRef()) return false;
+	
+	if (!pSession->GetBoolConnect() || pSession->GetConnectGen() != key.Gen || pSession->GetBoolbCloseing())
+	{
+		pSession->SubRef();
+		return false;
+	}
+
+	pSession->SendPacket(type, pPacket);
+	pSession->SubRef();
+
+	return true;
 }
-
 
 void SessionSendQEnqueue()
 {

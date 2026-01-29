@@ -1,0 +1,126 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="소스 파일">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="헤더 파일">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="소스 파일\Utill">
+      <UniqueIdentifier>{fae99b45-0d3b-4e8c-aa07-a6c0fe53fced}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\NetWork">
+      <UniqueIdentifier>{ecfd8ff0-1616-4775-9c63-499b4e34673a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Stub">
+      <UniqueIdentifier>{20dcdf93-bf64-4316-b9a9-f4cc7977adc6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\MemoryManager">
+      <UniqueIdentifier>{839b42d7-87f4-4c7d-8931-17118e5796d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\CObject">
+      <UniqueIdentifier>{0c0bf08e-2c66-4679-9640-c133acf5b09c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="PacketProc.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="CUtill\CPacket.cpp">
+      <Filter>소스 파일\Utill</Filter>
+    </ClCompile>
+    <ClCompile Include="CUtill\RingQueue.cpp">
+      <Filter>소스 파일\Utill</Filter>
+    </ClCompile>
+    <ClCompile Include="Stub\Serialization.cpp">
+      <Filter>소스 파일\Stub</Filter>
+    </ClCompile>
+    <ClCompile Include="Stub\SERVER_STUB.cpp">
+      <Filter>소스 파일\Stub</Filter>
+    </ClCompile>
+    <ClCompile Include="NetWork\CNetServer.cpp">
+      <Filter>소스 파일\NetWork</Filter>
+    </ClCompile>
+    <ClCompile Include="NetWork\CSession.cpp">
+      <Filter>소스 파일\NetWork</Filter>
+    </ClCompile>
+    <ClCompile Include="ProcWorkerThread.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="CPlayer.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="MemoryManager\MemoryManager.cpp">
+      <Filter>소스 파일\MemoryManager</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="PacketProc.h">
+      <Filter>소스 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CUtill\CPacket.h">
+      <Filter>소스 파일\Utill</Filter>
+    </ClInclude>
+    <ClInclude Include="CUtill\RingQueue.h">
+      <Filter>소스 파일\Utill</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub\EnumDef.h">
+      <Filter>소스 파일\Stub</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub\PacketEnumDef.h">
+      <Filter>소스 파일\Stub</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub\Serialization.h">
+      <Filter>소스 파일\Stub</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub\SERVER_STUB.h">
+      <Filter>소스 파일\Stub</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub\StructDef.h">
+      <Filter>소스 파일\Stub</Filter>
+    </ClInclude>
+    <ClInclude Include="NetWork\CNetServer.h">
+      <Filter>소스 파일\NetWork</Filter>
+    </ClInclude>
+    <ClInclude Include="NetWork\CSession.h">
+      <Filter>소스 파일\NetWork</Filter>
+    </ClInclude>
+    <ClInclude Include="NetWork\NetWorkDefine.h">
+      <Filter>소스 파일\NetWork</Filter>
+    </ClInclude>
+    <ClInclude Include="ProcWorkerThread.h">
+      <Filter>소스 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="GameServerDef.h">
+      <Filter>소스 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryManager\CHazardMemoryPool_FromGPT.h">
+      <Filter>소스 파일\MemoryManager</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryManager\CLockFreeQueue_FromGPT.h">
+      <Filter>소스 파일\MemoryManager</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryManager\MemoryManager.h">
+      <Filter>소스 파일\MemoryManager</Filter>
+    </ClInclude>
+    <ClInclude Include="CObject.h">
+      <Filter>소스 파일\CObject</Filter>
+    </ClInclude>
+    <ClInclude Include="CEntity.h">
+      <Filter>소스 파일\CObject</Filter>
+    </ClInclude>
+    <ClInclude Include="CPlayer.h">
+      <Filter>소스 파일\CObject</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

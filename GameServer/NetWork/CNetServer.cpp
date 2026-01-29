@@ -5,8 +5,7 @@
 #include<atomic>
 
 #include "NetWorkDefine.h"
-
-#include"../MemoryManager/MemoryManager.h"
+#include "../ProcWorkerThread.h"
 
 unsigned short CNetServer::Port = 7799;
 SOCKET CNetServer::listen_sock;
@@ -32,7 +31,8 @@ static std::atomic<bool> s_bSessionDisConnectDequeueRunning = false;
 
 void OnRecv(CSession* pSession, int type, CPacket& pPacket)
 {
-	g_ProcJobQueue.Enqueue({ pSession->GetConnectPlayerID(),type, pPacket });
+	int pid = pSession->GetProcID();
+	g_ProcJobQueue[pid].Enqueue({pSession->GetConnectPlayerID(),type, pPacket});
 }
 
 bool OnClientJoin(CSession* pSession)
@@ -465,8 +465,7 @@ void CNetServer::DisConnect(CSession* pSession)
 
 	CPlayer* pPlayer = g_PlayerManager[pSession->GetConnectPlayerID()];
 	if (pPlayer != nullptr)
-		pPlayer->SessionHandleClear();
-	
+		s_ProcWorker[pSession->GetProcID()]->ReleasePlayer(pPlayer);
 
 	pSession->OnDisconnect();
 	

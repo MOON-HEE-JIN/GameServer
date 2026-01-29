@@ -37,7 +37,7 @@ private:
 private:
 	std::atomic<SESSION_HANDLE> m_ConnectKey;
 	int m_ConnectPlayerID;	// 접속한 플레이어 ID
-
+	std::atomic<int> m_ProcID;			// 처리 스레드 ID
 public:
 	int IncrementIOCnt() { return InterlockedIncrement(&IOCnt); }
 	int DecrementIOCnt() { return InterlockedDecrement(&IOCnt); }
@@ -61,11 +61,13 @@ public:
 	int GetConnectPlayerID() { return m_ConnectPlayerID; }
 	int GetIOCnt() { return IOCnt; }
 	int GetRefCnt() { return RefCnt.load(); }
+	int GetProcID() { return m_ProcID.load(); }
 
 	bool GetBoolbCloseing() { return bCloseing; }
 	bool GetBoolConnect() { return bConnect; }
 
 	void SetConnectPlayerID(int playerID) { m_ConnectPlayerID = playerID; }
+	bool SetProcID(int procID);
 public:
 	void OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key);
 	

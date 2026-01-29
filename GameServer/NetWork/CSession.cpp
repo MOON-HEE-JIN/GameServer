@@ -25,6 +25,7 @@ CSession::CSession()
 	m_ConnectKey.store(SESSION_HANDLE(-1, 0));
 
 	m_ConnectPlayerID = -1;
+	m_ProcID = 0;
 }
 
 CSession::~CSession()
@@ -35,6 +36,17 @@ CSession::~CSession()
 	delete SendQ;
 	DeleteCriticalSection(&cs);
 	DeleteCriticalSection(&m_csSendQ);
+}
+
+bool CSession::SetProcID(int procID)
+{
+	if (AddRef())
+	{
+		m_ProcID.store(procID);
+		SubRef();
+		return true;
+	}
+	return false;
 }
 
 void CSession::OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key)
@@ -51,7 +63,7 @@ void CSession::OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key)
 	SendQ->Clear();
 
 	m_ConnectKey = std::move(key);
-
+	m_ProcID = 0;
 	bCloseing = false;
 	bDisconnecting = false;
 	RefCnt = 0;
@@ -73,7 +85,7 @@ void CSession::OnDisconnect()
 	RecvQ->Clear();
 	SendQ->Clear();
 	m_ConnectPlayerID = -1;
-
+	m_ProcID = 0;
 	CloseSocket();
 }
 

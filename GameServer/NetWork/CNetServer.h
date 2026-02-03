@@ -44,7 +44,7 @@ public:
 	static void IncrementAcceptCnt() { AcceptCnt++; }
 	static CSession* AddSession(SOCKET sock);
 	static void DisConnect(CSession* pSession);
-	static CSession* GetSession(int index) { return SessionManager[index]; }
+	static CSession* GetSession(int index) { return index < 0 ? nullptr : SessionManager[index]; }
 public:
 	static bool g_ServerON;
 
@@ -52,7 +52,7 @@ public:
 	static void StopServer();
 };
 
-static void OnRecv(CSession* pSession,int type, CPacket& pPacket);
+static void OnRecv(CSession* pSession,int type, CPacket pPacket);
 static bool OnClientJoin(CSession* pSession);
 
 static unsigned __stdcall AceeptThread(void* arg);		// accept() Thread
@@ -64,7 +64,7 @@ void SessionSendQEnqueue();
 void EnqueueDisConnectReq(CSession* pSession);
 void DequeueDisConnectReq();
 
-CPlayer* AllocPlayer();
+CPlayer* AllocPlayer(int& outPlayerHandle);
 void FreePlayer(CPlayer* pPlayer);
 
 extern std::vector<CPlayer*> g_PlayerManager;

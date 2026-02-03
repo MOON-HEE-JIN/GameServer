@@ -24,7 +24,7 @@ CSession::CSession()
 
 	m_ConnectKey.store(SESSION_HANDLE(-1, 0));
 
-	m_ConnectPlayerID = -1;
+	m_ConnectPlayerHandle = -1;
 	m_ProcID = 0;
 }
 
@@ -84,7 +84,7 @@ void CSession::OnDisconnect()
 	SendOverlap = { 0 };
 	RecvQ->Clear();
 	SendQ->Clear();
-	m_ConnectPlayerID = -1;
+	m_ConnectPlayerHandle = -1;
 	m_ProcID = 0;
 	CloseSocket();
 }

@@ -32,6 +32,7 @@ private:
 	static HANDLE CICP;
 	static HANDLE h_AceeptThread;
 	static HANDLE* h_WorkerThread;
+	static HANDLE h_LogThread;
 
 	static CRITICAL_SECTION cs_SessionFreeKey;
 public:

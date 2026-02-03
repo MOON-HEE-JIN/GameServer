@@ -1,4 +1,5 @@
 #include "./NetWork/CNetServer.h"
+#include "Log/CLog.h"
 
 void main()
 {

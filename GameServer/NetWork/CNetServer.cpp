@@ -6,6 +6,7 @@
 
 #include "NetWorkDefine.h"
 #include "../ProcWorkerThread.h"
+#include "../Log/CLog.h"
 
 unsigned short CNetServer::Port = 7799;
 SOCKET CNetServer::listen_sock;
@@ -21,7 +22,6 @@ HANDLE CNetServer::CICP;
 HANDLE CNetServer::h_AceeptThread;
 HANDLE* CNetServer::h_WorkerThread;
 
-
 std::vector<CPlayer*> g_PlayerManager;
 std::vector<int> g_PlayerHandleManager;
 CRITICAL_SECTION g_csPlayerManager;
@@ -32,6 +32,7 @@ static std::atomic<bool> s_bSessionDisConnectDequeueRunning = false;
 void OnRecv(CSession* pSession, int type, CPacket pPacket)
 {
 	int pid = pSession->GetProcID();
+	g_LogServer.DLog("Enqueue Job type : %d, size : %d", type, pPacket.GetDataSize());
 	g_ProcJobQueue[pid].Enqueue({pSession->GetConnectPlayerHandle(),type, pPacket});
 }
 
@@ -47,6 +48,9 @@ bool OnClientJoin(CSession* pSession)
 	
 	pPlayer->Init(pSession->GetConnectKey(), PlayerHandle, pSession->GetProcID());
 	pSession->SetConnectPlayerHandle(PlayerHandle);
+
+	g_LogServer.ILog("OnClientJoin SessionHandle : %d, PlayerHandle : %d"
+		, pSession->GetConnectHandle(), PlayerHandle);
 
 	return true;
 }
@@ -67,7 +71,7 @@ unsigned __stdcall AceeptThread(void* arg)
 		if (client_sock == INVALID_SOCKET)
 		{
 			retval = GetLastError();
-			printf("Accept Error %d\n", retval);
+			g_LogServer.ELog("Accept Error %d", retval);
 			continue;
 		}
 		CNetServer::IncrementAcceptCnt();
@@ -85,7 +89,7 @@ unsigned __stdcall AceeptThread(void* arg)
 		if (IOretval == NULL)
 		{
 			CNetServer::DisConnect(pSession);
-			printf("Aceept CICP Error %d\n", GetLastError());
+			g_LogServer.ELog("Accept CICP Error %d", IOError);
 			continue;
 		}
 
@@ -185,7 +189,6 @@ unsigned __stdcall WorkerThread(void* arg)
 					pSession->GetRecvBuffer()->MoveReadPointer(sizeof(st_Header));
 					pSession->GetRecvBuffer()->Dequeue(packet.GetWriteBuffPtr(), header.size);
 					packet.MoveWritePos(sizeof(st_Header) + header.size);
-					printf("Recv Packet Type : %d, Size : %d \n", header.type, header.size);
 					OnRecv(pSession,header.type, packet);
 				}
 				pSession->RecvPost();
@@ -485,13 +488,16 @@ void CNetServer::DisConnect(CSession* pSession)
 
 	CPlayer* pPlayer = g_PlayerManager[pSession->GetConnectPlayerHandle()];
 	if (pPlayer != nullptr)
+	{
 		s_ProcWorker[pSession->GetProcID()]->ReleasePlayer(pPlayer);
+	}
 
 	pSession->OnDisconnect();
 	
 	LockSessionFreeKey();
 	{
-		SessionFreeKey.push_back(SESSION_HANDLE(pSession->GetConnectID(), pSession->GetConnectGen()));
+		g_LogServer.ILog("DisConnect Session  Handle : %d, Gen : %d", pSession->GetConnectHandle(), pSession->GetConnectGen());
+		SessionFreeKey.push_back(SESSION_HANDLE(pSession->GetConnectHandle(), pSession->GetConnectGen()));
 	}
 	UnLockSessionFreeKey();
 }
@@ -508,11 +514,17 @@ void CNetServer::StartServer()
 		h_WorkerThread[i] = (HANDLE)_beginthreadex(NULL, 0, WorkerThread, 0, 0, NULL);
 	}
 
+	g_LogServer.ILog("Port : %d, CreateThread : %d, RunThread : %d, MaxConnect : %d"
+	,CNetServer::Port, OVERALP_CREATE_THREAD, OVERLAP_RUN_THREAD, MAX_CONNECT_COUNT);
+
 	CreateProcWorkerThread();
+	CreateLogThread();
 }
 
 void CNetServer::StopServer()
 {
 	WaitForSingleObject(h_AceeptThread, INFINITE);
 	WaitForMultipleObjects(OVERALP_CREATE_THREAD, h_WorkerThread, true, INFINITE);
+	WaitProcWorkerThread();
+	WaitLogThread();
 }

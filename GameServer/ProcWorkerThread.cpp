@@ -2,46 +2,73 @@
 #include "ProcWorkerThread.h"
 #include "GameServerDef.h"
 #include "NetWork/CNetServer.h"
-#include "MemoryManager/MemoryManager.h"
-#include "PacketProc.h"
 
-#include <vector>
+
 #include <Windows.h>
 #include <process.h>
 
 static std::vector<HANDLE> s_ProcWorkerThreadHandles;
+static std::vector<int> s_ProcWorkerThreadIDs;
+
+std::vector<CProcWorker*> s_ProcWorker;
+
 static HANDLE s_hExit;
 static PacketProc s_PacketProc;
 
 void CreateProcWorkerThread()
 {
-	for (int i = 0; i < ProcLoginThreadCnt; i++)
+    s_ProcWorkerThreadHandles.clear();
+    s_ProcWorkerThreadHandles.reserve(ProcThreadCnt);
+
+    s_ProcWorkerThreadIDs.resize(ProcThreadCnt);
+
+    for (int i = 0; i < ProcThreadCnt; i++)
     {
-        HANDLE h = (HANDLE)_beginthreadex(NULL, 0, ProcLoginWorkerThread, 0, 0, NULL);
+        s_ProcWorkerThreadIDs[i] = i;
+
+		CProcWorker* pWorker = new CProcWorker();
+		pWorker->Init(i, &s_PacketProc, &g_ProcJobQueue[i]);
+
+		s_ProcWorker.push_back(pWorker);
+        HANDLE h = (HANDLE)_beginthreadex(NULL, 0, ProcWorkerThread, &s_ProcWorkerThreadIDs[i], 0, NULL);
         s_ProcWorkerThreadHandles.push_back(h);
     }
 
-    for (int i = 0; i < ProcMainThreadCnt; i++)
-    {
-        HANDLE h = (HANDLE)_beginthreadex(NULL, 0, ProcGameWorkerThread, 0, 0, NULL);
-        s_ProcWorkerThreadHandles.push_back(h);
-    }
-    s_hExit = CreateEvent(NULL, true, NULL, NULL);
+    // manual-reset(TRUE), 초기 비신호(FALSE)
+    s_hExit = CreateEvent(NULL, TRUE, FALSE, NULL);
 }
 
 void WaitProcWorkerThread()
 {
-    WaitForMultipleObjects(s_ProcWorkerThreadHandles.size(), &s_ProcWorkerThreadHandles[0], true, INFINITE);
+    if (!s_ProcWorkerThreadHandles.empty())
+    {
+        WaitForMultipleObjects((DWORD)s_ProcWorkerThreadHandles.size(), &s_ProcWorkerThreadHandles[0], TRUE, INFINITE);
+        for (HANDLE h : s_ProcWorkerThreadHandles)
+        {
+            if (h) CloseHandle(h);
+        }
+        s_ProcWorkerThreadHandles.clear();
+    }
 
+    DeleteProcWorker();
+
+    if (s_hExit)
+    {
+        CloseHandle(s_hExit);
+        s_hExit = NULL;
+    }
 }
 
 void PostMessageExit()
 {
-    
+	// 종료 이벤트 발생
+	SetEvent(s_hExit);
 }
 
-unsigned __stdcall ProcLoginWorkerThread(void* arg)
+
+unsigned __stdcall ProcWorkerThread(void* arg)
 {
+	int procID = *(int*)arg;
     timeBeginPeriod(1);
     int ret = 0;
     while (CNetServer::g_ServerON)
@@ -53,41 +80,47 @@ unsigned __stdcall ProcLoginWorkerThread(void* arg)
         if (ret == WAIT_OBJECT_0)
             break;
 
-        PROC_MSG job;
-        while (g_ProcLoginJobQueue.TryDequeue(job))
-        {
-            CPlayer* pPlayer = g_PlayerManager[job.PlayerHandle];
-            if (pPlayer == nullptr)
-                continue;
-            s_PacketProc.DO_GAME_Proc(job.type, pPlayer, job.packet);
-            // 어떻게 해야 Player가 없어지지?
-        }
+		// 패킷 처리
+		s_ProcWorker[procID]->Proc();
+
+
+
+		// 플레이어 삭제 처리
+		s_ProcWorker[procID]->DeletePlayerProcess();
     }
     return 0;
 }
 
-unsigned __stdcall ProcGameWorkerThread(void* arg)
+void CProcWorker::Proc()
 {
-    timeBeginPeriod(1);
-    int ret = 0;
-    while (CNetServer::g_ServerON)
+    PROC_MSG job;
+	while (m_ProcJobQueue->TryDequeue(job))
     {
-        //1000 Frames 1초당 1000 처리
-        ret = WaitForSingleObject(s_hExit, 1);
-
-        // 종료 이벤트
-        if (ret == WAIT_OBJECT_0)
-            break;
-
-        PROC_MSG job;
-        while (g_ProcJobQueue.TryDequeue(job))
-        {
-            CPlayer* pPlayer = g_PlayerManager[job.PlayerHandle];
-            if (pPlayer == nullptr)
-                continue;
-            s_PacketProc.DO_GAME_Proc(job.type, pPlayer, job.packet);
-			// 어떻게 해야 Player가 없어지지?
-        }
+        CPlayer* pPlayer = g_PlayerManager[job.PlayerHandle];
+        if (pPlayer == nullptr)
+            continue;
+        m_pPacketProc->DO_GAME_Proc(job.type, pPlayer, job.packet);
     }
-    return 0;
+}
+
+void CProcWorker::DeletePlayerProcess()
+{
+    CPlayer* pPlayer = nullptr;
+    while (m_PlayerDeleteQueue.TryDequeue(pPlayer))
+    {
+		if (pPlayer == nullptr)
+            continue;
+        
+		pPlayer->SessionHandleClear();
+		FreePlayer(pPlayer);   
+    }
+}
+
+void DeleteProcWorker()
+{
+    for (auto pWorker : s_ProcWorker)
+    {
+        delete pWorker;
+    }
+    s_ProcWorker.clear();
 }

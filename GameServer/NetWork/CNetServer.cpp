@@ -5,8 +5,7 @@
 #include<atomic>
 
 #include "NetWorkDefine.h"
-
-#include"../MemoryManager/MemoryManager.h"
+#include "../ProcWorkerThread.h"
 
 unsigned short CNetServer::Port = 7799;
 SOCKET CNetServer::listen_sock;
@@ -30,21 +29,24 @@ CRITICAL_SECTION g_csPlayerManager;
 static std::atomic<bool> s_bSessionSendEnqueueRunning = false;
 static std::atomic<bool> s_bSessionDisConnectDequeueRunning = false;
 
-void OnRecv(CSession* pSession, int type, CPacket& pPacket)
+void OnRecv(CSession* pSession, int type, CPacket pPacket)
 {
-	g_ProcJobQueue.Enqueue({ pSession->GetConnectPlayerID(),type, pPacket });
+	int pid = pSession->GetProcID();
+	g_ProcJobQueue[pid].Enqueue({pSession->GetConnectPlayerHandle(),type, pPacket});
 }
 
 bool OnClientJoin(CSession* pSession)
 {
 	CPlayer* pPlayer = nullptr;
 
-	pPlayer = AllocPlayer();
+	int PlayerHandle;
+
+	pPlayer = AllocPlayer(PlayerHandle);
 	if(pPlayer == nullptr)
 		return false;
-		
-	pPlayer->Init(pSession->GetConnectKey(), (int)pSession->GetConnectPlayerID());
-	pSession->SetConnectPlayerID(pPlayer->GetPlayerHandle());
+	
+	pPlayer->Init(pSession->GetConnectKey(), PlayerHandle);
+	pSession->SetConnectPlayerHandle(PlayerHandle);
 
 	return true;
 }
@@ -106,7 +108,6 @@ unsigned __stdcall WorkerThread(void* arg)
 	CSession* pSession = nullptr;
 	DWORD transfrerred;
 
-	CPacket packet;
 	ULONG_PTR key;
 	while (CNetServer::g_ServerON)
 	{
@@ -179,12 +180,12 @@ unsigned __stdcall WorkerThread(void* arg)
 					if (size - sizeof(st_Header) < len)
 						break;
 
-					packet.Clear();
+					CPacket packet;
 
 					pSession->GetRecvBuffer()->MoveReadPointer(sizeof(st_Header));
 					pSession->GetRecvBuffer()->Dequeue(packet.GetWriteBuffPtr(), header.size);
 					packet.MoveWritePos(sizeof(st_Header) + header.size);
-				
+					printf("Recv Packet Type : %d, Size : %d \n", header.type, header.size);
 					OnRecv(pSession,header.type, packet);
 				}
 				pSession->RecvPost();
@@ -306,7 +307,7 @@ void DequeueDisConnectReq()
 	s_bSessionDisConnectDequeueRunning = false;
 }
 
-CPlayer* AllocPlayer()
+CPlayer* AllocPlayer(int& outPlayerHandle)
 {
 	int key = -1;
 	EnterCriticalSection(&g_csPlayerManager);
@@ -326,10 +327,12 @@ CPlayer* AllocPlayer()
 	{
 		CPlayer* pPlayer = new CPlayer;
 		g_PlayerManager[key] = pPlayer;
+		outPlayerHandle = key;
 		return pPlayer;
 	}
 	else
 	{
+		outPlayerHandle = key;
 		return g_PlayerManager[key];
 	}
 
@@ -463,10 +466,9 @@ void CNetServer::DisConnect(CSession* pSession)
 	if (!pSession->OnStartDisconnect())
 		return;
 
-	CPlayer* pPlayer = g_PlayerManager[pSession->GetConnectPlayerID()];
+	CPlayer* pPlayer = g_PlayerManager[pSession->GetConnectPlayerHandle()];
 	if (pPlayer != nullptr)
-		pPlayer->SessionHandleClear();
-	
+		s_ProcWorker[pSession->GetProcID()]->ReleasePlayer(pPlayer);
 
 	pSession->OnDisconnect();
 	
@@ -488,6 +490,8 @@ void CNetServer::StartServer()
 	{
 		h_WorkerThread[i] = (HANDLE)_beginthreadex(NULL, 0, WorkerThread, 0, 0, NULL);
 	}
+
+	CreateProcWorkerThread();
 }
 
 void CNetServer::StopServer()

@@ -16,6 +16,8 @@ out/
 .idea/
 .vscode/
 
-# VS build outputs
+# Visual Studio build output
 x64/
+Debug/
+Release/
 GameServer/x64/

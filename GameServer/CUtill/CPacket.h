@@ -6,6 +6,7 @@ class CPacket
 public:
 	CPacket();
 	CPacket(int size);
+	CPacket(const CPacket& other);
 	virtual ~CPacket();
 
 	void Release();//패킷 파괴
@@ -35,7 +36,7 @@ private:
 
 public:
 	//연산자 오버로딩
-	CPacket& operator = (CPacket& clSrcPacket);
+	CPacket& operator = (const CPacket& clSrcPacket);
 	//INPUT
 	CPacket& operator << (unsigned char value);
 	CPacket& operator << (char value);

@@ -79,18 +79,6 @@ int CPacket::PutData(void* Src, int size)
 	return size;
 }
 
-//CPacket& CPacket::operator=(CPacket& clSrcPacket)
-//{
-//	// TODO: 여기에 return 문을 삽입합니다.
-//}
-
-CPacket& CPacket::operator=(CPacket& clSrcPacket)
-{
-	// TODO: 여기에 return 문을 삽입합니다.
-	this->Clear();
-	this->PutData(clSrcPacket.GetReadBuffPtr(), clSrcPacket.GetDataSize());
-	return *this;
-}
 
 CPacket& CPacket::operator<<(unsigned char value)
 {
@@ -248,3 +236,31 @@ CPacket& CPacket::operator>>(bool& value)
 	return *this;
 }
 
+// 복사 생성자
+CPacket::CPacket(const CPacket& other)
+{
+	m_iBufferSize = other.m_iBufferSize;
+	buffer = (char*)malloc(m_iBufferSize);
+	memcpy(buffer, other.buffer, m_iBufferSize);
+	EndPointer = buffer + m_iBufferSize;
+	ReadPointer = buffer + (other.ReadPointer - other.buffer);
+	WritePointer = buffer + (other.WritePointer - other.buffer);
+}
+
+// 안전한 복사 대입 연산자
+CPacket& CPacket::operator=(const CPacket& other)
+{
+	if (this == &other) return *this;
+
+	if (m_iBufferSize < other.m_iBufferSize)
+	{
+		free(buffer);
+		m_iBufferSize = other.m_iBufferSize;
+		buffer = (char*)malloc(m_iBufferSize);
+	}
+	memcpy(buffer, other.buffer, other.m_iBufferSize);
+	EndPointer = buffer + m_iBufferSize;
+	ReadPointer = buffer + (other.ReadPointer - other.buffer);
+	WritePointer = buffer + (other.WritePointer - other.buffer);
+	return *this;
+}

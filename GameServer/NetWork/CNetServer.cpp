@@ -45,7 +45,7 @@ bool OnClientJoin(CSession* pSession)
 	if(pPlayer == nullptr)
 		return false;
 	
-	pPlayer->Init(pSession->GetConnectKey(), PlayerHandle);
+	pPlayer->Init(pSession->GetConnectKey(), PlayerHandle, pSession->GetProcID());
 	pSession->SetConnectPlayerHandle(PlayerHandle);
 
 	return true;

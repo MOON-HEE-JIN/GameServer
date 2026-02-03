@@ -9,7 +9,7 @@ public:
 	CPlayer() {};
 	~CPlayer() {};
 
-	void Init(SESSION_HANDLE sessionID, int playerID);
+	void Init(SESSION_HANDLE sessionID, int handle, int procID);
 
 	void Clear() {};
 private:

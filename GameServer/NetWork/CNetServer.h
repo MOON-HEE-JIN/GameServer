@@ -58,7 +58,7 @@ static bool OnClientJoin(CSession* pSession);
 static unsigned __stdcall AceeptThread(void* arg);		// accept() Thread
 static unsigned __stdcall WorkerThread(void* arg);		// recv, send Thread
 
-void EnqueueSendReq(const SESSION_HANDLE& key, int type, CPacket* pPacket);
+bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket);
 void SessionSendQEnqueue();
 
 void EnqueueDisConnectReq(CSession* pSession);

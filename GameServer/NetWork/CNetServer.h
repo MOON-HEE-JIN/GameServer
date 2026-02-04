@@ -60,6 +60,7 @@ static unsigned __stdcall AceeptThread(void* arg);		// accept() Thread
 static unsigned __stdcall WorkerThread(void* arg);		// recv, send Thread
 static unsigned __stdcall LogThread(void* arg);			// 로그 처리 Thread
 
+bool TryChangePid(const SESSION_HANDLE& key, int pid);
 bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket);
 void SessionSendQEnqueue();
 

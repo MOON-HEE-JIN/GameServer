@@ -32,7 +32,7 @@ static std::atomic<bool> s_bSessionDisConnectDequeueRunning = false;
 void OnRecv(CSession* pSession, int type, CPacket pPacket)
 {
 	int pid = pSession->GetProcID();
-	g_LogServer.DLog("Enqueue Job type : %d, size : %d", type, pPacket.GetDataSize());
+	//g_LogServer.DLog("Enqueue Job type : %d, size : %d", type, pPacket.GetDataSize());
 	g_ProcJobQueue[pid].Enqueue({pSession->GetConnectPlayerHandle(),type, pPacket});
 }
 
@@ -234,6 +234,23 @@ unsigned __stdcall WorkerThread(void* arg)
 		}
 	}
 	return 0;
+}
+
+bool TryChangePid(const SESSION_HANDLE& key, int pid)
+{
+	CSession* pSession = CNetServer::GetSession(key.Handle);
+	if (pSession == nullptr)
+		return false;
+
+	// 연결 및 재사용 횟수 체크
+	if (!pSession->GetBoolConnect()) return false;
+	if (pSession->GetConnectGen() != key.Gen) return false;
+
+	// 사용 증가
+	if (!pSession->SetProcID(pid))
+		return false;
+	
+	return true;
 }
 
 bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket)

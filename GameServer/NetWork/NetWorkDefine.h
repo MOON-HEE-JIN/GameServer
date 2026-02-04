@@ -39,7 +39,7 @@ typedef struct st_PACKET_JOB
 		return *this;
 	}
 
-} st_PACKET_JOB, PROC_MSG;
+}PROC_MSG;
 
 
 typedef struct st_SendReq

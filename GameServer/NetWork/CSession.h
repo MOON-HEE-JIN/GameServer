@@ -57,7 +57,7 @@ public:
 
 	SESSION_HANDLE GetConnectKey() { return m_ConnectKey; }
 	int GetConnectGen() { return m_ConnectKey.load().Gen; }
-	int GetConnectID() { return m_ConnectKey.load().Handle; }
+	int GetConnectHandle() { return m_ConnectKey.load().Handle; }
 	int GetConnectPlayerHandle() { return m_ConnectPlayerHandle; }
 	int GetIOCnt() { return IOCnt; }
 	int GetRefCnt() { return RefCnt.load(); }

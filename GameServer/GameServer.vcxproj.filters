@@ -28,6 +28,9 @@
     <Filter Include="소스 파일\CObject">
       <UniqueIdentifier>{0c0bf08e-2c66-4679-9640-c133acf5b09c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\LOG">
+      <UniqueIdentifier>{10ef9a7c-f8f4-4e4f-8750-0c065857729d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -62,6 +65,9 @@
     </ClCompile>
     <ClCompile Include="MemoryManager\MemoryManager.cpp">
       <Filter>소스 파일\MemoryManager</Filter>
+    </ClCompile>
+    <ClCompile Include="Log\CLog.cpp">
+      <Filter>소스 파일\LOG</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -121,6 +127,9 @@
     </ClInclude>
     <ClInclude Include="CPlayer.h">
       <Filter>소스 파일\CObject</Filter>
+    </ClInclude>
+    <ClInclude Include="Log\CLog.h">
+      <Filter>소스 파일\LOG</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

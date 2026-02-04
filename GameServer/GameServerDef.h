@@ -1,10 +1,15 @@
 #pragma once
+#include <string>
 
 #define ProcThreadCnt 3
 
-struct st_Log
+typedef struct st_Log
 {
-	unsigned int time;
+	std::string filePath;
+	std::string log;
 
-	char message[256];
-};
+	st_Log() : filePath(""), log("") {};
+	st_Log(const std::string& _filePath, const std::string& _log)
+		: filePath(_filePath), log(_log) {
+	};
+}LOG_JOB;

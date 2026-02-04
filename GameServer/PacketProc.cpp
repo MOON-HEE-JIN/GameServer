@@ -6,8 +6,6 @@ int PacketProc::DO_GAME_LOOPBACK(CPlayer* pTarget, CPacket& pReqPacket)
 {
     st_CTS_LoopBack data;
     pReqPacket >> data;
-
-    printf("LoopBackk Recv Data : %lld\n", data.data);
     
     st_STC_LoopBack reqPacket;
     reqPacket.ret = 0;

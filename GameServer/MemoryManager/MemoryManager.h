@@ -9,3 +9,4 @@
 extern CLockFreeQueue_MPSC<PROC_MSG> g_ProcJobQueue[ProcThreadCnt];
 extern CLockFreeQueue_MPSC<SEND_REQ> g_SendReqQueue;
 extern CLockFreeQueue_MPSC<CSession*> g_SessionCloseQueue;
+extern CLockFreeQueue_MPSC<LOG_JOB> g_LogJobQueue;

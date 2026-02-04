@@ -1,6 +1,7 @@
 #include "CSession.h"
 #include <WS2tcpip.h>
 #include "../Stub/StructDef.h"
+#include "../Log/CLog.h"
 
 CSession::CSession()
 {
@@ -114,6 +115,8 @@ void CSession::CloseSocket()
 	if (!bCloseing.compare_exchange_strong(bf, true))
 		return;
 	
+	g_LogServer.ILog("CloseSocket SessionHandle : %d", GetConnectHandle());
+
 	if (bConnect.exchange(false))
 	{
 		closesocket(sock);

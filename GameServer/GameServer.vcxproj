@@ -130,6 +130,7 @@
     <ClCompile Include="CPlayer.cpp" />
     <ClCompile Include="CUtill\CPacket.cpp" />
     <ClCompile Include="CUtill\RingQueue.cpp" />
+    <ClCompile Include="Log\CLog.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MemoryManager\MemoryManager.cpp" />
     <ClCompile Include="NetWork\CNetServer.cpp" />
@@ -146,6 +147,7 @@
     <ClInclude Include="CUtill\CPacket.h" />
     <ClInclude Include="CUtill\RingQueue.h" />
     <ClInclude Include="GameServerDef.h" />
+    <ClInclude Include="Log\CLog.h" />
     <ClInclude Include="MemoryManager\CHazardMemoryPool_FromGPT.h" />
     <ClInclude Include="MemoryManager\CLockFreeQueue_FromGPT.h" />
     <ClInclude Include="MemoryManager\MemoryManager.h" />

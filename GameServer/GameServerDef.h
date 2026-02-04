@@ -1,9 +1,6 @@
 #pragma once
 #include <string>
 
-<<<<<<< Updated upstream
-#define ProcThreadCnt 3
-=======
 #define ProcThreadCnt 3
 
 typedef struct st_Log
@@ -16,4 +13,3 @@ typedef struct st_Log
 		: filePath(_filePath), log(_log) {
 	};
 }LOG_JOB;
->>>>>>> Stashed changes

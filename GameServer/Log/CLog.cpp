@@ -134,6 +134,21 @@ unsigned __stdcall LogThread(void* arg)
 			fclose(fp);
 		}
 	}
+
+	// 종료 이벤트
+	LOG_JOB job;
+	while (g_LogJobQueue.TryDequeue(job))
+	{
+		fputs(job.log.c_str(), stdout);
+
+		FILE* fp;
+		fopen_s(&fp, job.filePath.c_str(), "a");
+		if (fp == nullptr)
+			continue;
+
+		fprintf(fp, job.log.c_str());
+		fclose(fp);
+	}
 	return 0;
 }
 

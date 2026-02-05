@@ -23,7 +23,7 @@ public:
 	int GetProcID() { return m_ProcID; }
 	
 	void SessionHandleClear() { m_SessionHandle = SESSION_HANDLE(-1, 0); }
-	int ChangeProcID(int pid) { m_ProcID = pid; return m_ProcID; }
+	void ChangeProcID(int pid);
 	
 public:
 	void SendPacket(CPacket* pPacket);

@@ -120,6 +120,8 @@ unsigned __stdcall LogThread(void* arg)
 		//1000 Frames 1초당 1000 처리
 		ret = WaitForSingleObject(h_hExit, 1);
 
+		CNetServer::ServerLog();
+
 		LOG_JOB job;
 		while (g_LogJobQueue.TryDequeue(job))
 		{

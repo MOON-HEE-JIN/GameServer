@@ -42,10 +42,13 @@ int PacketProc::DO_GAME_CHANGEPID(CPlayer* pTarget, CPacket& pReqPacket)
     if (data.pid >= ProcThreadCnt)
         return ERROR_CODE::NOT_FIND_PID;
 
+    if (pTarget->GetProcID() == data.pid)
+        return ERROR_CODE::EQUAL_PID;
+
     if (!TryChangePid(pTarget->GetSessionHandle(), data.pid))
         return ERROR_CODE::NOT_FIND_PID;
 
-    g_LogGame.DLog("Change ProcID : %d -> %d", pTarget->GetProcID(), data.pid);
+    //g_LogGame.DLog("Change ProcID : %d -> %d", pTarget->GetProcID(), data.pid);
     
     pTarget->ChangeProcID(data.pid);
     

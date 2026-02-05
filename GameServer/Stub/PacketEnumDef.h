@@ -9,3 +9,12 @@ namespace GAME
 	};
 };
 
+namespace GM
+{
+	enum GM
+	{
+		SHUTDOWN,
+		KICK,
+		RESULT,
+	};
+};

@@ -23,3 +23,18 @@ struct st_STC_LoopBack
 	__int32		ret;
 	__int64		data;
 };
+
+struct st_GM_CTS_ShutDown
+{
+	__int32	reason;
+};
+struct st_GM_CTS_Kick
+{
+	__int32	playerHandle;
+};
+struct st_GM_STC_Result
+{
+	__int32	ret;
+	__int32	type;
+	__int32	target;
+};

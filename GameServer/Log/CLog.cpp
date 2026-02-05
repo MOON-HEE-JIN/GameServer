@@ -151,10 +151,13 @@ unsigned __stdcall LogThread(void* arg)
 		fprintf(fp, job.log.c_str());
 		fclose(fp);
 	}
+
+	fputs("=== END THREAD LogThread ===\n", stdout);
+
 	return 0;
 }
 
 CLog g_LogTemp("temp.log", "TEMP");
 CLog g_LogServer("server.log", "SERVER");
 CLog g_LogGame("game.log", "GAME");
-
+CLog g_LogThread("thread.log", "THREAD");

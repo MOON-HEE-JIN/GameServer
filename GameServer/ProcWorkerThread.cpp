@@ -88,6 +88,8 @@ unsigned __stdcall ProcWorkerThread(void* arg)
 		// 플레이어 삭제 처리
 		s_ProcWorker[procID]->DeletePlayerProcess();
     }
+
+    g_LogThread.ILog("=== END THREAD ProcWorkerThread ===");
     return 0;
 }
 

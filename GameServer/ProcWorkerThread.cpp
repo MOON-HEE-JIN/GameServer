@@ -111,7 +111,8 @@ void CProcWorker::DeletePlayerProcess()
 		if (pPlayer == nullptr)
             continue;
         g_LogGame.ILog("Release Player PHandle : %d, SHandle : %d", pPlayer->GetPlayerHandle(), pPlayer->GetSessionHandle().Handle);
-		pPlayer->SessionHandleClear();
+        CNetServer::DecrementPlayerCount();
+        pPlayer->SessionHandleClear();
 		FreePlayer(pPlayer);   
     }
 }

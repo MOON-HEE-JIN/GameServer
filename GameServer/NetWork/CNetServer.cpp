@@ -29,10 +29,19 @@ CRITICAL_SECTION g_csPlayerManager;
 static std::atomic<bool> s_bSessionSendEnqueueRunning = false;
 static std::atomic<bool> s_bSessionDisConnectDequeueRunning = false;
 
+std::atomic<int> CNetServer::ConnectSessionCount;
+std::atomic<int> CNetServer::TotalConnectSessionCount;
+std::atomic<int> CNetServer::ConnectPlayerCount;
+std::atomic<int> CNetServer::TotalConnectPlayerCount;
+std::vector<std::atomic<int>> CNetServer::ConnectProcCount(ProcThreadCnt);
+
+int CNetServer::LogPrintTime;
+int CNetServer::LogPrintDelay = 3 * 1000;
+
 void OnRecv(CSession* pSession, int type, CPacket pPacket)
 {
 	int pid = pSession->GetProcID();
-	g_LogServer.DLog("Enqueue Job type : %d, size : %d", type, pPacket.GetDataSize());
+	//g_LogServer.DLog("Enqueue Job type : %d, size : %d", type, pPacket.GetDataSize());
 	g_ProcJobQueue[pid].Enqueue({pSession->GetConnectPlayerHandle(),type, pPacket});
 }
 
@@ -45,12 +54,15 @@ bool OnClientJoin(CSession* pSession)
 	pPlayer = AllocPlayer(PlayerHandle);
 	if(pPlayer == nullptr)
 		return false;
-	
+
+	CNetServer::IncrementPlayerCount();
 	pPlayer->Init(pSession->GetConnectKey(), PlayerHandle, pSession->GetProcID());
 	pSession->SetConnectPlayerHandle(PlayerHandle);
 
 	g_LogServer.ILog("OnClientJoin SessionHandle : %d, PlayerHandle : %d"
 		, pSession->GetConnectHandle(), PlayerHandle);
+
+	CNetServer::IncrementProcCount(0);
 
 	return true;
 }
@@ -98,6 +110,8 @@ unsigned __stdcall AceeptThread(void* arg)
 			CNetServer::DisConnect(pSession);
 			continue;
 		}
+
+		CNetServer::IncrementSessionCount();
 
 		if(!pSession->RecvPost())
 			CNetServer::DisConnect(pSession);
@@ -234,6 +248,23 @@ unsigned __stdcall WorkerThread(void* arg)
 		}
 	}
 	return 0;
+}
+
+bool TryChangePid(const SESSION_HANDLE& key, int pid)
+{
+	CSession* pSession = CNetServer::GetSession(key.Handle);
+	if (pSession == nullptr)
+		return false;
+
+	// 연결 및 재사용 횟수 체크
+	if (!pSession->GetBoolConnect()) return false;
+	if (pSession->GetConnectGen() != key.Gen) return false;
+
+	// 사용 증가
+	if (!pSession->SetProcID(pid))
+		return false;
+	
+	return true;
 }
 
 bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket)
@@ -492,14 +523,28 @@ void CNetServer::DisConnect(CSession* pSession)
 		s_ProcWorker[pSession->GetProcID()]->ReleasePlayer(pPlayer);
 	}
 
+	DecrementProcCount(pSession->GetProcID());
+
 	pSession->OnDisconnect();
 	
 	LockSessionFreeKey();
 	{
 		g_LogServer.ILog("DisConnect Session  Handle : %d, Gen : %d", pSession->GetConnectHandle(), pSession->GetConnectGen());
+		DecrementSessionCount();
 		SessionFreeKey.push_back(SESSION_HANDLE(pSession->GetConnectHandle(), pSession->GetConnectGen()));
 	}
 	UnLockSessionFreeKey();
+}
+
+void CNetServer::ServerLog()
+{
+	if (LogPrintTime + LogPrintDelay > GetTickCount())
+		return;
+	LogPrintTime = GetTickCount();
+
+	g_LogServer.ILog("S:%d, P:%d, TS:%d, TP:%d\nProc0 : %d, Proc1 : %d, Proc2 : %d",
+		ConnectSessionCount.load(), ConnectPlayerCount.load(), TotalConnectSessionCount.load(), TotalConnectPlayerCount.load(),
+		ConnectProcCount[0].load(), ConnectProcCount[1].load(), ConnectProcCount[2].load());
 }
 
 void CNetServer::StartServer()

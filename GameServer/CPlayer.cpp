@@ -9,6 +9,13 @@ void CPlayer::Init(SESSION_HANDLE sessionID, int handle, int procID)
 	m_ProcID = procID;
 }
 
+void CPlayer::ChangeProcID(int pid)
+{
+	CNetServer::DecrementProcCount(m_ProcID);
+	m_ProcID = pid;
+	CNetServer::IncrementProcCount(m_ProcID);
+}
+
 void CPlayer::SendPacket(CPacket* pPacket)
 {
 }

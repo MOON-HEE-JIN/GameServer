@@ -120,6 +120,8 @@ unsigned __stdcall LogThread(void* arg)
 		//1000 Frames 1초당 1000 처리
 		ret = WaitForSingleObject(h_hExit, 1);
 
+		CNetServer::ServerLog();
+
 		LOG_JOB job;
 		while (g_LogJobQueue.TryDequeue(job))
 		{
@@ -133,6 +135,21 @@ unsigned __stdcall LogThread(void* arg)
 			fprintf(fp, job.log.c_str());
 			fclose(fp);
 		}
+	}
+
+	// 종료 이벤트
+	LOG_JOB job;
+	while (g_LogJobQueue.TryDequeue(job))
+	{
+		fputs(job.log.c_str(), stdout);
+
+		FILE* fp;
+		fopen_s(&fp, job.filePath.c_str(), "a");
+		if (fp == nullptr)
+			continue;
+
+		fprintf(fp, job.log.c_str());
+		fclose(fp);
 	}
 	return 0;
 }

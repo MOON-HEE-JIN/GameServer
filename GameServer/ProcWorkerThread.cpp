@@ -2,7 +2,7 @@
 #include "ProcWorkerThread.h"
 #include "GameServerDef.h"
 #include "NetWork/CNetServer.h"
-
+#include "Log/CLog.h"
 
 #include <Windows.h>
 #include <process.h>
@@ -110,8 +110,9 @@ void CProcWorker::DeletePlayerProcess()
     {
 		if (pPlayer == nullptr)
             continue;
-        
-		pPlayer->SessionHandleClear();
+        g_LogGame.ILog("Release Player PHandle : %d, SHandle : %d", pPlayer->GetPlayerHandle(), pPlayer->GetSessionHandle().Handle);
+        CNetServer::DecrementPlayerCount();
+        pPlayer->SessionHandleClear();
 		FreePlayer(pPlayer);   
     }
 }

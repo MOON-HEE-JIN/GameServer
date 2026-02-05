@@ -20,8 +20,11 @@ private:
 public:
 	SESSION_HANDLE GetSessionHandle() { return m_SessionHandle; }
 	int GetPlayerHandle() { return m_PlayerHandle; }
+	int GetProcID() { return m_ProcID; }
+	
 	void SessionHandleClear() { m_SessionHandle = SESSION_HANDLE(-1, 0); }
-
+	void ChangeProcID(int pid);
+	
 public:
 	void SendPacket(CPacket* pPacket);
 };

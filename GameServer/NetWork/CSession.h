@@ -29,8 +29,6 @@ private:
 
 	// 접속 종료중인지
 	std::atomic<bool> bCloseing;
-	// 세션의 사용 완전	종료 플래그
-	std::atomic<bool> bDisconnecting;
 	// 접속 상태 플래그
 	std::atomic<bool> bConnect;
 	std::atomic<int> RefCnt;
@@ -70,8 +68,6 @@ public:
 	bool SetProcID(int procID);
 public:
 	void OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key);
-	
-	bool OnStartDisconnect();
 	void OnDisconnect();
 
 public:

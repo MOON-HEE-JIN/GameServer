@@ -71,6 +71,7 @@ bool OnClientJoin(CSession* pSession)
 	return true;
 }
 
+
 unsigned __stdcall AceeptThread(void* arg)
 {
 	int retval;
@@ -366,6 +367,24 @@ void SessionSendQEnqueue()
 	s_bSessionSendEnqueueRunning = false;
 }
 
+bool KickSession(const SESSION_HANDLE& key)
+{
+	CSession* pSession = CNetServer::GetSession(key.Handle);
+
+	// 이미 연결이 끊어진 세션
+	if (!pSession->AddRef())
+		return false;
+
+	if (pSession && pSession->GetConnectHandle() == key.Handle && pSession->GetConnectGen() == key.Gen)
+	{
+		// 세션 연결 해제 요청
+		EnqueueDisConnectReq(pSession);
+		pSession->SubRef();
+		return true;
+	}
+	return false;
+}
+
 void EnqueueDisConnectReq(CSession* pSession)
 {
 	g_SessionCloseQueue.Enqueue(pSession);
@@ -588,94 +607,10 @@ void CNetServer::DisConnect(CSession* pSession)
 	if (playerHandle >= 0 && playerHandle < (int)g_PlayerManager.size())
 	{
 		pPlayer = g_PlayerManager[playerHandle];
-	}
-
-		DecrementProcCount(pSession->GetProcID());
-
-bool CNetServer::KickSessionByHandle(int sessionHandle)
-{
-	if (sessionHandle < 0 || sessionHandle >= (int)SessionManager.size())
-		return false;
-
-	CSession* pSession = GetSession(sessionHandle);
-	if (pSession == nullptr)
-		return false;
-
-	if (!pSession->GetBoolConnect())
-		return false;
-
-	EnqueueDisConnectReq(pSession);
-	return true;
-}
-
-bool CNetServer::KickPlayerByHandle(int playerHandle)
-{
-	if (playerHandle < 0 || playerHandle >= (int)g_PlayerManager.size())
-		return false;
-
-	CPlayer* pPlayer = g_PlayerManager[playerHandle];
-	if (pPlayer == nullptr)
-		return false;
-
-	SESSION_HANDLE sessionKey = pPlayer->GetSessionHandle();
-	CSession* pSession = GetSession(sessionKey.Handle);
-	if (pSession == nullptr)
-		return false;
-
-	if (!pSession->GetBoolConnect() || pSession->GetConnectGen() != sessionKey.Gen)
-		return false;
-
-	EnqueueDisConnectReq(pSession);
-	return true;
-}
-
-void CNetServer::RequestShutdown()
-{
-	if (!g_ServerON)
-		return;
-
-	g_ServerON = false;
-	g_LogServer.ILog("Server shutdown requested by GM session");
-
-	if (listen_sock != INVALID_SOCKET)
-	{
-		closesocket(listen_sock);
-		listen_sock = INVALID_SOCKET;
-	}
-
-	if (gm_listen_sock != INVALID_SOCKET)
-	{
-		closesocket(gm_listen_sock);
-		gm_listen_sock = INVALID_SOCKET;
-	}
-
-	PostMessageExit();
-	PostLogMessageExit();
-
-	for (int i = 0; i < OVERALP_CREATE_THREAD; i++)
-	{
-		PostQueuedCompletionStatus(CICP, 0, 0, NULL);
-	}
-}
-
-	h_GMAcceptThread = (HANDLE)_beginthreadex(NULL, 0, GMAceeptThread, 0, 0, NULL);
-	g_LogServer.ILog("Port : %d, GM Port : %d, CreateThread : %d, RunThread : %d, MaxConnect : %d"
-		,CNetServer::Port, CNetServer::GMPort, OVERALP_CREATE_THREAD, OVERLAP_RUN_THREAD, MAX_CONNECT_COUNT);
-	if (h_AceeptThread)
-		WaitForSingleObject(h_AceeptThread, INFINITE);
-	if (h_GMAcceptThread)
-		WaitForSingleObject(h_GMAcceptThread, INFINITE);
-	if (h_WorkerThread)
-	{
-		WaitForMultipleObjects(OVERALP_CREATE_THREAD, h_WorkerThread, true, INFINITE);
-		delete[] h_WorkerThread;
-		h_WorkerThread = nullptr;
-	}
-	WSACleanup();
+		s_ProcWorker[pSession->GetProcID()]->ReleasePlayer(pPlayer);
 	}
 
 	DecrementProcCount(pSession->GetProcID());
-
 	pSession->OnDisconnect();
 	
 	LockSessionFreeKey();
@@ -686,6 +621,7 @@ void CNetServer::RequestShutdown()
 	}
 	UnLockSessionFreeKey();
 }
+
 
 void CNetServer::ServerLog()
 {
@@ -717,6 +653,35 @@ void CNetServer::StartServer()
 	CreateLogThread();
 }
 
+void CNetServer::ShutDown()
+{
+	if (!g_ServerON)
+		return;
+
+	g_ServerON = false;
+	g_LogServer.ILog("Server shutdown requested by GM session");
+
+	if (listen_sock != INVALID_SOCKET)
+	{
+		closesocket(listen_sock);
+		listen_sock = INVALID_SOCKET;
+	}
+
+	if (gm_listen_sock != INVALID_SOCKET)
+	{
+		closesocket(gm_listen_sock);
+		gm_listen_sock = INVALID_SOCKET;
+	}
+
+	PostMessageExit();
+	PostLogMessageExit();
+
+	for (int i = 0; i < OVERALP_CREATE_THREAD; i++)
+	{
+		PostQueuedCompletionStatus(CNetServer::GetCICP, 0, 0, NULL);
+	}
+}
+
 void CNetServer::StopServer()
 {
 	WaitForSingleObject(h_AceeptThread, INFINITE);
@@ -724,3 +689,4 @@ void CNetServer::StopServer()
 	WaitProcWorkerThread();
 	WaitLogThread();
 }
+

@@ -40,11 +40,6 @@ private:
 
 	static CRITICAL_SECTION cs_SessionFreeKey;
 private:
-	static SOCKET& GetGMListenSocket() { return gm_listen_sock; }
-	static bool KickSessionByHandle(int sessionHandle);
-	static bool KickPlayerByHandle(int playerHandle);
-	static void RequestShutdown();
-static unsigned __stdcall GMAceeptThread(void* arg);		// GM accept() Thread
 	static std::atomic<int> ConnectSessionCount;				// 현재 연결중인 세션
 	static std::atomic<int> TotalConnectSessionCount;			// 총 연결 횟수
 	static std::atomic<int> ConnectPlayerCount;					// 현재 연결중인 플레이어
@@ -58,6 +53,7 @@ public:
 	static void UnLockSessionFreeKey() { LeaveCriticalSection(&cs_SessionFreeKey); };
 
 	static SOCKET& GetListenSocket() { return listen_sock; }
+	static SOCKET& GetGMListenSocket() { return gm_listen_sock; }
 	static HANDLE GetCICP() { return CICP; }
 
 	static void IncrementAcceptCnt() { AcceptCnt++; }
@@ -77,6 +73,7 @@ public:
 	static bool g_ServerON;
 
 	static void StartServer();
+	static void ShutDown();
 	static void StopServer();
 };
 
@@ -87,10 +84,14 @@ static unsigned __stdcall AceeptThread(void* arg);		// accept() Thread
 static unsigned __stdcall WorkerThread(void* arg);		// recv, send Thread
 static unsigned __stdcall LogThread(void* arg);			// 로그 처리 Thread
 
+
+static unsigned __stdcall GMAceeptThread(void* arg);		// GM accept() Thread
+
 bool TryChangePid(const SESSION_HANDLE& key, int pid);
 bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket);
 void SessionSendQEnqueue();
 
+bool KickSession(const SESSION_HANDLE& key);
 void EnqueueDisConnectReq(CSession* pSession);
 void DequeueDisConnectReq();
 

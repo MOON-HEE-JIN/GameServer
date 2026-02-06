@@ -75,25 +75,8 @@ bool CGMSession::ProcessCommand(const std::string& commandLine)
     if (command == "SHUTDOWN")
     {
         SendResponse("OK SHUTDOWN REQUESTED\n");
-        CNetServer::RequestShutdown();
+        CNetServer::ShutDown();
         return false;
-    }
-
-    if (command == "KICK_PLAYER")
-    {
-        int playerHandle = -1;
-        if (!(ss >> playerHandle))
-        {
-            return SendResponse("ERR KICK_PLAYER REQUIRES HANDLE\n");
-        }
-
-        if (!CNetServer::KickPlayerByHandle(playerHandle))
-        {
-            return SendResponse("ERR KICK_PLAYER FAILED\n");
-        }
-
-        g_LogServer.ILog("GM kick player handle : %d", playerHandle);
-        return SendResponse("OK KICK_PLAYER\n");
     }
 
     if (command == "KICK_SESSION")
@@ -103,8 +86,8 @@ bool CGMSession::ProcessCommand(const std::string& commandLine)
         {
             return SendResponse("ERR KICK_SESSION REQUIRES HANDLE\n");
         }
-
-        if (!CNetServer::KickSessionByHandle(sessionHandle))
+        SESSION_HANDLE key;
+        if (!KickSession(key))
         {
             return SendResponse("ERR KICK_SESSION FAILED\n");
         }

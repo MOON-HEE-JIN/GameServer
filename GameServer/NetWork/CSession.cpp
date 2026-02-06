@@ -66,14 +66,7 @@ void CSession::OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key)
 	m_ConnectKey = std::move(key);
 	m_ProcID = 0;
 	bCloseing = false;
-	bDisconnecting = false;
 	RefCnt = 0;
-}
-
-bool CSession::OnStartDisconnect()
-{
-	bool bf = false;
-	return bDisconnecting.compare_exchange_strong(bf, true);
 }
 
 void CSession::OnDisconnect()

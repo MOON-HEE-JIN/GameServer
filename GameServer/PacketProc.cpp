@@ -39,7 +39,7 @@ int PacketProc::DO_GAME_CHANGEPID(CPlayer* pTarget, CPacket& pReqPacket)
     st_CTS_ChangePid data;
     pReqPacket >> data;
     
-    if (data.pid >= ProcThreadCnt)
+    if (data.pid >= ProcThreadCnt || data.pid < 0)
         return ERROR_CODE::NOT_FIND_PID;
 
     if (pTarget->GetProcID() == data.pid)

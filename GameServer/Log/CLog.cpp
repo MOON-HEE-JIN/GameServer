@@ -117,7 +117,7 @@ unsigned __stdcall LogThread(void* arg)
 	int ret = 0;
 	while (CNetServer::g_ServerON)
 	{
-		//1000 Frames 1�ʴ� 1000 ó��
+		//1000 Frames 1ÃÊ´ç 1000 Ã³¸®
 		ret = WaitForSingleObject(h_hExit, 1);
 
 		CNetServer::ServerLog();
@@ -137,7 +137,7 @@ unsigned __stdcall LogThread(void* arg)
 		}
 	}
 
-	// ���� �̺�Ʈ
+	// Á¾·á ÀÌº¥Æ®
 	LOG_JOB job;
 	while (g_LogJobQueue.TryDequeue(job))
 	{
@@ -151,10 +151,13 @@ unsigned __stdcall LogThread(void* arg)
 		fprintf(fp, job.log.c_str());
 		fclose(fp);
 	}
+
+	fputs("=== END THREAD LogThread ===\n", stdout);
+
 	return 0;
 }
 
 CLog g_LogTemp("temp.log", "TEMP");
 CLog g_LogServer("server.log", "SERVER");
 CLog g_LogGame("game.log", "GAME");
-
+CLog g_LogThread("thread.log", "THREAD");

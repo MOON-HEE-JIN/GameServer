@@ -117,6 +117,7 @@ unsigned __stdcall AceeptThread(void* arg)
 			CNetServer::DisConnect(pSession);
 		
 	}
+	g_LogThread.ILog("=== END THREAD AcceptThread ===");
 	return 0;
 }
 
@@ -247,6 +248,9 @@ unsigned __stdcall WorkerThread(void* arg)
 			CNetServer::DisConnect(pSession);
 		}
 	}
+
+	g_LogThread.ILog("=== END THREAD WorkerThread ===");
+
 	return 0;
 }
 

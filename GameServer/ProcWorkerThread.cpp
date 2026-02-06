@@ -59,7 +59,7 @@ void WaitProcWorkerThread()
     }
 }
 
-void PostMessageExit()
+void PostMessageProcThreadExit()
 {
 	// 종료 이벤트 발생
 	SetEvent(s_hExit);
@@ -71,6 +71,7 @@ unsigned __stdcall ProcWorkerThread(void* arg)
 	int procID = *(int*)arg;
     timeBeginPeriod(1);
     int ret = 0;
+    Sleep(1000);
     while (CNetServer::g_ServerON)
     {
         //1000 Frames 1초당 1000 처리

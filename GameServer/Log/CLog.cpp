@@ -106,6 +106,12 @@ void CreateLogThread()
 	h_hExit = CreateEvent(NULL, TRUE, FALSE, NULL);
 }
 
+void PostMessageLogThreadExit()
+{
+	Sleep(1000);
+	SetEvent(h_hExit);
+}
+
 void WaitLogThread()
 {
 	WaitForSingleObject(s_hLogHandle, INFINITE);
@@ -137,7 +143,6 @@ unsigned __stdcall LogThread(void* arg)
 		}
 	}
 
-	// Á¾·á ÀÌº¥Æ®
 	LOG_JOB job;
 	while (g_LogJobQueue.TryDequeue(job))
 	{
@@ -152,6 +157,7 @@ unsigned __stdcall LogThread(void* arg)
 		fclose(fp);
 	}
 
+	Sleep(1000);
 	fputs("=== END THREAD LogThread ===\n", stdout);
 
 	return 0;

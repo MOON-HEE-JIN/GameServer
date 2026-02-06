@@ -187,6 +187,10 @@ unsigned __stdcall WorkerThread(void* arg)
 			DequeueDisConnectReq();
 			continue;
 		}
+
+		if (key == KEY_SHUTDOWN_WAKE)
+			continue;
+
 		pSession = (CSession*)key;
 
 		if (pSession == nullptr)
@@ -602,7 +606,7 @@ void CNetServer::ServerLog()
 void CNetServer::StartServer()
 {
 	Init();
-
+	Sleep(1000);
 	h_AceeptThread = (HANDLE)_beginthreadex(NULL, 0, AceeptThread, 0, 0, NULL);
 	h_GmAceeptThread = (HANDLE)_beginthreadex(NULL, 0, GMAceeptThread, 0, 0, NULL);
 	h_WorkerThread = new HANDLE[OVERALP_CREATE_THREAD];
@@ -618,7 +622,21 @@ void CNetServer::StartServer()
 	CreateLogThread();
 }
 
-void CNetServer::StopServer()
+void CNetServer::ServerShutDown()
+{
+	g_ServerON = false;
+
+	closesocket(listen_sock);
+	closesocket(gm_listen_sock);
+
+	for(int i = 0; i < OVERALP_CREATE_THREAD; i++)
+		PostQueuedCompletionStatus(CNetServer::GetCICP(), 0, KEY_SHUTDOWN_WAKE, NULL);
+
+	PostMessageProcThreadExit();
+	PostMessageLogThreadExit();
+}
+
+void CNetServer::WiatStopServer()
 {
 	WaitForSingleObject(h_AceeptThread, INFINITE);
 	WaitForMultipleObjects(OVERALP_CREATE_THREAD, h_WorkerThread, true, INFINITE);

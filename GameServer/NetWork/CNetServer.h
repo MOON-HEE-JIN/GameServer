@@ -73,7 +73,8 @@ public:
 	static bool g_ServerON;
 
 	static void StartServer();
-	static void StopServer();
+	static void ServerShutDown();
+	static void WiatStopServer();
 };
 
 static void OnRecv(CSession* pSession,int type, CPacket pPacket);

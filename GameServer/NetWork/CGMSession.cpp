@@ -72,6 +72,11 @@ bool CGMSession::ProcessCommand(const std::string& commandLine)
         return SendResponse("OK COMMANDS: HELP, SHUTDOWN, KICK_PLAYER <playerHandle>, KICK_SESSION <sessionHandle>, QUIT\n");
     }
 
+    if (command == "SHUTDOWN")
+    {
+        CNetServer::ServerShutDown();
+        return true;
+    }
     if (command == "QUIT")
     {
         SendResponse("OK BYE\n");

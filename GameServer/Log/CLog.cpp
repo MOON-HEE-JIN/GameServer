@@ -111,18 +111,13 @@ void WaitLogThread()
 	WaitForSingleObject(s_hLogHandle, INFINITE);
 }
 
-void PostLogMessageExit()
-{
-	SetEvent(h_hExit);
-}
-
 unsigned __stdcall LogThread(void* arg)
 {
 	
 	int ret = 0;
 	while (CNetServer::g_ServerON)
 	{
-		//1000 Frames 1ÃÊ´ç 1000 Ã³¸®
+		//1000 Frames 1�ʴ� 1000 ó��
 		ret = WaitForSingleObject(h_hExit, 1);
 
 		CNetServer::ServerLog();
@@ -142,7 +137,7 @@ unsigned __stdcall LogThread(void* arg)
 		}
 	}
 
-	// Á¾·á ÀÌº¥Æ®
+	// ���� �̺�Ʈ
 	LOG_JOB job;
 	while (g_LogJobQueue.TryDequeue(job))
 	{

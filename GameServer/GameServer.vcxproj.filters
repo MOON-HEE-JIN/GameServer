@@ -54,9 +54,6 @@
     <ClCompile Include="NetWork\CNetServer.cpp">
       <Filter>소스 파일\NetWork</Filter>
     </ClCompile>
-    <ClCompile Include="NetWork\CGMSession.cpp">
-      <Filter>소스 파일\NetWork</Filter>
-    </ClCompile>
     <ClCompile Include="NetWork\CSession.cpp">
       <Filter>소스 파일\NetWork</Filter>
     </ClCompile>
@@ -99,9 +96,6 @@
       <Filter>소스 파일\Stub</Filter>
     </ClInclude>
     <ClInclude Include="NetWork\CNetServer.h">
-      <Filter>소스 파일\NetWork</Filter>
-    </ClInclude>
-    <ClInclude Include="NetWork\CGMSession.h">
       <Filter>소스 파일\NetWork</Filter>
     </ClInclude>
     <ClInclude Include="NetWork\CSession.h">

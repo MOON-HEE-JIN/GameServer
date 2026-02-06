@@ -1,5 +1,4 @@
 #include "CNetServer.h"
-#include "CGMSession.h"
 #include <process.h>
 #include <ws2tcpip.h>
 #include <iostream>
@@ -10,9 +9,7 @@
 #include "../Log/CLog.h"
 
 unsigned short CNetServer::Port = 7799;
-unsigned short CNetServer::GMPort = 7798;
 SOCKET CNetServer::listen_sock;
-SOCKET CNetServer::gm_listen_sock;
 int CNetServer::AcceptCnt;
 std::vector<CSession*> CNetServer::SessionManager;
 std::vector<SESSION_HANDLE> CNetServer::SessionFreeKey;
@@ -23,7 +20,6 @@ unsigned __int64 CNetServer::AllocSessionID;
 bool CNetServer::g_ServerON;
 HANDLE CNetServer::CICP;
 HANDLE CNetServer::h_AceeptThread;
-HANDLE CNetServer::h_GMAcceptThread;
 HANDLE* CNetServer::h_WorkerThread;
 
 std::vector<CPlayer*> g_PlayerManager;
@@ -124,35 +120,6 @@ unsigned __stdcall AceeptThread(void* arg)
 	return 0;
 }
 
-unsigned __stdcall GMAceeptThread(void* arg)
-{
-	int retval;
-	int addrlen;
-	SOCKADDR_IN clientaddr;
-	SOCKET client_sock;
-
-	while (CNetServer::g_ServerON)
-	{
-		addrlen = sizeof(clientaddr);
-		client_sock = accept(CNetServer::GetGMListenSocket(), (SOCKADDR*)&clientaddr, &addrlen);
-
-		if (client_sock == INVALID_SOCKET)
-		{
-			retval = GetLastError();
-			if (CNetServer::g_ServerON)
-			{
-				g_LogServer.ELog("GM Accept Error %d", retval);
-			}
-			continue;
-		}
-
-		CGMSession gmSession(client_sock);
-		gmSession.Run();
-	}
-
-	return 0;
-}
-
 unsigned __stdcall WorkerThread(void* arg)
 {
 	int retval = 0;
@@ -200,11 +167,11 @@ unsigned __stdcall WorkerThread(void* arg)
 				if (err != 64 && err != 997 && err != 0 && err != 10038 && err != 1236)
 				{
 					/*
-					* ERROR_NETNAME_DELETED(64) : TCP Ïó∞Í≤∞Ïù¥ ÎπÑÏ†ïÏÉÅÏ†Å Ï¢ÖÎ£å
-					* WSA_IO_PENDING(997) : Ï§ëÏ≤© I/O ÏûëÏóÖ ÎÇòÏ§ëÏóê ÏôÑÎ£å
-					* ERROR_NETWORK_UNREACHABLE(1236) : ÎÑ§Ìä∏ÏõåÌÅ¨ Ïó∞Í≤∞Ïù¥ ÏãúÏä§ÌÖúÏóê ÏùòÌï¥ Ï§ëÎã®
-					*	linger ÏòµÏÖòÏù¥ ÏÑ§Ï†ïÏãú RST Î•º Ï¶âÏãú Ï†ÑÏÜ° RST ÏóêÏùò Ìï¥ Ïó∞Í≤∞Ïù¥ Ï¢ÖÎ£å ÎêòÏñ¥ ÎåÄÍ∏∞Ï§ëÏù∏ recv ÏóêÏÑú Ïò§Î•ò
-					* WSAENOTSOCKET(10038) : nonsocket Ïóê ÎåÄÌïú ÏÜåÏºì ÏûëÏóÖ
+					* ERROR_NETNAME_DELETED(64) : TCP ø¨∞·¿Ã ∫Ò¡§ªÛ¿˚ ¡æ∑·
+					* WSA_IO_PENDING(997) : ¡ﬂ√∏ I/O ¿€æ˜ ≥™¡ﬂø° øœ∑·
+					* ERROR_NETWORK_UNREACHABLE(1236) : ≥◊∆Æøˆ≈© ø¨∞·¿Ã Ω√Ω∫≈€ø° ¿««ÿ ¡ﬂ¥‹
+					*	linger ø…º«¿Ã º≥¡§Ω√ RST ∏¶ ¡ÔΩ√ ¿¸º€ RST ø°¿« «ÿ ø¨∞·¿Ã ¡æ∑· µ«æÓ ¥Î±‚¡ﬂ¿Œ recv ø°º≠ ø¿∑˘
+					* WSAENOTSOCKET(10038) : nonsocket ø° ¥Î«— º“ƒœ ¿€æ˜
 					printf("WorkerThread GQCS Error %d\n", err);
 					*/
 				}
@@ -222,7 +189,7 @@ unsigned __stdcall WorkerThread(void* arg)
 				{
 					size = pSession->GetRecvBuffer()->GetUseSize();
 
-					//Í≥†Ï†ïÎêú ÌÅ¨Í∏∞Ïùò Header ÌÅ¨Í∏∞ ÌôïÏù∏
+					//∞Ì¡§µ» ≈©±‚¿« Header ≈©±‚ »Æ¿Œ
 					if (size < sizeof(st_Header))
 						break;
 
@@ -258,11 +225,11 @@ unsigned __stdcall WorkerThread(void* arg)
 				if (err != 64 && err != 997 && err != 0 && err != 10038 && err != 1236)
 				{
 					/*
-					* ERROR_NETNAME_DELETED(64) : TCP Ïó∞Í≤∞Ïù¥ ÎπÑÏ†ïÏÉÅÏ†Å Ï¢ÖÎ£å
-					* WSA_IO_PENDING(997) : Ï§ëÏ≤© I/O ÏûëÏóÖ ÎÇòÏ§ëÏóê ÏôÑÎ£å
-					* ERROR_NETWORK_UNREACHABLE(1236) : ÎÑ§Ìä∏ÏõåÌÅ¨ Ïó∞Í≤∞Ïù¥ ÏãúÏä§ÌÖúÏóê ÏùòÌï¥ Ï§ëÎã®
-					*	linger ÏòµÏÖòÏù¥ ÏÑ§Ï†ïÏãú RST Î•º Ï¶âÏãú Ï†ÑÏÜ° RST ÏóêÏùò Ìï¥ Ïó∞Í≤∞Ïù¥ Ï¢ÖÎ£å ÎêòÏñ¥ ÎåÄÍ∏∞Ï§ëÏù∏ recv ÏóêÏÑú Ïò§Î•ò
-					* WSAENOTSOCKET(10038) : nonsocket Ïóê ÎåÄÌïú ÏÜåÏºì ÏûëÏóÖ
+					* ERROR_NETNAME_DELETED(64) : TCP ø¨∞·¿Ã ∫Ò¡§ªÛ¿˚ ¡æ∑·
+					* WSA_IO_PENDING(997) : ¡ﬂ√∏ I/O ¿€æ˜ ≥™¡ﬂø° øœ∑·
+					* ERROR_NETWORK_UNREACHABLE(1236) : ≥◊∆Æøˆ≈© ø¨∞·¿Ã Ω√Ω∫≈€ø° ¿««ÿ ¡ﬂ¥‹
+					*	linger ø…º«¿Ã º≥¡§Ω√ RST ∏¶ ¡ÔΩ√ ¿¸º€ RST ø°¿« «ÿ ø¨∞·¿Ã ¡æ∑· µ«æÓ ¥Î±‚¡ﬂ¿Œ recv ø°º≠ ø¿∑˘
+					* WSAENOTSOCKET(10038) : nonsocket ø° ¥Î«— º“ƒœ ¿€æ˜
 					printf("WorkerThread GQCS Error %d\n", err);
 					*/
 				}
@@ -289,11 +256,11 @@ bool TryChangePid(const SESSION_HANDLE& key, int pid)
 	if (pSession == nullptr)
 		return false;
 
-	// Ïó∞Í≤∞ Î∞è Ïû¨ÏÇ¨Ïö© ÌöüÏàò Ï≤¥ÌÅ¨
+	// ø¨∞· π◊ ¿ÁªÁøÎ »Ωºˆ √º≈©
 	if (!pSession->GetBoolConnect()) return false;
 	if (pSession->GetConnectGen() != key.Gen) return false;
 
-	// ÏÇ¨Ïö© Ï¶ùÍ∞Ä
+	// ªÁøÎ ¡ı∞°
 	if (!pSession->SetProcID(pid))
 		return false;
 	
@@ -306,11 +273,11 @@ bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket)
 	if (pSession == nullptr)
 		return false;
 	
-	// Ïó∞Í≤∞ Î∞è Ïû¨ÏÇ¨Ïö© ÌöüÏàò Ï≤¥ÌÅ¨
+	// ø¨∞· π◊ ¿ÁªÁøÎ »Ωºˆ √º≈©
 	if (!pSession->GetBoolConnect()) return false;
 	if (pSession->GetConnectGen() != key.Gen) return false;
 
-	// ÏÇ¨Ïö© Ï¶ùÍ∞Ä
+	// ªÁøÎ ¡ı∞°
 	if (!pSession->AddRef()) return false;
 	
 	if (!pSession->GetBoolConnect() || pSession->GetConnectGen() != key.Gen || pSession->GetBoolbCloseing())
@@ -438,11 +405,6 @@ void FreePlayer(CPlayer* pPlayer)
 void CNetServer::Init()
 {
 	AcceptCnt = 0;
-	listen_sock = INVALID_SOCKET;
-	gm_listen_sock = INVALID_SOCKET;
-	h_AceeptThread = NULL;
-	h_GMAcceptThread = NULL;
-	h_WorkerThread = nullptr;
 	g_ServerON = true;
 	AcceptKey = 0;
 	InitializeCriticalSection(&cs_SessionFreeKey);
@@ -470,51 +432,6 @@ void CNetServer::Init()
 	OpenServer();
 }
 
-int CNetServer::OpenListenSocket(unsigned short port, SOCKET& outSocket)
-{
-	outSocket = socket(AF_INET, SOCK_STREAM, 0);
-	if (outSocket == INVALID_SOCKET)
-	{
-		return WSAGetLastError();
-	}
-
-	SOCKADDR_IN serveraddr;
-	ZeroMemory(&serveraddr, sizeof(serveraddr));
-	serveraddr.sin_family = AF_INET;
-	serveraddr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
-	serveraddr.sin_port = htons(port);
-
-	int ret = bind(outSocket, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
-	if (ret == SOCKET_ERROR)
-	{
-		ret = WSAGetLastError();
-		closesocket(outSocket);
-		outSocket = INVALID_SOCKET;
-		return ret;
-	}
-
-	if (listen(outSocket, SOMAXCONN) == SOCKET_ERROR)
-	{
-		ret = WSAGetLastError();
-		closesocket(outSocket);
-		outSocket = INVALID_SOCKET;
-		return ret;
-	}
-
-	int optval = 0;
-	setsockopt(outSocket, SOL_SOCKET, SO_SNDBUF, (char*)&optval, sizeof(optval));
-
-	linger _linger;
-	_linger.l_onoff = 1;
-	_linger.l_linger = 0;
-	setsockopt(outSocket, SOL_SOCKET, SO_LINGER, (char*)&_linger, sizeof(linger));
-
-	int nValue = 1;
-	setsockopt(outSocket, SOL_SOCKET, TCP_NODELAY, (char*)&nValue, sizeof(nValue));
-
-	return 0;
-}
-
 int CNetServer::OpenServer()
 {
 	g_ServerON = true;
@@ -530,21 +447,34 @@ int CNetServer::OpenServer()
 	if (CICP == NULL)
 		return WSAGetLastError();
 
-	ret = OpenListenSocket(Port, listen_sock);
-	if (ret != 0)
-	{
-		return ret;
-	}
+	listen_sock = socket(AF_INET, SOCK_STREAM, 0);
 
-	ret = OpenListenSocket(GMPort, gm_listen_sock);
-	if (ret != 0)
-	{
-		closesocket(listen_sock);
-		listen_sock = INVALID_SOCKET;
-		return ret;
-	}
+	SOCKADDR_IN serveraddr;
+	ZeroMemory(&serveraddr, sizeof(serveraddr));
+	serveraddr.sin_family = AF_INET;
+	serveraddr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+	
+	serveraddr.sin_port = htons(Port);
 
-	return 0;
+	ret = bind(listen_sock, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
+
+	listen(listen_sock, SOMAXCONN);
+
+	int optval = 0;
+	int optlen = sizeof(optval);
+	int tmep = setsockopt(listen_sock, SOL_SOCKET, SO_SNDBUF, (char*)&optval, sizeof(optval));
+
+	linger _linger;
+	_linger.l_onoff = 1;
+	_linger.l_linger = 0;
+	setsockopt(listen_sock, SOL_SOCKET, SO_LINGER, (char*)&_linger, sizeof(linger));
+
+	int nValue = 1;
+	setsockopt(listen_sock, SOL_SOCKET, TCP_NODELAY, (char*)&nValue, sizeof(nValue));
+	
+	getsockopt(listen_sock, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
+	
+	return ret;
 }
 
 CSession* CNetServer::AddSession(SOCKET sock)
@@ -583,95 +513,14 @@ CSession* CNetServer::AddSession(SOCKET sock)
 
 void CNetServer::DisConnect(CSession* pSession)
 {
-	CPlayer* pPlayer = nullptr;
-	const int playerHandle = pSession->GetConnectPlayerHandle();
-	if (playerHandle >= 0 && playerHandle < (int)g_PlayerManager.size())
-	{
-		pPlayer = g_PlayerManager[playerHandle];
-	}
-
-		DecrementProcCount(pSession->GetProcID());
-
-bool CNetServer::KickSessionByHandle(int sessionHandle)
-{
-	if (sessionHandle < 0 || sessionHandle >= (int)SessionManager.size())
-		return false;
-
-	CSession* pSession = GetSession(sessionHandle);
-	if (pSession == nullptr)
-		return false;
-
-	if (!pSession->GetBoolConnect())
-		return false;
-
-	EnqueueDisConnectReq(pSession);
-	return true;
-}
-
-bool CNetServer::KickPlayerByHandle(int playerHandle)
-{
-	if (playerHandle < 0 || playerHandle >= (int)g_PlayerManager.size())
-		return false;
-
-	CPlayer* pPlayer = g_PlayerManager[playerHandle];
-	if (pPlayer == nullptr)
-		return false;
-
-	SESSION_HANDLE sessionKey = pPlayer->GetSessionHandle();
-	CSession* pSession = GetSession(sessionKey.Handle);
-	if (pSession == nullptr)
-		return false;
-
-	if (!pSession->GetBoolConnect() || pSession->GetConnectGen() != sessionKey.Gen)
-		return false;
-
-	EnqueueDisConnectReq(pSession);
-	return true;
-}
-
-void CNetServer::RequestShutdown()
-{
-	if (!g_ServerON)
+	// ¿ÃπÃ ¡æ∑·¡ﬂ¿Ã∏È π´Ω√
+	if (!pSession->OnStartDisconnect())
 		return;
 
-	g_ServerON = false;
-	g_LogServer.ILog("Server shutdown requested by GM session");
-
-	if (listen_sock != INVALID_SOCKET)
+	CPlayer* pPlayer = g_PlayerManager[pSession->GetConnectPlayerHandle()];
+	if (pPlayer != nullptr)
 	{
-		closesocket(listen_sock);
-		listen_sock = INVALID_SOCKET;
-	}
-
-	if (gm_listen_sock != INVALID_SOCKET)
-	{
-		closesocket(gm_listen_sock);
-		gm_listen_sock = INVALID_SOCKET;
-	}
-
-	PostMessageExit();
-	PostLogMessageExit();
-
-	for (int i = 0; i < OVERALP_CREATE_THREAD; i++)
-	{
-		PostQueuedCompletionStatus(CICP, 0, 0, NULL);
-	}
-}
-
-	h_GMAcceptThread = (HANDLE)_beginthreadex(NULL, 0, GMAceeptThread, 0, 0, NULL);
-	g_LogServer.ILog("Port : %d, GM Port : %d, CreateThread : %d, RunThread : %d, MaxConnect : %d"
-		,CNetServer::Port, CNetServer::GMPort, OVERALP_CREATE_THREAD, OVERLAP_RUN_THREAD, MAX_CONNECT_COUNT);
-	if (h_AceeptThread)
-		WaitForSingleObject(h_AceeptThread, INFINITE);
-	if (h_GMAcceptThread)
-		WaitForSingleObject(h_GMAcceptThread, INFINITE);
-	if (h_WorkerThread)
-	{
-		WaitForMultipleObjects(OVERALP_CREATE_THREAD, h_WorkerThread, true, INFINITE);
-		delete[] h_WorkerThread;
-		h_WorkerThread = nullptr;
-	}
-	WSACleanup();
+		s_ProcWorker[pSession->GetProcID()]->ReleasePlayer(pPlayer);
 	}
 
 	DecrementProcCount(pSession->GetProcID());

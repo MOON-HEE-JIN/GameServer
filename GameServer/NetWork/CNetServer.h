@@ -18,12 +18,9 @@ public:
 private:
 	static void Init();
 	static int OpenServer();
-	static int OpenListenSocket(unsigned short port, SOCKET& outSocket);
 	static unsigned short Port;
-	static unsigned short GMPort;
 private:
 	static SOCKET listen_sock;
-	static SOCKET gm_listen_sock;
 	static int AcceptCnt;
 
 	static std::vector<CSession*> SessionManager;
@@ -34,25 +31,19 @@ private:
 
 	static HANDLE CICP;
 	static HANDLE h_AceeptThread;
-	static HANDLE h_GMAcceptThread;
 	static HANDLE* h_WorkerThread;
 	static HANDLE h_LogThread;
 
 	static CRITICAL_SECTION cs_SessionFreeKey;
 private:
-	static SOCKET& GetGMListenSocket() { return gm_listen_sock; }
-	static bool KickSessionByHandle(int sessionHandle);
-	static bool KickPlayerByHandle(int playerHandle);
-	static void RequestShutdown();
-static unsigned __stdcall GMAceeptThread(void* arg);		// GM accept() Thread
-	static std::atomic<int> ConnectSessionCount;				// í˜„ì¬ ì—°ê²°ì¤‘ì¸ ì„¸ì…˜
-	static std::atomic<int> TotalConnectSessionCount;			// ì´ ì—°ê²° íšŸìˆ˜
-	static std::atomic<int> ConnectPlayerCount;					// í˜„ì¬ ì—°ê²°ì¤‘ì¸ í”Œë ˆì´ì–´
-	static std::atomic<int> TotalConnectPlayerCount;			// ì´ ì—°ê²° íšŸìˆ˜
-	static std::vector<std::atomic<int>> ConnectProcCount;		// Proc ì— ì—°ê²°
+	static std::atomic<int> ConnectSessionCount;				// ÇöÀç ¿¬°áÁßÀÎ ¼¼¼Ç
+	static std::atomic<int> TotalConnectSessionCount;			// ÃÑ ¿¬°á È½¼ö
+	static std::atomic<int> ConnectPlayerCount;					// ÇöÀç ¿¬°áÁßÀÎ ÇÃ·¹ÀÌ¾î
+	static std::atomic<int> TotalConnectPlayerCount;			// ÃÑ ¿¬°á È½¼ö
+	static std::vector<std::atomic<int>> ConnectProcCount;		// Proc ¿¡ ¿¬°á
 
-	static int LogPrintTime;					// ë¡œê·¸ ì¶œë ¥ ì‹œê°„
-	static int LogPrintDelay;				// ë¡œê·¸ ì¶œë ¥ ë”œë ˆì´ ì‹œê°„
+	static int LogPrintTime;					// ·Î±× Ãâ·Â ½Ã°£
+	static int LogPrintDelay;				// ·Î±× Ãâ·Â µô·¹ÀÌ ½Ã°£
 public:
 	static void LockSessionFreeKey() { EnterCriticalSection(&cs_SessionFreeKey); };
 	static void UnLockSessionFreeKey() { LeaveCriticalSection(&cs_SessionFreeKey); };
@@ -85,7 +76,7 @@ static bool OnClientJoin(CSession* pSession);
 
 static unsigned __stdcall AceeptThread(void* arg);		// accept() Thread
 static unsigned __stdcall WorkerThread(void* arg);		// recv, send Thread
-static unsigned __stdcall LogThread(void* arg);			// ë¡œê·¸ ì²˜ë¦¬ Thread
+static unsigned __stdcall LogThread(void* arg);			// ·Î±× Ã³¸® Thread
 
 bool TryChangePid(const SESSION_HANDLE& key, int pid);
 bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket);

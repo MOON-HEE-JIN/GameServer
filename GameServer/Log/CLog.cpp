@@ -117,7 +117,7 @@ unsigned __stdcall LogThread(void* arg)
 	int ret = 0;
 	while (CNetServer::g_ServerON)
 	{
-		//1000 Frames 1�ʴ� 1000 ó��
+		//1000 Frames 1ÃÊ´ç 1000 Ã³¸®
 		ret = WaitForSingleObject(h_hExit, 1);
 
 		CNetServer::ServerLog();
@@ -137,7 +137,7 @@ unsigned __stdcall LogThread(void* arg)
 		}
 	}
 
-	// ���� �̺�Ʈ
+	// Á¾·á ÀÌº¥Æ®
 	LOG_JOB job;
 	while (g_LogJobQueue.TryDequeue(job))
 	{

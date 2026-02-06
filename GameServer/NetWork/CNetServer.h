@@ -18,9 +18,12 @@ public:
 private:
 	static void Init();
 	static int OpenServer();
+	static int ListenSocket(unsigned short _port, SOCKET& out);
 	static unsigned short Port;
+	static unsigned short GmPort;
 private:
 	static SOCKET listen_sock;
+	static SOCKET gm_listen_sock;
 	static int AcceptCnt;
 
 	static std::vector<CSession*> SessionManager;
@@ -31,6 +34,7 @@ private:
 
 	static HANDLE CICP;
 	static HANDLE h_AceeptThread;
+	static HANDLE h_GmAceeptThread;
 	static HANDLE* h_WorkerThread;
 	static HANDLE h_LogThread;
 
@@ -49,6 +53,7 @@ public:
 	static void UnLockSessionFreeKey() { LeaveCriticalSection(&cs_SessionFreeKey); };
 
 	static SOCKET& GetListenSocket() { return listen_sock; }
+	static SOCKET& GetGmListenSocket() { return gm_listen_sock; }
 	static HANDLE GetCICP() { return CICP; }
 
 	static void IncrementAcceptCnt() { AcceptCnt++; }
@@ -77,6 +82,8 @@ static bool OnClientJoin(CSession* pSession);
 static unsigned __stdcall AceeptThread(void* arg);		// accept() Thread
 static unsigned __stdcall WorkerThread(void* arg);		// recv, send Thread
 static unsigned __stdcall LogThread(void* arg);			// 로그 처리 Thread
+
+static unsigned __stdcall GMAceeptThread(void* arg);
 
 bool TryChangePid(const SESSION_HANDLE& key, int pid);
 bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket);

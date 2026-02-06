@@ -133,6 +133,7 @@
     <ClCompile Include="Log\CLog.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MemoryManager\MemoryManager.cpp" />
+    <ClCompile Include="NetWork\CGMSession.cpp" />
     <ClCompile Include="NetWork\CNetServer.cpp" />
     <ClCompile Include="NetWork\CSession.cpp" />
     <ClCompile Include="PacketProc.cpp" />
@@ -151,6 +152,7 @@
     <ClInclude Include="MemoryManager\CHazardMemoryPool_FromGPT.h" />
     <ClInclude Include="MemoryManager\CLockFreeQueue_FromGPT.h" />
     <ClInclude Include="MemoryManager\MemoryManager.h" />
+    <ClInclude Include="NetWork\CGMSession.h" />
     <ClInclude Include="NetWork\CNetServer.h" />
     <ClInclude Include="NetWork\CSession.h" />
     <ClInclude Include="NetWork\NetWorkDefine.h" />

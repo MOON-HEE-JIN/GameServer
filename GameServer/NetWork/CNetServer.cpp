@@ -7,9 +7,13 @@
 #include "NetWorkDefine.h"
 #include "../ProcWorkerThread.h"
 #include "../Log/CLog.h"
+#include "CGMSession.h"
 
 unsigned short CNetServer::Port = 7799;
+unsigned short CNetServer::GmPort = 7700;
 SOCKET CNetServer::listen_sock;
+SOCKET CNetServer::gm_listen_sock;
+
 int CNetServer::AcceptCnt;
 std::vector<CSession*> CNetServer::SessionManager;
 std::vector<SESSION_HANDLE> CNetServer::SessionFreeKey;
@@ -20,6 +24,7 @@ unsigned __int64 CNetServer::AllocSessionID;
 bool CNetServer::g_ServerON;
 HANDLE CNetServer::CICP;
 HANDLE CNetServer::h_AceeptThread;
+HANDLE CNetServer::h_GmAceeptThread;
 HANDLE* CNetServer::h_WorkerThread;
 
 std::vector<CPlayer*> g_PlayerManager;
@@ -118,6 +123,36 @@ unsigned __stdcall AceeptThread(void* arg)
 		
 	}
 	g_LogThread.ILog("=== END THREAD AcceptThread ===");
+	return 0;
+}
+
+unsigned __stdcall GMAceeptThread(void* arg)
+{
+	int retval;
+	int addrlen;
+	SOCKADDR_IN clientaddr;
+	SOCKET client_sock;
+
+	while (CNetServer::g_ServerON)
+	{
+		addrlen = sizeof(clientaddr);
+		client_sock = accept(CNetServer::GetGmListenSocket(), (SOCKADDR*)&clientaddr, &addrlen);
+
+		if (client_sock == INVALID_SOCKET)
+		{
+			retval = GetLastError();
+			if (CNetServer::g_ServerON)
+			{
+				g_LogServer.ELog("GM Accept Error %d", retval);
+			}
+			continue;
+		}
+		g_LogServer.ILog("GM Connect");
+		// 包府 家纳篮 悼扁 肺 包府
+		CGMSession gmSession(client_sock);
+		gmSession.Run();
+	}
+
 	return 0;
 }
 
@@ -408,8 +443,11 @@ void FreePlayer(CPlayer* pPlayer)
 
 void CNetServer::Init()
 {
+	int ret = OpenServer();
+	if (ret != 0)
+		return;
+
 	AcceptCnt = 0;
-	g_ServerON = true;
 	AcceptKey = 0;
 	InitializeCriticalSection(&cs_SessionFreeKey);
 	InitializeCriticalSection(&g_csPlayerManager);
@@ -432,8 +470,6 @@ void CNetServer::Init()
 	{
 		g_PlayerHandleManager.push_back(MAX_CONNECT_COUNT - 1 - i);
 	}
-
-	OpenServer();
 }
 
 int CNetServer::OpenServer()
@@ -451,33 +487,45 @@ int CNetServer::OpenServer()
 	if (CICP == NULL)
 		return WSAGetLastError();
 
-	listen_sock = socket(AF_INET, SOCK_STREAM, 0);
+	ret = ListenSocket(Port, listen_sock);
+	if (ret != 0) return ret;
+	ret = ListenSocket(GmPort, gm_listen_sock);
+	if (ret != 0) return ret;
+
+	return ret;
+}
+
+int CNetServer::ListenSocket(unsigned short _port, SOCKET& out)
+{
+	int ret = 0;
+	out = socket(AF_INET, SOCK_STREAM, 0);
 
 	SOCKADDR_IN serveraddr;
 	ZeroMemory(&serveraddr, sizeof(serveraddr));
 	serveraddr.sin_family = AF_INET;
 	serveraddr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
-	
-	serveraddr.sin_port = htons(Port);
 
-	ret = bind(listen_sock, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
+	serveraddr.sin_port = htons(_port);
 
-	listen(listen_sock, SOMAXCONN);
+	ret = bind(out, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
+	if (ret == SOCKET_ERROR)
+		return ret;
+
+	ret = listen(out, SOMAXCONN);
+	if (ret == SOCKET_ERROR)
+		return ret;
 
 	int optval = 0;
 	int optlen = sizeof(optval);
-	int tmep = setsockopt(listen_sock, SOL_SOCKET, SO_SNDBUF, (char*)&optval, sizeof(optval));
+	int tmep = setsockopt(out, SOL_SOCKET, SO_SNDBUF, (char*)&optval, sizeof(optval));
 
 	linger _linger;
 	_linger.l_onoff = 1;
 	_linger.l_linger = 0;
-	setsockopt(listen_sock, SOL_SOCKET, SO_LINGER, (char*)&_linger, sizeof(linger));
+	setsockopt(out, SOL_SOCKET, SO_LINGER, (char*)&_linger, sizeof(linger));
 
 	int nValue = 1;
-	setsockopt(listen_sock, SOL_SOCKET, TCP_NODELAY, (char*)&nValue, sizeof(nValue));
-	
-	getsockopt(listen_sock, SOL_SOCKET, SO_SNDBUF, (char*)&optval, &optlen);
-	
+	setsockopt(out, SOL_SOCKET, TCP_NODELAY, (char*)&nValue, sizeof(nValue));
 	return ret;
 }
 
@@ -556,7 +604,7 @@ void CNetServer::StartServer()
 	Init();
 
 	h_AceeptThread = (HANDLE)_beginthreadex(NULL, 0, AceeptThread, 0, 0, NULL);
-
+	h_GmAceeptThread = (HANDLE)_beginthreadex(NULL, 0, GMAceeptThread, 0, 0, NULL);
 	h_WorkerThread = new HANDLE[OVERALP_CREATE_THREAD];
 	for (int i = 0; i < OVERALP_CREATE_THREAD; i++)
 	{

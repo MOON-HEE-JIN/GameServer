@@ -22,6 +22,7 @@ private:
 
 void CreateLogThread();
 void WaitLogThread();
+void PostLogMessageExit();
 static unsigned __stdcall LogThread(void* arg);
 
 extern CLog g_LogTemp;

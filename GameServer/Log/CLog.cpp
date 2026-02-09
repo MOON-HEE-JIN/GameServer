@@ -108,7 +108,6 @@ void CreateLogThread()
 
 void PostMessageLogThreadExit()
 {
-	Sleep(1000);
 	SetEvent(h_hExit);
 }
 
@@ -157,7 +156,9 @@ unsigned __stdcall LogThread(void* arg)
 		fclose(fp);
 	}
 
+	// LogThread 는 마지막에 종료되어야 한다
 	Sleep(1000);
+
 	fputs("=== END THREAD LogThread ===\n", stdout);
 
 	return 0;

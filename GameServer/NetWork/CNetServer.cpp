@@ -606,7 +606,6 @@ void CNetServer::ServerLog()
 void CNetServer::StartServer()
 {
 	Init();
-	Sleep(1000);
 	h_AceeptThread = (HANDLE)_beginthreadex(NULL, 0, AceeptThread, 0, 0, NULL);
 	h_GmAceeptThread = (HANDLE)_beginthreadex(NULL, 0, GMAceeptThread, 0, 0, NULL);
 	h_WorkerThread = new HANDLE[OVERALP_CREATE_THREAD];

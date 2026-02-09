@@ -70,6 +70,8 @@ private:
     std::atomic<std::uint64_t> m_debugNewNodes{ 0 };
     std::atomic<std::uint64_t> m_debugRecycledToFreeList{ 0 };
 
+    // main 종료후 이미 삭제된 TLS 구역 접근 안하기
+    std::atomic<bool> m_bShutdowning = false;
 private:
     // =========================
     // Hazard Pointer infrastructure
@@ -285,6 +287,8 @@ private:
     void retire_node(Node* n)
     {
         n->next = nullptr;
+        // ShutDown 시 s_tlsRetired 가 먼저 파괴후에 LF_Queue 를 파괴로 인해
+        // push_back 에서 오류 발생
         s_tlsRetired.push_back(n);
 
         if (s_tlsRetired.size() >= RETIRE_THRESHOLD)
@@ -308,6 +312,8 @@ public:
     {
         return m_debugRecycledToFreeList.load(std::memory_order_relaxed);
     }
+
+    void BeginShutdown() { m_bShutdowning.store(true); }
 
     // -------------------------
     // API 1) Emplace/Destroy (권장)
@@ -336,6 +342,13 @@ public:
         Node* n = node_from_data(p);
         // T 소멸
         p->~T();
+
+        if (m_bShutdowning.load())
+        {
+            push_free_list(n);
+            return;
+        }
+
         // retire
         retire_node(n);
     }

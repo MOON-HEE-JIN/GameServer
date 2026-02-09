@@ -71,7 +71,6 @@ unsigned __stdcall ProcWorkerThread(void* arg)
 	int procID = *(int*)arg;
     timeBeginPeriod(1);
     int ret = 0;
-    Sleep(1000);
     while (CNetServer::g_ServerON)
     {
         //1000 Frames 1초당 1000 처리

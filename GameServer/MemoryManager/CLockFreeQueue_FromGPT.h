@@ -49,18 +49,13 @@ public:
 
     ~CLockFreeQueue_MPSC()
     {
+        m_pool.BeginShutdown();
         // 전제: 파괴 시점에 producer/consumer 스레드가 모두 중지(join)된 상태여야 안전
         T out;
         while (TryDequeue(out)) {}
 
         // 마지막 dummy 회수
         m_pool.Free(m_head);
-
-        // 현재 스레드의 retire 정리(권장)
-        m_pool.ForceReclaimCurrentThread();
-
-        // 모든 스레드가 이미 종료(join)된 상태라면 추가로 호출 가능
-        // m_pool.ClearAfterAllThreadsJoined();
     }
 
     CLockFreeQueue_MPSC(const CLockFreeQueue_MPSC&) = delete;

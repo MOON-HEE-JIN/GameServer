@@ -5,5 +5,5 @@ void main()
 {
 	CNetServer::StartServer();
 
-	CNetServer::StopServer();
+	CNetServer::WiatStopServer();
 }

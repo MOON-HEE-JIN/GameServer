@@ -6,7 +6,7 @@
 
 void CreateProcWorkerThread();
 void WaitProcWorkerThread();
-void PostMessageExit();
+void PostMessageProcThreadExit();
 void DeleteProcWorker();
 
 static unsigned __stdcall ProcLoginWorkerThread(void* arg);

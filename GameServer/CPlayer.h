@@ -14,17 +14,16 @@ public:
 	void Clear() {};
 private:
 	SESSION_HANDLE m_SessionHandle;
-	int m_PlayerHandle;
-	int m_ProcID;
+	int m_PlayerHandle;					// Player 전체 에 대한 handle
+	int m_ZoneID;						// 처리 Zone 에 대한 id
 
 public:
 	SESSION_HANDLE GetSessionHandle() { return m_SessionHandle; }
 	int GetPlayerHandle() { return m_PlayerHandle; }
-	int GetProcID() { return m_ProcID; }
-	
+	int GetZoneID() { return m_ZoneID; }
+
 	void SessionHandleClear() { m_SessionHandle = SESSION_HANDLE(-1, 0); }
-	void ChangeProcID(int pid);
-	
+	void SetZoneID(int zone) { m_ZoneID = zone; };
 public:
 	void SendPacket(CPacket* pPacket);
 };

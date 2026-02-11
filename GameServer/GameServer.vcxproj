@@ -140,6 +140,8 @@
     <ClCompile Include="ProcWorkerThread.cpp" />
     <ClCompile Include="Stub\Serialization.cpp" />
     <ClCompile Include="Stub\SERVER_STUB.cpp" />
+    <ClCompile Include="ZoneManager\CZone.cpp" />
+    <ClCompile Include="ZoneManager\CZoneManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CEntity.h" />
@@ -163,6 +165,8 @@
     <ClInclude Include="Stub\Serialization.h" />
     <ClInclude Include="Stub\SERVER_STUB.h" />
     <ClInclude Include="Stub\StructDef.h" />
+    <ClInclude Include="ZoneManager\CZone.h" />
+    <ClInclude Include="ZoneManager\CZoneManager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

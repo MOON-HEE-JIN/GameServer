@@ -3,7 +3,7 @@
 #include "GameServerDef.h"
 #include "NetWork/CNetServer.h"
 #include "Log/CLog.h"
-
+#include "./ZoneManager/CZoneManager.h"
 #include <Windows.h>
 #include <process.h>
 
@@ -112,8 +112,9 @@ void CProcWorker::DeletePlayerProcess()
     {
 		if (pPlayer == nullptr)
             continue;
-        g_LogGame.ILog("Release Player PHandle : %d, SHandle : %d", pPlayer->GetPlayerHandle(), pPlayer->GetSessionHandle().Handle);
+        //g_LogGame.ILog("Release Player PHandle : %d, SHandle : %d", pPlayer->GetPlayerHandle(), pPlayer->GetSessionHandle().Handle);
         CNetServer::DecrementPlayerCount();
+        g_ZoneManager.LeaveZone(pPlayer);
         pPlayer->SessionHandleClear();
 		FreePlayer(pPlayer);   
     }

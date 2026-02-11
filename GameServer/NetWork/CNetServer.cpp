@@ -8,6 +8,7 @@
 #include "../ProcWorkerThread.h"
 #include "../Log/CLog.h"
 #include "CGMSession.h"
+#include "../ZoneManager/CZoneManager.h"
 
 unsigned short CNetServer::Port = 7799;
 unsigned short CNetServer::GmPort = 7700;
@@ -45,15 +46,27 @@ int CNetServer::LogPrintDelay = 3 * 1000;
 
 void OnRecv(CSession* pSession, int type, CPacket pPacket)
 {
+	if (pSession == nullptr)
+		return;
+
 	int pid = pSession->GetProcID();
+	if (pid < 0 || pid >= ProcThreadCnt)
+	{
+		g_LogServer.ELog("Invalid ProcID on recv. Session:%d ProcID:%d", pSession->GetConnectHandle(), pid);
+		EnqueueDisConnectReq(pSession);
+		return;
+	}
+
 	//g_LogServer.DLog("Enqueue Job type : %d, size : %d", type, pPacket.GetDataSize());
 	g_ProcJobQueue[pid].Enqueue({pSession->GetConnectPlayerHandle(),type, pPacket});
 }
 
 bool OnClientJoin(CSession* pSession)
 {
-	CPlayer* pPlayer = nullptr;
+	if (pSession == nullptr)
+		return false;
 
+	CPlayer* pPlayer = nullptr;
 	int PlayerHandle;
 
 	pPlayer = AllocPlayer(PlayerHandle);
@@ -61,13 +74,18 @@ bool OnClientJoin(CSession* pSession)
 		return false;
 
 	CNetServer::IncrementPlayerCount();
-	pPlayer->Init(pSession->GetConnectKey(), PlayerHandle, pSession->GetProcID());
+	pPlayer->Init(pSession->GetConnectKey(), PlayerHandle, pSession->GetZoneID());
 	pSession->SetConnectPlayerHandle(PlayerHandle);
 
-	g_LogServer.ILog("OnClientJoin SessionHandle : %d, PlayerHandle : %d"
-		, pSession->GetConnectHandle(), PlayerHandle);
+	//g_LogServer.ILog("OnClientJoin SessionHandle : %d, PlayerHandle : %d" , pSession->GetConnectHandle(), PlayerHandle);
 
-	CNetServer::IncrementProcCount(0);
+	if (!g_ZoneManager.EnterZone(pPlayer, 0))
+	{
+		pSession->SetConnectPlayerHandle(-1);
+		FreePlayer(pPlayer);
+		CNetServer::DecrementPlayerCount();
+		return false;
+	}
 
 	return true;
 }
@@ -148,7 +166,7 @@ unsigned __stdcall GMAceeptThread(void* arg)
 			continue;
 		}
 		g_LogServer.ILog("GM Connect");
-		// °ü¸® ¼ÒÄÉÀº µ¿±â ·Î °ü¸®
+		// ê´€ë¦¬ ì†Œì¼€ì€ ë™ê¸° ë¡œ ê´€ë¦¬
 		CGMSession gmSession(client_sock);
 		gmSession.Run();
 	}
@@ -207,11 +225,11 @@ unsigned __stdcall WorkerThread(void* arg)
 				if (err != 64 && err != 997 && err != 0 && err != 10038 && err != 1236)
 				{
 					/*
-					* ERROR_NETNAME_DELETED(64) : TCP ¿¬°áÀÌ ºñÁ¤»óÀû Á¾·á
-					* WSA_IO_PENDING(997) : ÁßÃ¸ I/O ÀÛ¾÷ ³ªÁß¿¡ ¿Ï·á
-					* ERROR_NETWORK_UNREACHABLE(1236) : ³×Æ®¿öÅ© ¿¬°áÀÌ ½Ã½ºÅÛ¿¡ ÀÇÇØ Áß´Ü
-					*	linger ¿É¼ÇÀÌ ¼³Á¤½Ã RST ¸¦ Áï½Ã Àü¼Û RST ¿¡ÀÇ ÇØ ¿¬°áÀÌ Á¾·á µÇ¾î ´ë±âÁßÀÎ recv ¿¡¼­ ¿À·ù
-					* WSAENOTSOCKET(10038) : nonsocket ¿¡ ´ëÇÑ ¼ÒÄÏ ÀÛ¾÷
+					* ERROR_NETNAME_DELETED(64) : TCP Â—ê³Œê»Â é®Â„ï¿½Â•ÂƒÂï¿½Â é†«Â…çŒ·ÂŒ
+					* WSA_IO_PENDING(997) : ä»¥Â‘ï§£ I/O ÂÂ‘Â—Â… Â‚Â˜ä»¥Â‘Â—Â Â™Â„çŒ·ÂŒ
+					* ERROR_NETWORK_UNREACHABLE(1236) : Â„ã…½ÂŠëª„Â›ÂŒÂ Â—ê³Œê»Â Â‹ÂœÂŠã…½Â…ÂœÂ—Â ÂÂ˜Â• ä»¥Â‘Â‹
+					*	linger Â˜ë“­Â…Â˜Â Â„ã…¼Â•Â‹Âœ RST ç‘œ ï§Â‰Â‹Âœ ï¿½Â„Â† RST Â—ÂÂÂ˜ Â• Â—ê³Œê»Â é†«Â…çŒ·ÂŒ ÂÂ˜Â– ÂŒÂ€æ¹²ê³—Â‘Â recv Â—ÂÂ„Âœ Â˜ã…»Â˜
+					* WSAENOTSOCKET(10038) : nonsocket Â—Â ÂŒÂ€Â•Âœ Â†ÂŒè€³Â“ ÂÂ‘Â—Â…
 					printf("WorkerThread GQCS Error %d\n", err);
 					*/
 				}
@@ -229,7 +247,7 @@ unsigned __stdcall WorkerThread(void* arg)
 				{
 					size = pSession->GetRecvBuffer()->GetUseSize();
 
-					//°íÁ¤µÈ Å©±âÀÇ Header Å©±â È®ÀÎ
+					//æ€¨ï¿½Â•ÂÂœ ÂÑˆë¦°ÂÂ˜ Header ÂÑˆë¦° Â™Â•Â
 					if (size < sizeof(st_Header))
 						break;
 
@@ -265,11 +283,11 @@ unsigned __stdcall WorkerThread(void* arg)
 				if (err != 64 && err != 997 && err != 0 && err != 10038 && err != 1236)
 				{
 					/*
-					* ERROR_NETNAME_DELETED(64) : TCP ¿¬°áÀÌ ºñÁ¤»óÀû Á¾·á
-					* WSA_IO_PENDING(997) : ÁßÃ¸ I/O ÀÛ¾÷ ³ªÁß¿¡ ¿Ï·á
-					* ERROR_NETWORK_UNREACHABLE(1236) : ³×Æ®¿öÅ© ¿¬°áÀÌ ½Ã½ºÅÛ¿¡ ÀÇÇØ Áß´Ü
-					*	linger ¿É¼ÇÀÌ ¼³Á¤½Ã RST ¸¦ Áï½Ã Àü¼Û RST ¿¡ÀÇ ÇØ ¿¬°áÀÌ Á¾·á µÇ¾î ´ë±âÁßÀÎ recv ¿¡¼­ ¿À·ù
-					* WSAENOTSOCKET(10038) : nonsocket ¿¡ ´ëÇÑ ¼ÒÄÏ ÀÛ¾÷
+					* ERROR_NETNAME_DELETED(64) : TCP Â—ê³Œê»Â é®Â„ï¿½Â•ÂƒÂï¿½Â é†«Â…çŒ·ÂŒ
+					* WSA_IO_PENDING(997) : ä»¥Â‘ï§£ I/O ÂÂ‘Â—Â… Â‚Â˜ä»¥Â‘Â—Â Â™Â„çŒ·ÂŒ
+					* ERROR_NETWORK_UNREACHABLE(1236) : Â„ã…½ÂŠëª„Â›ÂŒÂ Â—ê³Œê»Â Â‹ÂœÂŠã…½Â…ÂœÂ—Â ÂÂ˜Â• ä»¥Â‘Â‹
+					*	linger Â˜ë“­Â…Â˜Â Â„ã…¼Â•Â‹Âœ RST ç‘œ ï§Â‰Â‹Âœ ï¿½Â„Â† RST Â—ÂÂÂ˜ Â• Â—ê³Œê»Â é†«Â…çŒ·ÂŒ ÂÂ˜Â– ÂŒÂ€æ¹²ê³—Â‘Â recv Â—ÂÂ„Âœ Â˜ã…»Â˜
+					* WSAENOTSOCKET(10038) : nonsocket Â—Â ÂŒÂ€Â•Âœ Â†ÂŒè€³Â“ ÂÂ‘Â—Â…
 					printf("WorkerThread GQCS Error %d\n", err);
 					*/
 				}
@@ -299,12 +317,12 @@ bool TryChangePid(const SESSION_HANDLE& key, int pid)
 	if (pSession == nullptr)
 		return false;
 
-	// ¿¬°á ¹× Àç»ç¿ë È½¼ö Ã¼Å©
+	// Â—ê³Œê» è«› ÂÑŠÂ‚ÑŠÂš ÂšÂŸÂˆÂ˜ ï§£ëŒ„Â
 	if (!pSession->GetBoolConnect()) return false;
 	if (pSession->GetConnectGen() != key.Gen) return false;
 
-	// »ç¿ë Áõ°¡
-	if (!pSession->SetProcID(pid))
+	// Â‚ÑŠÂš ï§Âåª›Â€
+	if (!pSession->SetZoneID(pid))
 		return false;
 	
 	return true;
@@ -316,11 +334,11 @@ bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket)
 	if (pSession == nullptr)
 		return false;
 	
-	// ¿¬°á ¹× Àç»ç¿ë È½¼ö Ã¼Å©
+	// Â—ê³Œê» è«› ÂÑŠÂ‚ÑŠÂš ÂšÂŸÂˆÂ˜ ï§£ëŒ„Â
 	if (!pSession->GetBoolConnect()) return false;
 	if (pSession->GetConnectGen() != key.Gen) return false;
 
-	// »ç¿ë Áõ°¡
+	// Â‚ÑŠÂš ï§Âåª›Â€
 	if (!pSession->AddRef()) return false;
 	
 	if (!pSession->GetBoolConnect() || pSession->GetConnectGen() != key.Gen || pSession->GetBoolbCloseing())
@@ -569,7 +587,7 @@ CSession* CNetServer::AddSession(SOCKET sock)
 
 void CNetServer::DisConnect(CSession* pSession)
 {
-	// ÀÌ¹Ì Á¾·áÁßÀÌ¸é ¹«½Ã
+	// ÂëŒ€ï¿½ é†«Â…çŒ·ÂŒä»¥Â‘ÂëŒ€ãˆƒ è‡¾ëŒÂ‹Âœ
 	if (!pSession->OnStartDisconnect())
 		return;
 
@@ -579,13 +597,11 @@ void CNetServer::DisConnect(CSession* pSession)
 		s_ProcWorker[pSession->GetProcID()]->ReleasePlayer(pPlayer);
 	}
 
-	DecrementProcCount(pSession->GetProcID());
-
 	pSession->OnDisconnect();
 	
 	LockSessionFreeKey();
 	{
-		g_LogServer.ILog("DisConnect Session  Handle : %d, Gen : %d", pSession->GetConnectHandle(), pSession->GetConnectGen());
+		//g_LogServer.ILog("DisConnect Session  Handle : %d, Gen : %d", pSession->GetConnectHandle(), pSession->GetConnectGen());
 		DecrementSessionCount();
 		SessionFreeKey.push_back(SESSION_HANDLE(pSession->GetConnectHandle(), pSession->GetConnectGen()));
 	}
@@ -598,9 +614,11 @@ void CNetServer::ServerLog()
 		return;
 	LogPrintTime = GetTickCount();
 
-	g_LogServer.ILog("S:%d, P:%d, TS:%d, TP:%d\nProc0 : %d, Proc1 : %d, Proc2 : %d",
+	g_LogServer.ILog("S:%d, P:%d, TS:%d, TP:%d Proc0 : %d, Proc1 : %d, Proc2 : %d",
 		ConnectSessionCount.load(), ConnectPlayerCount.load(), TotalConnectSessionCount.load(), TotalConnectPlayerCount.load(),
 		ConnectProcCount[0].load(), ConnectProcCount[1].load(), ConnectProcCount[2].load());
+
+	g_ZoneManager.Log();
 }
 
 void CNetServer::StartServer()

@@ -8,6 +8,7 @@
 #include "../ProcWorkerThread.h"
 #include "../Log/CLog.h"
 #include "CGMSession.h"
+#include "../ZoneManager/CZoneManager.h"
 
 unsigned short CNetServer::Port = 7799;
 unsigned short CNetServer::GmPort = 7700;
@@ -61,13 +62,12 @@ bool OnClientJoin(CSession* pSession)
 		return false;
 
 	CNetServer::IncrementPlayerCount();
-	pPlayer->Init(pSession->GetConnectKey(), PlayerHandle, pSession->GetProcID());
+	pPlayer->Init(pSession->GetConnectKey(), PlayerHandle, pSession->GetZoneID());
 	pSession->SetConnectPlayerHandle(PlayerHandle);
 
-	g_LogServer.ILog("OnClientJoin SessionHandle : %d, PlayerHandle : %d"
-		, pSession->GetConnectHandle(), PlayerHandle);
+	//g_LogServer.ILog("OnClientJoin SessionHandle : %d, PlayerHandle : %d" , pSession->GetConnectHandle(), PlayerHandle);
 
-	CNetServer::IncrementProcCount(0);
+	g_ZoneManager.EnterZone(pPlayer, 0);
 
 	return true;
 }
@@ -304,7 +304,7 @@ bool TryChangePid(const SESSION_HANDLE& key, int pid)
 	if (pSession->GetConnectGen() != key.Gen) return false;
 
 	// 사용 증가
-	if (!pSession->SetProcID(pid))
+	if (!pSession->SetZoneID(pid))
 		return false;
 	
 	return true;
@@ -579,13 +579,11 @@ void CNetServer::DisConnect(CSession* pSession)
 		s_ProcWorker[pSession->GetProcID()]->ReleasePlayer(pPlayer);
 	}
 
-	DecrementProcCount(pSession->GetProcID());
-
 	pSession->OnDisconnect();
 	
 	LockSessionFreeKey();
 	{
-		g_LogServer.ILog("DisConnect Session  Handle : %d, Gen : %d", pSession->GetConnectHandle(), pSession->GetConnectGen());
+		//g_LogServer.ILog("DisConnect Session  Handle : %d, Gen : %d", pSession->GetConnectHandle(), pSession->GetConnectGen());
 		DecrementSessionCount();
 		SessionFreeKey.push_back(SESSION_HANDLE(pSession->GetConnectHandle(), pSession->GetConnectGen()));
 	}
@@ -598,9 +596,11 @@ void CNetServer::ServerLog()
 		return;
 	LogPrintTime = GetTickCount();
 
-	g_LogServer.ILog("S:%d, P:%d, TS:%d, TP:%d\nProc0 : %d, Proc1 : %d, Proc2 : %d",
+	g_LogServer.ILog("S:%d, P:%d, TS:%d, TP:%d Proc0 : %d, Proc1 : %d, Proc2 : %d",
 		ConnectSessionCount.load(), ConnectPlayerCount.load(), TotalConnectSessionCount.load(), TotalConnectPlayerCount.load(),
 		ConnectProcCount[0].load(), ConnectProcCount[1].load(), ConnectProcCount[2].load());
+
+	g_ZoneManager.Log();
 }
 
 void CNetServer::StartServer()

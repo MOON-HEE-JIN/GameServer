@@ -4,6 +4,7 @@
 #include "GameServerDef.h"
 #include "Stub/EnumDef.h"
 #include "Log/CLog.h"
+#include "ZoneManager/CZoneManager.h"
 
 int PacketProc::DO_GAME_LOOPBACK(CPlayer* pTarget, CPacket& pReqPacket)
 {
@@ -39,19 +40,23 @@ int PacketProc::DO_GAME_CHANGEPID(CPlayer* pTarget, CPacket& pReqPacket)
     st_CTS_ChangePid data;
     pReqPacket >> data;
     
-    if (data.pid >= ProcThreadCnt || data.pid < 0)
+    int ret = 0;
+
+    if (data.pid > g_ZoneManager.GetMaxZoneCnt() || data.pid < 0)
         return ERROR_CODE::NOT_FIND_PID;
 
-    if (pTarget->GetProcID() == data.pid)
+    if (pTarget->GetZoneID() == data.pid)
         return ERROR_CODE::EQUAL_PID;
 
-    if (!TryChangePid(pTarget->GetSessionHandle(), data.pid))
+    // ±âÁ¸ Zone
+    ret = g_ZoneManager.LeaveZone(pTarget);
+    if (ret == false)
         return ERROR_CODE::NOT_FIND_PID;
+    ret = g_ZoneManager.EnterZone(pTarget, data.pid);
+    if (ret == false)
+        return ERROR_CODE::NOT_FIND_PID;
+    //g_LogGame.DLog("Change ProcID : %d -> %d", pTarget->GetZoneID(), data.pid);
 
-    //g_LogGame.DLog("Change ProcID : %d -> %d", pTarget->GetProcID(), data.pid);
-    
-    pTarget->ChangeProcID(data.pid);
-    
     st_STC_ChangePid req;
     req.ret = ERROR_CODE::NOT_ERROR;
     CPacket reqPacket;

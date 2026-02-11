@@ -17,7 +17,7 @@ typedef struct st_ObjectHandle
 	st_ObjectHandle() : Handle(-1), Gen(0) {};
 	st_ObjectHandle(int _id, int _gen) : Handle(_id), Gen(_gen) {};
 
-} SESSION_HANDLE, PLAYER_HANDLE;
+} SESSION_HANDLE;
 
 typedef struct st_PACKET_JOB
 {

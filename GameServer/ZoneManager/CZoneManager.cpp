@@ -14,37 +14,6 @@ CZoneManager::CZoneManager()
 		g_LogServer.ILog("Create Zone Index : %d, ProcQ : %d, Max : %d", i, i % ProcThreadCnt, 2000);
 	}
 
-
-bool CZoneManager::IsValidZoneID(int zoneid) const
-{
-	return zoneid >= 0 && zoneid < static_cast<int>(m_vecZone.size());
-}
-
-int CZoneManager::GetProcID(int zone)
-{
-	if (!IsValidZoneID(zone))
-		return 0;
-
-	return m_vecZone[zone]->GetPid();
-}
-
-	if (pPlayer == nullptr || !IsValidZoneID(zoneid))
-		return false;
-
-	if (pPlayer == nullptr)
-		return false;
-
-	int zoneID = pPlayer->GetZoneID();
-	if (!IsValidZoneID(zoneID))
-		return false;
-
-	return m_vecZone[zoneID]->LeaveZone(pPlayer);
-	buf.reserve(m_maxZoneCnt * 16);
-
-		const int zoneCount = m_vecZone[i]->m_Cnt.load();
-
-		stream << "Zone[" << i << "] : " << zoneCount << " ";
-		Total += zoneCount;
 	CZone* pZone = new CZone(m_maxZoneCnt, 0, 2000);
 	m_vecZone.push_back(pZone);
 	g_LogServer.ILog("Create Zone Index : %d, ProcQ : %d, Max : %d", m_maxZoneCnt, 0, 2000);
@@ -59,26 +28,51 @@ CZoneManager::~CZoneManager()
 	}
 }
 
+bool CZoneManager::IsValidZoneID(int zoneid) const
+{
+	return zoneid >= 0 && zoneid < static_cast<int>(m_vecZone.size());
+}
+
+int CZoneManager::GetProcID(int zone)
+{
+	if (!IsValidZoneID(zone))
+		return 0;
+
+	return m_vecZone[zone]->GetPid();
+}
+
 bool CZoneManager::EnterZone(CPlayer* pPlayer, int zoneid)
 {
+	if (pPlayer == nullptr || !IsValidZoneID(zoneid))
+		return false;
+
 	return m_vecZone[zoneid]->EnterZone(pPlayer);
 }
 
 bool CZoneManager::LeaveZone(CPlayer* pPlayer)
 {
-	return m_vecZone[pPlayer->GetZoneID()]->LeaveZone(pPlayer);
+	if (pPlayer == nullptr)
+		return false;
+
+	int zoneID = pPlayer->GetZoneID();
+	if (!IsValidZoneID(zoneID))
+		return false;
+
+	return m_vecZone[zoneID]->LeaveZone(pPlayer);
 }
 
 void CZoneManager::Log()
 {
 	std::string buf;
+	buf.reserve(m_maxZoneCnt * 16);
 	int Total = 0;
-	for (int i = 0; i < m_maxZoneCnt; i++)
+	for (int i = 0; i <= m_maxZoneCnt; i++)
 	{
+		const int zoneCount = m_vecZone[i]->m_Cnt.load();
 		std::ostringstream stream;
-		stream << "Zone[" << i << "] : " << m_vecZone[i]->m_Cnt.load() << " ";
+		stream << "Zone[" << i << "] : " << zoneCount << " ";
 		buf.append(stream.str());
-		Total += m_vecZone[i]->m_Cnt.load();
+		Total += zoneCount;
 	}
 
 	std::ostringstream stream;

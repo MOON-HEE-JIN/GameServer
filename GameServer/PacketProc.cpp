@@ -60,18 +60,18 @@ int PacketProc::DO_GAME_CHANGEPID(CPlayer* pTarget, CPacket& pReqPacket)
         return ERROR_CODE::EQUAL_PID;
 
     if (!g_ZoneManager.LeaveZone(pTarget))
+        return ERROR_CODE::NOT_FIND_PID;
 
     if (!g_ZoneManager.EnterZone(pTarget, data.pid))
     {
-        // ̵    Zone  õ
+        // 새 Zone 에 입장 실패시 기존 Zone 으로 다시 입장
         if (!g_ZoneManager.EnterZone(pTarget, prevZoneID))
         {
             g_LogServer.ELog("Zone rollback fail. PlayerHandle:%d PrevZone:%d NewZone:%d",
                 pTarget->GetPlayerHandle(), prevZoneID, data.pid);
         }
+       return ERROR_CODE::NOT_FIND_PID;
     }
-    if (ret == false)
-        return ERROR_CODE::NOT_FIND_PID;
     //g_LogGame.DLog("Change ProcID : %d -> %d", pTarget->GetZoneID(), data.pid);
 
     st_STC_ChangePid req;

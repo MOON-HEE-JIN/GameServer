@@ -69,6 +69,9 @@
     <ClCompile Include="Log\CLog.cpp">
       <Filter>소스 파일\LOG</Filter>
     </ClCompile>
+    <ClCompile Include="NetWork\CGMSession.cpp">
+      <Filter>소스 파일\NetWork</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PacketProc.h">
@@ -130,6 +133,9 @@
     </ClInclude>
     <ClInclude Include="Log\CLog.h">
       <Filter>소스 파일\LOG</Filter>
+    </ClInclude>
+    <ClInclude Include="NetWork\CGMSession.h">
+      <Filter>소스 파일\NetWork</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

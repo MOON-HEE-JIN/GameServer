@@ -8,7 +8,8 @@ public:
 	CZoneManager();
 	~CZoneManager();
 private:
-	std::vector<CZone*> m_vecZone; // Zone ¹è¿­
+	bool IsValidZoneID(int zoneid) const;
+	int GetProcID(int zone);
 	int m_maxZoneCnt;
 public:
 	int GetMaxZoneCnt(){ return m_maxZoneCnt; }

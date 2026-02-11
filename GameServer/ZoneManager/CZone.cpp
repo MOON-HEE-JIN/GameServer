@@ -11,15 +11,27 @@ CZone::CZone(int managerIndex, int pid, int max)
 
 CZone::~CZone()
 {
-	// Zone Àº CPlayer* ÀÇ °ü¸®(º¸°ü) ¸¸ ÇÑ´Ù new/delte ¿¡ °ü¿©ÇÏÁö ¾Ê´Â´Ù
-}
-
-bool CZone::EnterZone(CPlayer* pPlayer)
-{
-	if (m_vecPlayer.size() >= m_MaxZoneManagerCount)
+	if (pPlayer == nullptr)
 		return false;
 
-	if (!TryChangePid(pPlayer->GetSessionHandle(), m_ID))
+	if (m_mapIDtoIndex.find(pPlayer->GetPlayerHandle()) != m_mapIDtoIndex.end())
+		return false;
+
+	m_mapIDtoIndex[pPlayer->GetPlayerHandle()] = static_cast<int>(m_vecPlayer.size());
+}
+
+	if (pPlayer == nullptr || m_vecPlayer.empty())
+		return false;
+
+	const int leaveIndex = iter->second;
+	if (leaveIndex < 0 || leaveIndex >= static_cast<int>(m_vecPlayer.size()))
+		return false;
+
+	CPlayer* ePlayer = m_vecPlayer.back();
+		//  Ä¡ Player Ä¡ Ù²Ù±
+		m_vecPlayer[leaveIndex] = ePlayer;
+		m_mapIDtoIndex[ePlayer->GetPlayerHandle()] = leaveIndex;
+
 		return false;
 
 	pPlayer->SetZoneID(m_ID);
@@ -36,17 +48,17 @@ bool CZone::LeaveZone(CPlayer* pPlayer)
 {
 	std::unordered_map<int, int>::iterator iter = m_mapIDtoIndex.find(pPlayer->GetPlayerHandle());
 	
-	// ÇØ´ç Zone ¿¡ Player ¾øÀ½
+	// í•´ë‹¹ Zone ì— Player ì—†ìŒ
 	if (iter == m_mapIDtoIndex.end())
 		return false;
 
-	// ³¡ÀÚ¸®¿¡ ÀÖ´Â Player
+	// ëìžë¦¬ì— ìžˆëŠ” Player
 	CPlayer* ePlayer = m_vecPlayer[m_vecPlayer.size() - 1];
 
-	// Áö¿ö¾ß ÇÒ Player °¡ ³¡ÀÚ¸® °¡ ¾Æ´Ï¶ó¸é ¹Ù²ãÁÖ±â
+	// ì§€ì›Œì•¼ í•  Player ê°€ ëìžë¦¬ ê°€ ì•„ë‹ˆë¼ë©´ ë°”ê¿”ì£¼ê¸°
 	if (ePlayer != pPlayer)
 	{
-		// ¸¶Áö¸· À§Â÷ Player À§Ä¡ ¹Ù²Ù±â
+		// ë§ˆì§€ë§‰ ìœ„ì°¨ Player ìœ„ì¹˜ ë°”ê¾¸ê¸°
 		m_vecPlayer[iter->second] = ePlayer;
 		m_mapIDtoIndex[ePlayer->GetPlayerHandle()] = iter->second;
 	}

@@ -225,11 +225,11 @@ unsigned __stdcall WorkerThread(void* arg)
 				if (err != 64 && err != 997 && err != 0 && err != 10038 && err != 1236)
 				{
 					/*
-					* ERROR_NETNAME_DELETED(64) : TCP 연결이 비정상적 종료
-					* WSA_IO_PENDING(997) : 중첩 I/O 작업 나중에 완료
-					* ERROR_NETWORK_UNREACHABLE(1236) : 네트워크 연결이 시스템에 의해 중단
-					*	linger 옵션이 설정시 RST 를 즉시 전송 RST 에의 해 연결이 종료 되어 대기중인 recv 에서 오류
-					* WSAENOTSOCKET(10038) : nonsocket 에 대한 소켓 작업
+					* ERROR_NETNAME_DELETED(64) : TCP 곌껐 鍮�� 醫猷
+					* WSA_IO_PENDING(997) : 以泥 I/O  以 猷
+					* ERROR_NETWORK_UNREACHABLE(1236) : ㅽ몄 곌껐 ㅽ  以
+					*	linger 듭 ㅼ RST 瑜 利 � RST   곌껐 醫猷  湲곗 recv  ㅻ
+					* WSAENOTSOCKET(10038) : nonsocket   耳 
 					printf("WorkerThread GQCS Error %d\n", err);
 					*/
 				}
@@ -247,7 +247,7 @@ unsigned __stdcall WorkerThread(void* arg)
 				{
 					size = pSession->GetRecvBuffer()->GetUseSize();
 
-					//고정된 크기의 Header 크기 확인
+					//怨� ш린 Header ш린 
 					if (size < sizeof(st_Header))
 						break;
 
@@ -283,11 +283,11 @@ unsigned __stdcall WorkerThread(void* arg)
 				if (err != 64 && err != 997 && err != 0 && err != 10038 && err != 1236)
 				{
 					/*
-					* ERROR_NETNAME_DELETED(64) : TCP 연결이 비정상적 종료
-					* WSA_IO_PENDING(997) : 중첩 I/O 작업 나중에 완료
-					* ERROR_NETWORK_UNREACHABLE(1236) : 네트워크 연결이 시스템에 의해 중단
-					*	linger 옵션이 설정시 RST 를 즉시 전송 RST 에의 해 연결이 종료 되어 대기중인 recv 에서 오류
-					* WSAENOTSOCKET(10038) : nonsocket 에 대한 소켓 작업
+					* ERROR_NETNAME_DELETED(64) : TCP 곌껐 鍮�� 醫猷
+					* WSA_IO_PENDING(997) : 以泥 I/O  以 猷
+					* ERROR_NETWORK_UNREACHABLE(1236) : ㅽ몄 곌껐 ㅽ  以
+					*	linger 듭 ㅼ RST 瑜 利 � RST   곌껐 醫猷  湲곗 recv  ㅻ
+					* WSAENOTSOCKET(10038) : nonsocket   耳 
 					printf("WorkerThread GQCS Error %d\n", err);
 					*/
 				}
@@ -317,11 +317,11 @@ bool TryChangePid(const SESSION_HANDLE& key, int pid)
 	if (pSession == nullptr)
 		return false;
 
-	// 연결 및 재사용 횟수 체크
+	// 곌껐 諛 ъъ  泥댄
 	if (!pSession->GetBoolConnect()) return false;
 	if (pSession->GetConnectGen() != key.Gen) return false;
 
-	// 사용 증가
+	// ъ 利媛
 	if (!pSession->SetZoneID(pid))
 		return false;
 	
@@ -334,11 +334,11 @@ bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket)
 	if (pSession == nullptr)
 		return false;
 	
-	// 연결 및 재사용 횟수 체크
+	// 곌껐 諛 ъъ  泥댄
 	if (!pSession->GetBoolConnect()) return false;
 	if (pSession->GetConnectGen() != key.Gen) return false;
 
-	// 사용 증가
+	// ъ 利媛
 	if (!pSession->AddRef()) return false;
 	
 	if (!pSession->GetBoolConnect() || pSession->GetConnectGen() != key.Gen || pSession->GetBoolbCloseing())
@@ -587,7 +587,7 @@ CSession* CNetServer::AddSession(SOCKET sock)
 
 void CNetServer::DisConnect(CSession* pSession)
 {
-	// 이미 종료중이면 무시
+	// 대� 醫猷以대㈃ 臾댁
 	if (!pSession->OnStartDisconnect())
 		return;
 

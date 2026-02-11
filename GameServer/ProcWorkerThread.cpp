@@ -59,7 +59,7 @@ void WaitProcWorkerThread()
     }
 }
 
-void PostMessageExit()
+void PostMessageProcThreadExit()
 {
 	// 종료 이벤트 발생
 	SetEvent(s_hExit);

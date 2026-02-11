@@ -21,6 +21,7 @@ private:
 };
 
 void CreateLogThread();
+void PostMessageLogThreadExit();
 void WaitLogThread();
 static unsigned __stdcall LogThread(void* arg);
 

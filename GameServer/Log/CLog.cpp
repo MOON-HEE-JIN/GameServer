@@ -106,6 +106,11 @@ void CreateLogThread()
 	h_hExit = CreateEvent(NULL, TRUE, FALSE, NULL);
 }
 
+void PostMessageLogThreadExit()
+{
+	SetEvent(h_hExit);
+}
+
 void WaitLogThread()
 {
 	WaitForSingleObject(s_hLogHandle, INFINITE);
@@ -137,7 +142,6 @@ unsigned __stdcall LogThread(void* arg)
 		}
 	}
 
-	// Á¾·á ÀÌº¥Æ®
 	LOG_JOB job;
 	while (g_LogJobQueue.TryDequeue(job))
 	{
@@ -151,6 +155,9 @@ unsigned __stdcall LogThread(void* arg)
 		fprintf(fp, job.log.c_str());
 		fclose(fp);
 	}
+
+	// LogThread 는 마지막에 종료되어야 한다
+	Sleep(1000);
 
 	fputs("=== END THREAD LogThread ===\n", stdout);
 

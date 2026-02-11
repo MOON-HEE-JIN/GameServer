@@ -11,20 +11,27 @@ CZone::CZone(int managerIndex, int pid, int max)
 
 CZone::~CZone()
 {
-	// Zone Àº CPlayer* ÀÇ °ü¸®(º¸°ü) ¸¸ ÇÑ´Ù new/delte ¿¡ °ü¿©ÇÏÁö ¾Ê´Â´Ù
+
 }
 
 bool CZone::EnterZone(CPlayer* pPlayer)
 {
+	if (pPlayer == nullptr)
+		return false;
+
 	if (m_vecPlayer.size() >= m_MaxZoneManagerCount)
 		return false;
 
+	// ì´ë¯¸ ì¡´ìž¬ í•œë‹¤ë©´
+	if (m_mapIDtoIndex.find(pPlayer->GetPlayerHandle()) != m_mapIDtoIndex.end())
+		return false;
+	
 	if (!TryChangePid(pPlayer->GetSessionHandle(), m_ID))
 		return false;
 
 	pPlayer->SetZoneID(m_ID);
 
-	m_mapIDtoIndex[pPlayer->GetPlayerHandle()] = m_vecPlayer.size();
+	m_mapIDtoIndex[pPlayer->GetPlayerHandle()] = static_cast<int>(m_vecPlayer.size());
 	m_vecPlayer.push_back(pPlayer);
 
 	CNetServer::IncrementProcCount(m_ZonePid);
@@ -34,21 +41,29 @@ bool CZone::EnterZone(CPlayer* pPlayer)
 
 bool CZone::LeaveZone(CPlayer* pPlayer)
 {
+	if (pPlayer == nullptr || m_vecPlayer.empty())
+		return false;
+
 	std::unordered_map<int, int>::iterator iter = m_mapIDtoIndex.find(pPlayer->GetPlayerHandle());
 	
-	// ÇØ´ç Zone ¿¡ Player ¾øÀ½
+	// í•´ë‹¹ Zone ì— Player ì—†ìŒ
 	if (iter == m_mapIDtoIndex.end())
 		return false;
 
-	// ³¡ÀÚ¸®¿¡ ÀÖ´Â Player
-	CPlayer* ePlayer = m_vecPlayer[m_vecPlayer.size() - 1];
+	// ì‚¬ë¼ì§ˆ Player index
+	const int leaveIndex = iter->second;
+	if (leaveIndex < 0 || leaveIndex >= static_cast<int>(m_vecPlayer.size()))
+		return false;
 
-	// Áö¿ö¾ß ÇÒ Player °¡ ³¡ÀÚ¸® °¡ ¾Æ´Ï¶ó¸é ¹Ù²ãÁÖ±â
+	// ëìžë¦¬ì— ìžˆëŠ” Player
+	CPlayer* ePlayer = m_vecPlayer.back();
+	
+	// ì§€ì›Œì•¼ í•  Player ê°€ ëìžë¦¬ ê°€ ì•„ë‹ˆë¼ë©´ ë°”ê¿”ì£¼ê¸°
 	if (ePlayer != pPlayer)
 	{
-		// ¸¶Áö¸· À§Â÷ Player À§Ä¡ ¹Ù²Ù±â
-		m_vecPlayer[iter->second] = ePlayer;
-		m_mapIDtoIndex[ePlayer->GetPlayerHandle()] = iter->second;
+		// ë§ˆì§€ë§‰ ìœ„ì°¨ Player ìœ„ì¹˜ ë°”ê¾¸ê¸°
+		m_vecPlayer[leaveIndex] = ePlayer;
+		m_mapIDtoIndex[ePlayer->GetPlayerHandle()] = leaveIndex;
 	}
 
 	m_vecPlayer.pop_back();

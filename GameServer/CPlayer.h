@@ -14,8 +14,8 @@ public:
 	void Clear() {};
 private:
 	SESSION_HANDLE m_SessionHandle;
-	int m_PlayerHandle;					// Player 전체 에 대한 handle
-	int m_ZoneID;						// 처리 Zone 에 대한 id
+  int m_PlayerHandle;					// Player 전체 에 대한 handle
+  int m_ZoneID;						    // 처리 Zone 에 대한 id
 
 public:
 	SESSION_HANDLE GetSessionHandle() { return m_SessionHandle; }

@@ -100,10 +100,10 @@ void CSession::OnDisconnect()
 
 bool CSession::AddRef()
 {
-	// 종료중이 아니라면
+	// 연결 중인가
 	if(!bCloseing.load())
 	{
-		// 사용 증가
+		// 사용중
 		RefCnt.fetch_add(1);
 		if (!bCloseing.load())
 		{

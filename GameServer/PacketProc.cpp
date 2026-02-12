@@ -64,7 +64,7 @@ int PacketProc::DO_GAME_CHANGEPID(CPlayer* pTarget, CPacket& pReqPacket)
 
     if (!g_ZoneManager.EnterZone(pTarget, data.pid))
     {
-        // Zone 에 못들어가면 기존 Zone 으로 이동
+        // 새 Zone 에 입장 실패시 기존 Zone 으로 다시 입장
         if (!g_ZoneManager.EnterZone(pTarget, prevZoneID))
         {
             g_LogServer.ELog("Zone rollback fail. PlayerHandle:%d PrevZone:%d NewZone:%d",

@@ -1,4 +1,4 @@
-﻿#include "CZone.h"
+#include "CZone.h"
 #include "../NetWork/CNetServer.h"
 
 CZone::CZone(int managerIndex, int pid, int max)
@@ -22,7 +22,7 @@ bool CZone::EnterZone(CPlayer* pPlayer)
 	if (m_vecPlayer.size() >= m_MaxZoneManagerCount)
 		return false;
 
-	// Player 를 못찾았으면 나가기
+	// 이미 존재 한다면
 	if (m_mapIDtoIndex.find(pPlayer->GetPlayerHandle()) != m_mapIDtoIndex.end())
 		return false;
 	
@@ -46,22 +46,22 @@ bool CZone::LeaveZone(CPlayer* pPlayer)
 
 	std::unordered_map<int, int>::iterator iter = m_mapIDtoIndex.find(pPlayer->GetPlayerHandle());
 	
-	// 해당 플레이어 없으며 나가기
+	// 해당 Zone 에 Player 없음
 	if (iter == m_mapIDtoIndex.end())
 		return false;
 
-	// 마지막 Player Index
+	// 사라질 Player index
 	const int leaveIndex = iter->second;
 	if (leaveIndex < 0 || leaveIndex >= static_cast<int>(m_vecPlayer.size()))
 		return false;
 
-	// 마지막 플레이어 가져오기
+	// 끝자리에 있는 Player
 	CPlayer* ePlayer = m_vecPlayer.back();
 	
-	// 마지막 플레이어 와 같지 않다면 교체
+	// 지워야 할 Player 가 끝자리 가 아니라면 바꿔주기
 	if (ePlayer != pPlayer)
 	{
-		// 교체
+		// 마지막 위차 Player 위치 바꾸기
 		m_vecPlayer[leaveIndex] = ePlayer;
 		m_mapIDtoIndex[ePlayer->GetPlayerHandle()] = leaveIndex;
 	}
@@ -72,5 +72,4 @@ bool CZone::LeaveZone(CPlayer* pPlayer)
 	m_Cnt.fetch_sub(1);
 	return true;
 }
-
 

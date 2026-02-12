@@ -1,4 +1,4 @@
-﻿#include "CZoneManager.h"
+#include "CZoneManager.h"
 
 #include "../GameServerDef.h"
 #include "../Log/CLog.h"
@@ -21,7 +21,7 @@ CZoneManager::CZoneManager()
 
 CZoneManager::~CZoneManager()
 {
-	// Zone 삭제
+	// 임시 소멸자
 	for (int i = 0; i <= m_maxZoneCnt; i++)
 	{
 		delete m_vecZone[i];

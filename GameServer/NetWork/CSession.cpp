@@ -1,4 +1,4 @@
-#include "CSession.h"
+﻿#include "CSession.h"
 #include <WS2tcpip.h>
 #include "../Stub/StructDef.h"
 #include "../Log/CLog.h"
@@ -109,7 +109,7 @@ bool CSession::AddRef()
 		{
 			return true;
 		}
-		// 사용중이 아니면 감소
+		// 사용 끝나고 나가기
 		RefCnt.fetch_sub(1);
 	}
 	return false;
@@ -119,7 +119,7 @@ void CSession::CloseSocket()
 {
 	bool bf = false;
 
-	// 이미 종료중 이라면
+	// 중복 종료 막기
 	if (!bCloseing.compare_exchange_strong(bf, true))
 		return;
 	
@@ -247,7 +247,6 @@ bool CSession::RecvPost()
 		ret = WSAGetLastError();
 		if (ret != WSA_IO_PENDING)
 		{
-			// 10054 : 연결이 강제로 끊김, 10053 : 비정상 종료
 			if (ret != 10054 && ret != 10053)
 			{
 				//printf("-- Recv WSARecv Error %d ---\n", ret);

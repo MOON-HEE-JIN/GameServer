@@ -7,11 +7,11 @@
 
 class PacketProc : public Stub<CPlayer, CPacket>
 {
-	// StubÀ»(¸¦) ÅëÇØ »ó¼ÓµÊ
+	// Stubì„(ë¥¼) í†µí•´ ìƒì†ë¨
 	int DO_GAME_LOOPBACK(CPlayer* pTarget, CPacket& pReqPacket) override;
 	int DO_ERROR_PACKET(CPlayer* pTarget, CPacket& pReqPacket) override;
 	int DO_ERROR_RESULT(CPlayer* pTarget, int ret, int type) override;
 
-	// StubÀ»(¸¦) ÅëÇØ »ó¼ÓµÊ
+	// Stubì„(ë¥¼) í†µí•´ ìƒì†ë¨
 	int DO_GAME_CHANGEPID(CPlayer* pTarget, CPacket& pReqPacket) override;
 };

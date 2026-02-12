@@ -14,8 +14,8 @@ public:
 	void Clear() {};
 private:
 	SESSION_HANDLE m_SessionHandle;
-	int m_PlayerHandle;					// Player ÀüÃ¼ ¿¡ ´ëÇÑ handle
-	int m_ZoneID;						// Ã³¸® Zone ¿¡ ´ëÇÑ id
+  int m_PlayerHandle;					// Player ì „ì²´ ì— ëŒ€í•œ handle
+  int m_ZoneID;						    // ì²˜ë¦¬ Zone ì— ëŒ€í•œ id
 
 public:
 	SESSION_HANDLE GetSessionHandle() { return m_SessionHandle; }

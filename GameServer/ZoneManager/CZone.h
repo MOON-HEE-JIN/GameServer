@@ -11,11 +11,11 @@ public:
 	
 	std::atomic<int> m_Cnt;
 private:
-	int m_ID;		// CZoneManager ¿¡¼­ °ü¸®ÇÏ´Â ID;
-	int m_ZonePid;	// ÇØ´ç Zone À» °ü¸®ÇØÁÖ´Â ProcQ_ID;
-	int m_MaxZoneManagerCount;		// Zone ¿¡¼­ °ü¸® ÇÏ´Â ÃÖ´ë Player ¼ö
+	int m_ID;		// CZoneManager ì—ì„œ ê´€ë¦¬í•˜ëŠ” ID;
+	int m_ZonePid;	// í•´ë‹¹ Zone ì„ ê´€ë¦¬í•´ì£¼ëŠ” ProcQ_ID;
+	int m_MaxZoneManagerCount;		// Zone ì—ì„œ ê´€ë¦¬ í•˜ëŠ” ìµœëŒ€ Player ìˆ˜
 
-	std::vector<CPlayer*> m_vecPlayer; // Zone ÀÌ °ü¸®ÇÏ°í ÀÖ´Â Player
+	std::vector<CPlayer*> m_vecPlayer; // Zone ì´ ê´€ë¦¬í•˜ê³  ìˆëŠ” Player
 	std::unordered_map<int, int> m_mapIDtoIndex;	// <PlayerHandle,m_vecPlayerIndex>
 public:
 	bool EnterZone(CPlayer* pPlayer);

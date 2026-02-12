@@ -34,7 +34,7 @@ void CreateProcWorkerThread()
         s_ProcWorkerThreadHandles.push_back(h);
     }
 
-    // manual-reset(TRUE), ÃÊ±â ºñ½ÅÈ£(FALSE)
+    // manual-reset(TRUE), ì´ˆê¸° ë¹„ì‹ í˜¸(FALSE)
     s_hExit = CreateEvent(NULL, TRUE, FALSE, NULL);
 }
 
@@ -61,7 +61,7 @@ void WaitProcWorkerThread()
 
 void PostMessageProcThreadExit()
 {
-	// Á¾·á ÀÌº¥Æ® ¹ß»ý
+	// ì¢…ë£Œ ì´ë²¤íŠ¸ ë°œìƒ
 	SetEvent(s_hExit);
 }
 
@@ -73,19 +73,19 @@ unsigned __stdcall ProcWorkerThread(void* arg)
     int ret = 0;
     while (CNetServer::g_ServerON)
     {
-        //1000 Frames 1ÃÊ´ç 1000 Ã³¸®
+        //1000 Frames 1ì´ˆë‹¹ 1000 ì²˜ë¦¬
         ret = WaitForSingleObject(s_hExit, 1);
 
-        // Á¾·á ÀÌº¥Æ®
+        // ì¢…ë£Œ ì´ë²¤íŠ¸
         if (ret == WAIT_OBJECT_0)
             break;
 
-		// ÆÐÅ¶ Ã³¸®
+		// íŒ¨í‚· ì²˜ë¦¬
 		s_ProcWorker[procID]->Proc();
 
 
 
-		// ÇÃ·¹ÀÌ¾î »èÁ¦ Ã³¸®
+		// í”Œë ˆì´ì–´ ì‚­ì œ ì²˜ë¦¬
 		s_ProcWorker[procID]->DeletePlayerProcess();
     }
 

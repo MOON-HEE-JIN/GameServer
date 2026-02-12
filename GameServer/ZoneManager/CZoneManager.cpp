@@ -5,7 +5,7 @@
 #include <sstream>
 CZoneManager::CZoneManager()
 {
-	// 해당 생성자 는 임시 Packet 을 처리하는 ProcThread * 2 만큼 생성후 ProcThread 당 Zone 2개식 할당
+	// 해당 생성자는 임시로 작성함 나중에 Zone 에 사용될 Map 완성시 수정해야함
 	m_maxZoneCnt = ProcThreadCnt * 2;
 	for (int i = 0; i < m_maxZoneCnt; i++)
 	{

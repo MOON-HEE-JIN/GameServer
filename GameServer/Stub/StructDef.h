@@ -23,3 +23,4 @@ struct st_STC_LoopBack
 	__int32		ret;
 	__int64		data;
 };
+

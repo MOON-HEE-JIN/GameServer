@@ -9,8 +9,8 @@ public:
 	CPacket(const CPacket& other);
 	virtual ~CPacket();
 
-	void Release();//ÆĞÅ¶ ÆÄ±«
-	virtual void Clear();//ÆĞÅ¶ Ã»¼Ò
+	void Release();//íŒ¨í‚· íŒŒê´´
+	virtual void Clear();//íŒ¨í‚· ì²­ì†Œ
 
 	int GetBufferSize() { return m_iBufferSize; }
 	int GetDataSize() { return (int)(WritePointer - ReadPointer); }
@@ -35,7 +35,7 @@ private:
 	char* EndPointer;
 
 public:
-	//¿¬»êÀÚ ¿À¹ö·Îµù
+	//ì—°ì‚°ì ì˜¤ë²„ë¡œë”©
 	CPacket& operator = (const CPacket& clSrcPacket);
 	//INPUT
 	CPacket& operator << (unsigned char value);
@@ -71,7 +71,7 @@ public:
 template<typename T>
 inline CPacket& CPacket::operator<<(T value)
 {
-	// TODO: ¿©±â¿¡ return ¹®À» »ğÀÔÇÕ´Ï´Ù.
+	// TODO: ì—¬ê¸°ì— return ë¬¸ì„ ì‚½ì…í•©ë‹ˆë‹¤.
 	int len = Serialization(GetWriteBuffPtr(), value);
 	MoveWritePos(len);
 	return *this;
@@ -80,9 +80,10 @@ inline CPacket& CPacket::operator<<(T value)
 template<typename T>
 inline CPacket& CPacket::operator>>(T& value)
 {
-	// TODO: ¿©±â¿¡ return ¹®À» »ğÀÔÇÕ´Ï´Ù.
+	// TODO: ì—¬ê¸°ì— return ë¬¸ì„ ì‚½ì…í•©ë‹ˆë‹¤.
 	int len = UnSerialization(GetReadBuffPtr(), value);
 	MoveReadPos(len);
 	return *this;
 }
+
 

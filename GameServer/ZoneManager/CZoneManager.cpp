@@ -5,7 +5,7 @@
 #include <sstream>
 CZoneManager::CZoneManager()
 {
-	// 해당 생성자 는 임시 Packet 을 처리하는 ProcThread * 2 만큼 생성후 ProcThread 당 Zone 2개식 할당
+	// ?대떦 ?앹꽦?????꾩떆 Packet ??泥섎━?섎뒗 ProcThread * 2 留뚰겮 ?앹꽦??ProcThread ??Zone 2媛쒖떇 ?좊떦
 	m_maxZoneCnt = ProcThreadCnt * 2;
 	for (int i = 0; i < m_maxZoneCnt; i++)
 	{
@@ -21,7 +21,7 @@ CZoneManager::CZoneManager()
 
 CZoneManager::~CZoneManager()
 {
-	// 임시 소멸자
+	// ?꾩떆 ?뚮㈇??
 	for (int i = 0; i <= m_maxZoneCnt; i++)
 	{
 		delete m_vecZone[i];

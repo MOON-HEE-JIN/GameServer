@@ -64,7 +64,7 @@ int PacketProc::DO_GAME_CHANGEPID(CPlayer* pTarget, CPacket& pReqPacket)
 
     if (!g_ZoneManager.EnterZone(pTarget, data.pid))
     {
-        // 새 Zone 에 입장 실패시 기존 Zone 으로 다시 입장
+        // ??Zone ???낆옣 ?ㅽ뙣??湲곗〈 Zone ?쇰줈 ?ㅼ떆 ?낆옣
         if (!g_ZoneManager.EnterZone(pTarget, prevZoneID))
         {
             g_LogServer.ELog("Zone rollback fail. PlayerHandle:%d PrevZone:%d NewZone:%d",
@@ -82,3 +82,4 @@ int PacketProc::DO_GAME_CHANGEPID(CPlayer* pTarget, CPacket& pReqPacket)
     TrySend(pTarget->GetSessionHandle(), GAME::CHANGEPID, &reqPacket);
     return ERROR_CODE::NOT_ERROR;
 }
+

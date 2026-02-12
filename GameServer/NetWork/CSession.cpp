@@ -100,16 +100,16 @@ void CSession::OnDisconnect()
 
 bool CSession::AddRef()
 {
-	// 연결 중인가
+	// ?곌껐 以묒씤媛
 	if(!bCloseing.load())
 	{
-		// 사용중
+		// ?ъ슜以?
 		RefCnt.fetch_add(1);
 		if (!bCloseing.load())
 		{
 			return true;
 		}
-		// 사용중이 아니면 감소
+		// ?ъ슜以묒씠 ?꾨땲硫?媛먯냼
 		RefCnt.fetch_sub(1);
 	}
 	return false;
@@ -119,7 +119,7 @@ void CSession::CloseSocket()
 {
 	bool bf = false;
 
-	// 이미 종료중 이라면
+	// ?대? 醫낅즺以??대씪硫?
 	if (!bCloseing.compare_exchange_strong(bf, true))
 		return;
 	
@@ -247,7 +247,7 @@ bool CSession::RecvPost()
 		ret = WSAGetLastError();
 		if (ret != WSA_IO_PENDING)
 		{
-			// 10054 : 연결이 강제로 끊김, 10053 : 비정상 종료
+			// 10054 : ?곌껐??媛뺤젣濡??딄?, 10053 : 鍮꾩젙??醫낅즺
 			if (ret != 10054 && ret != 10053)
 			{
 				//printf("-- Recv WSARecv Error %d ---\n", ret);

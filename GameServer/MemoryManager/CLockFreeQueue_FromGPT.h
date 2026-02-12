@@ -50,11 +50,11 @@ public:
     ~CLockFreeQueue_MPSC()
     {
         m_pool.BeginShutdown();
-        // ÀüÁ¦: ÆÄ±« ½ÃÁ¡¿¡ producer/consumer ½º·¹µå°¡ ¸ğµÎ ÁßÁö(join)µÈ »óÅÂ¿©¾ß ¾ÈÀü
+        // ì „ì œ: íŒŒê´´ ì‹œì ì— producer/consumer ìŠ¤ë ˆë“œê°€ ëª¨ë‘ ì¤‘ì§€(join)ëœ ìƒíƒœì—¬ì•¼ ì•ˆì „
         T out;
         while (TryDequeue(out)) {}
 
-        // ¸¶Áö¸· dummy È¸¼ö
+        // ë§ˆì§€ë§‰ dummy íšŒìˆ˜
         m_pool.Free(m_head);
     }
 
@@ -66,14 +66,14 @@ public:
     void Enqueue(const T& v)
     {
         Node* n = m_pool.Alloc();
-        // placement-new ÇüÅÂ°¡ ¾Æ´Ï¶ó poolÀÌ raw Node¸¦ ÁÖ¹Ç·Î ´ëÀÔÀ¸·Î ÃÊ±âÈ­
+        // placement-new í˜•íƒœê°€ ì•„ë‹ˆë¼ poolì´ raw Nodeë¥¼ ì£¼ë¯€ë¡œ ëŒ€ì…ìœ¼ë¡œ ì´ˆê¸°í™”
         n->data = v;
         n->next.store(nullptr, std::memory_order_relaxed);
 
-        // 1) tailÀ» »õ ³ëµå·Î ±³Ã¼ (¸ÖÆ¼ producer °æÀï ÁöÁ¡)
+        // 1) tailì„ ìƒˆ ë…¸ë“œë¡œ êµì²´ (ë©€í‹° producer ê²½ìŸ ì§€ì )
         Node* prev = m_tail.exchange(n, std::memory_order_acq_rel);
 
-        // 2) prev->next¿¡ »õ ³ëµå¸¦ publish (consumer´Â acquire·Î ÀĞÀ½)
+        // 2) prev->nextì— ìƒˆ ë…¸ë“œë¥¼ publish (consumerëŠ” acquireë¡œ ì½ìŒ)
         prev->next.store(n, std::memory_order_release);
     }
 
@@ -88,8 +88,8 @@ public:
         prev->next.store(n, std::memory_order_release);
     }
 
-    // Consumer(´ÜÀÏ): pop
-    // empty¸é false, ¼º°øÇÏ¸é out Ã¤¿ì°í true
+    // Consumer(ë‹¨ì¼): pop
+    // emptyë©´ false, ì„±ê³µí•˜ë©´ out ì±„ìš°ê³  true
     bool TryDequeue(T& out)
     {
         Node* h = m_head;
@@ -97,8 +97,8 @@ public:
 
         if (next == nullptr)
         {
-            // Áß¿ä: producer°¡ tailÀº ¹Ù²å´Âµ¥ prev->next publish°¡ ¾ÆÁ÷ÀÏ ¼ö ÀÖÀ½.
-            // head != tail ÀÌ¸é "ÁøÂ¥ empty"°¡ ¾Æ´Ô ¡æ Àá±ñ ´ë±â ÈÄ ÀçÈ®ÀÎ
+            // ì¤‘ìš”: producerê°€ tailì€ ë°”ê¿¨ëŠ”ë° prev->next publishê°€ ì•„ì§ì¼ ìˆ˜ ìˆìŒ.
+            // head != tail ì´ë©´ "ì§„ì§œ empty"ê°€ ì•„ë‹˜ â†’ ì ê¹ ëŒ€ê¸° í›„ ì¬í™•ì¸
             if (m_tail.load(std::memory_order_acquire) != h)
             {
                 do
@@ -113,27 +113,28 @@ public:
             }
             else
             {
-                return false; // ÁøÂ¥ empty
+                return false; // ì§„ì§œ empty
             }
         }
 
-        // next´Â ½ÇÁ¦ µ¥ÀÌÅÍ ³ëµå
+        // nextëŠ” ì‹¤ì œ ë°ì´í„° ë…¸ë“œ
         out = std::move(next->data);
 
-        // dummy¸¦ ÇÑ Ä­ ÀüÁø: next°¡ »õ dummy°¡ µÊ
+        // dummyë¥¼ í•œ ì¹¸ ì „ì§„: nextê°€ ìƒˆ dummyê°€ ë¨
         m_head = next;
 
-        // ÀÌÀü dummy(h)´Â consumer°¡ ´Üµ¶À¸·Î retire/free
+        // ì´ì „ dummy(h)ëŠ” consumerê°€ ë‹¨ë…ìœ¼ë¡œ retire/free
         m_pool.Free(h);
         return true;
     }
 
-    // µğ¹ö±×/°üÂû¿ë(Á¤È® size´Â MPSC¿¡¼­µµ ºñ¿ë/Á¤È®¼º ¹®Á¦°¡ ÀÖ¾î º¸Åë ¾È µÒ)
+    // ë””ë²„ê·¸/ê´€ì°°ìš©(ì •í™• sizeëŠ” MPSCì—ì„œë„ ë¹„ìš©/ì •í™•ì„± ë¬¸ì œê°€ ìˆì–´ ë³´í†µ ì•ˆ ë‘ )
     int GetMemoryPoolSize() { return m_pool.GetAllocCount(); }
 
-    // ÇÊ¿ä ½Ã: consumer ½º·¹µå¿¡¼­ ÁÖ±âÀûÀ¸·Î È£ÃâÇØ reclaim ¾Ğ¹Ú ÁÙÀÌ±â
+    // í•„ìš” ì‹œ: consumer ìŠ¤ë ˆë“œì—ì„œ ì£¼ê¸°ì ìœ¼ë¡œ í˜¸ì¶œí•´ reclaim ì••ë°• ì¤„ì´ê¸°
     void ForceReclaimOnThisThread()
     {
         m_pool.ForceReclaimCurrentThread();
     }
 };
+

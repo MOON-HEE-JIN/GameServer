@@ -12,16 +12,16 @@
 #include <algorithm>
 #include <stdexcept>
 
-// Hazard Pointer + Retire/Reclaim ±â¹İ ´Ü¼ø ¸Ş¸ğ¸® Ç®
+// Hazard Pointer + Retire/Reclaim ê¸°ë°˜ ë‹¨ìˆœ ë©”ëª¨ë¦¬ í’€
 // - Lock-free free-list (Treiber stack)
-// - Hazard pointer·Î pop ½Ã ABA/Use-after-free ¹æÁö
-// - Retire list´Â TLS (thread_local)·Î º¸°ü ÈÄ ÀÓ°èÄ¡¸¶´Ù ½ºÄµ/È¸¼ö
+// - Hazard pointerë¡œ pop ì‹œ ABA/Use-after-free ë°©ì§€
+// - Retire listëŠ” TLS (thread_local)ë¡œ ë³´ê´€ í›„ ì„ê³„ì¹˜ë§ˆë‹¤ ìŠ¤ìº”/íšŒìˆ˜
 //
-// ÁÖÀÇ/±Ô¾à:
-// 1) MAX_THREADS¸¦ ÃÊ°úÇÏ´Â ½º·¹µå°¡ µ¿½Ã¿¡ ÀÌ Ç®À» »ç¿ëÇÏ¸é ¿¹¿Ü/assert·Î ½ÇÆĞÇÕ´Ï´Ù.
-// 2) Ç® ÆÄ±« ½ÃÁ¡¿¡ ´Ù¸¥ ½º·¹µå°¡ ¿©ÀüÈ÷ ³ëµå¸¦ ÂüÁ¶ÇÒ ¼ö ÀÖÀ¸¸é ¾ÈÀüÇÑ delete°¡ ºÒ°¡´ÉÇÕ´Ï´Ù.
-//    µû¶ó¼­ ClearAfterAllThreadsJoined()´Â "¸ğµç ÀÛ¾÷ ½º·¹µå°¡ Á¾·á(join)"µÈ µÚ¿¡¸¸ È£ÃâÇØ¾ß ÇÕ´Ï´Ù.
-// 3) µ¿ÀÏ T¿¡ ´ëÇØ ¿©·¯ CHMemoryPool<T> ÀÎ½ºÅÏ½º¸¦ ¿î¿µÇÏ´Â °æ¿ì retire TLS°¡ Ç®º° ºĞ¸®µÇÁö ¾ÊÀ¸¹Ç·Î ºñ±ÇÀå.
+// ì£¼ì˜/ê·œì•½:
+// 1) MAX_THREADSë¥¼ ì´ˆê³¼í•˜ëŠ” ìŠ¤ë ˆë“œê°€ ë™ì‹œì— ì´ í’€ì„ ì‚¬ìš©í•˜ë©´ ì˜ˆì™¸/assertë¡œ ì‹¤íŒ¨í•©ë‹ˆë‹¤.
+// 2) í’€ íŒŒê´´ ì‹œì ì— ë‹¤ë¥¸ ìŠ¤ë ˆë“œê°€ ì—¬ì „íˆ ë…¸ë“œë¥¼ ì°¸ì¡°í•  ìˆ˜ ìˆìœ¼ë©´ ì•ˆì „í•œ deleteê°€ ë¶ˆê°€ëŠ¥í•©ë‹ˆë‹¤.
+//    ë”°ë¼ì„œ ClearAfterAllThreadsJoined()ëŠ” "ëª¨ë“  ì‘ì—… ìŠ¤ë ˆë“œê°€ ì¢…ë£Œ(join)"ëœ ë’¤ì—ë§Œ í˜¸ì¶œí•´ì•¼ í•©ë‹ˆë‹¤.
+// 3) ë™ì¼ Tì— ëŒ€í•´ ì—¬ëŸ¬ CHMemoryPool<T> ì¸ìŠ¤í„´ìŠ¤ë¥¼ ìš´ì˜í•˜ëŠ” ê²½ìš° retire TLSê°€ í’€ë³„ ë¶„ë¦¬ë˜ì§€ ì•Šìœ¼ë¯€ë¡œ ë¹„ê¶Œì¥.
 
 template <typename T, int MAX_THREADS = 16, std::size_t RETIRE_THRESHOLD = 512>
 class CHMemoryPool
@@ -33,12 +33,12 @@ private:
     struct Node
     {
         Node* next;
-        // T ¸¦ ´ã±â À§ÇÑ ¹öÆÛ¸¦ storge ÇÏ´Âµ¥ ÀÌ Á¤·ÄÀ» T¿¡ ´ëÇÑ Á¤·Ä·Î ¸ÂÃã
+        // T ë¥¼ ë‹´ê¸° ìœ„í•œ ë²„í¼ë¥¼ storge í•˜ëŠ”ë° ì´ ì •ë ¬ì„ Tì— ëŒ€í•œ ì •ë ¬ë¡œ ë§ì¶¤
         alignas(T) std::byte storage[sizeof(T)];
 
         T* data_ptr() noexcept
         {
-            // placement-new·Î »ı¼ºµÈ T¿¡ Á¢±ÙÇÒ ¶§ launder »ç¿ë ±ÇÀå
+            // placement-newë¡œ ìƒì„±ëœ Tì— ì ‘ê·¼í•  ë•Œ launder ì‚¬ìš© ê¶Œì¥
             return std::launder(reinterpret_cast<T*>(storage));
         }
         const T* data_ptr() const noexcept
@@ -46,31 +46,31 @@ private:
             return std::launder(reinterpret_cast<const T*>(storage));
         }
         /*
-        std::launder ´Â »õ·Î¿î °´Ã¼ÀÇ ÇÒ´çÀ» ÀÇ¹ÌÇÑ´Ù
-        ÇÊ¿äÇÑ ÀÌÀ¯
-        alloc ÇÒ¶§ placement new ¸¦ ÅëÇØ¼­ »ı¼ºÀÚ¸¦ È£Ãâ ÇÔ¿¡ µû¶ó °´Ã¼ÀÇ »ı¸íÁÖ±âÀÇ ½ÃÀÛÀ» ÀÇ¹ÌÇÑ´Ù
-        free ÇÒ¶§ ¼Ò¸êÀÚ È£ÃâÀ» ÅëÇØ¼­ °´Ã¼ÀÇ Á¾·á¸¦ ÀÇ¹ÌÇÑ´Ù
-        ÀÌ¶§ alloc ½Ã »ç¿ëÇÑÁÖ ¸¦ ´Ù½Ã ÁÙ°æ¿ì
+        std::launder ëŠ” ìƒˆë¡œìš´ ê°ì²´ì˜ í• ë‹¹ì„ ì˜ë¯¸í•œë‹¤
+        í•„ìš”í•œ ì´ìœ 
+        alloc í• ë•Œ placement new ë¥¼ í†µí•´ì„œ ìƒì„±ìë¥¼ í˜¸ì¶œ í•¨ì— ë”°ë¼ ê°ì²´ì˜ ìƒëª…ì£¼ê¸°ì˜ ì‹œì‘ì„ ì˜ë¯¸í•œë‹¤
+        free í• ë•Œ ì†Œë©¸ì í˜¸ì¶œì„ í†µí•´ì„œ ê°ì²´ì˜ ì¢…ë£Œë¥¼ ì˜ë¯¸í•œë‹¤
+        ì´ë•Œ alloc ì‹œ ì‚¬ìš©í•œì£¼ ë¥¼ ë‹¤ì‹œ ì¤„ê²½ìš°
         ex
             T* p = alloc;
             free(p);
             T* q = alloc;
 
-        ÀÌ¿¡ µû¸£¸é ÄÄÆÄÀÏ·¯´Â µ¿ÀÏÇÑ ÇÒ´ç¹ŞÀº ÁÖ¼Ò¸¦ »ç¿ëÇÏ°Ô µÇ´Âµ¥ ¿©±â¼­ p ¿Í q ¸¦ µ¿ÀÏ °´Ã¼·Î ¿©±æ¼ö ÀÖ´Â ¿©Áö°¡ »ı±ä´Ù
-        ±×·¸´Ù¸é ÀÌÀü¿¡ Á¢±ÙÇØ¼­ ¾òÀº p ¿¡ ´ëÇÑ °ªÀ» À¯ÁöÇÑÃ¼ »ç¿ëÇÒ¼ö ÀÖ°í ¹®Á¦ °¡ ¹ß»ıÇÑ´Ù
+        ì´ì— ë”°ë¥´ë©´ ì»´íŒŒì¼ëŸ¬ëŠ” ë™ì¼í•œ í• ë‹¹ë°›ì€ ì£¼ì†Œë¥¼ ì‚¬ìš©í•˜ê²Œ ë˜ëŠ”ë° ì—¬ê¸°ì„œ p ì™€ q ë¥¼ ë™ì¼ ê°ì²´ë¡œ ì—¬ê¸¸ìˆ˜ ìˆëŠ” ì—¬ì§€ê°€ ìƒê¸´ë‹¤
+        ê·¸ë ‡ë‹¤ë©´ ì´ì „ì— ì ‘ê·¼í•´ì„œ ì–»ì€ p ì— ëŒ€í•œ ê°’ì„ ìœ ì§€í•œì²´ ì‚¬ìš©í• ìˆ˜ ìˆê³  ë¬¸ì œ ê°€ ë°œìƒí•œë‹¤
 
-        std::lanunder Àº ÄÄÆÄÀÏ·¯ ¿¡°Ô ÇØ´ç ÁÖ¼ÒÀÇ »õ·Î¿î °´Ã¼ÀÓÀ» ¾Ë¸°´Ù(ÇÒ´çX, »õ·Î¿î °´Ã¼)
+        std::lanunder ì€ ì»´íŒŒì¼ëŸ¬ ì—ê²Œ í•´ë‹¹ ì£¼ì†Œì˜ ìƒˆë¡œìš´ ê°ì²´ì„ì„ ì•Œë¦°ë‹¤(í• ë‹¹X, ìƒˆë¡œìš´ ê°ì²´)
         */
     };
 
     // free-list head
     std::atomic<Node*> m_freeList{ nullptr };
 
-    // µğ¹ö±×/Åë°è: »õ·Î ÇÒ´çµÈ ³ëµå ¼ö, free-list·Î È¸¼öµÈ ³ëµå ¼ö
+    // ë””ë²„ê·¸/í†µê³„: ìƒˆë¡œ í• ë‹¹ëœ ë…¸ë“œ ìˆ˜, free-listë¡œ íšŒìˆ˜ëœ ë…¸ë“œ ìˆ˜
     std::atomic<std::uint64_t> m_debugNewNodes{ 0 };
     std::atomic<std::uint64_t> m_debugRecycledToFreeList{ 0 };
 
-    // main Á¾·áÈÄ ÀÌ¹Ì »èÁ¦µÈ TLS ±¸¿ª Á¢±Ù ¾ÈÇÏ±â
+    // main ì¢…ë£Œí›„ ì´ë¯¸ ì‚­ì œëœ TLS êµ¬ì—­ ì ‘ê·¼ ì•ˆí•˜ê¸°
     std::atomic<bool> m_bShutdowning = false;
 private:
     // =========================
@@ -79,7 +79,7 @@ private:
 
     struct HazardRecord
     {
-        std::atomic<std::uintptr_t> ownerToken; // 0ÀÌ¸é ¹Ì»ç¿ë
+        std::atomic<std::uintptr_t> ownerToken; // 0ì´ë©´ ë¯¸ì‚¬ìš©
         std::atomic<Node*> protectedPtr;
 
         HazardRecord() : ownerToken(0), protectedPtr(nullptr) {}
@@ -87,14 +87,14 @@ private:
 
     static HazardRecord s_hazardRecs[MAX_THREADS];
 
-    // °¢ ½º·¹µå°¡ ÀÚ±â ÅäÅ«À» °®°í hazard record¸¦ 1°³ ¼ÒÀ¯
+    // ê° ìŠ¤ë ˆë“œê°€ ìê¸° í† í°ì„ ê°–ê³  hazard recordë¥¼ 1ê°œ ì†Œìœ 
     class HazardOwner
     {
     public:
         HazardOwner()
         {
-            // ½º·¹µåº° °íÀ¯ ÅäÅ«: TLS ÁÖ¼Ò¸¦ »ç¿ë(ÇÁ·Î¼¼½º ³» À¯ÀÏ¼º °¡Á¤)
-            // (Ç¥ÁØÀûÀ¸·Î "ÁÖ¼Ò À¯ÀÏ¼º"Àº »ç½Ç»ó º¸ÀåµÇ´Â °ü¿ëÀû ÆĞÅÏ)
+            // ìŠ¤ë ˆë“œë³„ ê³ ìœ  í† í°: TLS ì£¼ì†Œë¥¼ ì‚¬ìš©(í”„ë¡œì„¸ìŠ¤ ë‚´ ìœ ì¼ì„± ê°€ì •)
+            // (í‘œì¤€ì ìœ¼ë¡œ "ì£¼ì†Œ ìœ ì¼ì„±"ì€ ì‚¬ì‹¤ìƒ ë³´ì¥ë˜ëŠ” ê´€ìš©ì  íŒ¨í„´)
             m_token = reinterpret_cast<std::uintptr_t>(&s_tlsTokenMarker);
             if (m_token == 0)
                 m_token = 1;
@@ -114,14 +114,14 @@ private:
 
             if (!m_rec)
             {
-                // ½º·¹µå ½½·Ô °í°¥: ¸í½ÃÀûÀ¸·Î ½ÇÆĞ
+                // ìŠ¤ë ˆë“œ ìŠ¬ë¡¯ ê³ ê°ˆ: ëª…ì‹œì ìœ¼ë¡œ ì‹¤íŒ¨
                 throw std::runtime_error("CHMemoryPool: Hazard slot exhausted (MAX_THREADS exceeded).");
             }
         }
 
         ~HazardOwner()
         {
-            // ½º·¹µå Á¾·á ½ÃÁ¡¿¡ hazard pointer¸¦ ºñ¿ì°í ½½·Ô ¹İÈ¯
+            // ìŠ¤ë ˆë“œ ì¢…ë£Œ ì‹œì ì— hazard pointerë¥¼ ë¹„ìš°ê³  ìŠ¬ë¡¯ ë°˜í™˜
             if (m_rec)
             {
                 m_rec->protectedPtr.store(nullptr, std::memory_order_release);
@@ -139,7 +139,7 @@ private:
         HazardRecord* m_rec{ nullptr };
         std::uintptr_t m_token{ 0 };
 
-        static inline thread_local int s_tlsTokenMarker = 0; // ÅäÅ«¿ë ¸¶Ä¿
+        static inline thread_local int s_tlsTokenMarker = 0; // í† í°ìš© ë§ˆì»¤
     };
 
     static thread_local HazardOwner s_tlsHazOwner;
@@ -149,7 +149,7 @@ private:
         return s_tlsHazOwner.protected_ptr_ref();
     }
 
-    // retire list: ½º·¹µå ·ÎÄÃ
+    // retire list: ìŠ¤ë ˆë“œ ë¡œì»¬
     static thread_local std::vector<Node*> s_tlsRetired;
 
 private:
@@ -159,8 +159,8 @@ private:
 
     static Node* node_from_data(T* p) noexcept
     {
-        // Node´Â T¸¦ Á÷Á¢ ¸â¹ö·Î Æ÷ÇÔÇÏÁö ¾ÊÀ¸¹Ç·Î standard-layoutÀÌ°í,
-        // storageÀÇ ¿ÀÇÁ¼ÂÀº ¾ÈÀüÇÏ°Ô Ãë±Ş °¡´É
+        // NodeëŠ” Të¥¼ ì§ì ‘ ë©¤ë²„ë¡œ í¬í•¨í•˜ì§€ ì•Šìœ¼ë¯€ë¡œ standard-layoutì´ê³ ,
+        // storageì˜ ì˜¤í”„ì…‹ì€ ì•ˆì „í•˜ê²Œ ì·¨ê¸‰ ê°€ëŠ¥
         std::byte* b = reinterpret_cast<std::byte*>(p);
         Node* n = reinterpret_cast<Node*>(b - offsetof(Node, storage));
         return n;
@@ -173,15 +173,15 @@ private:
         {
             Node* head = m_freeList.load(std::memory_order_acquire);
 
-            // ÇöÀç head¸¦ hazard·Î º¸È£
+            // í˜„ì¬ headë¥¼ hazardë¡œ ë³´í˜¸
             tls_hazard_ptr().store(head, std::memory_order_release);
 
-            // head°¡ ¹Ù²î¾úÀ¸¸é ´Ù½Ã
+            // headê°€ ë°”ë€Œì—ˆìœ¼ë©´ ë‹¤ì‹œ
             if (head != m_freeList.load(std::memory_order_acquire))
             {
-                // Àç½Ãµµ Àü¿¡ º¸È£¸¦ ÇØÁ¦ÇÏÁö ¾ÊÀ¸¸é
-                // ´Ù¸¥ ½º·¹µå¿¡¼­ ÇØ´ç ³ëµå¸¦ È¸¼öÇÏÁö ¸øÇÏ°Ô µÇ¾î
-                // retire/reclaimÀÌ Áö¿¬µÉ ¼ö ÀÖÀ½.
+                // ì¬ì‹œë„ ì „ì— ë³´í˜¸ë¥¼ í•´ì œí•˜ì§€ ì•Šìœ¼ë©´
+                // ë‹¤ë¥¸ ìŠ¤ë ˆë“œì—ì„œ í•´ë‹¹ ë…¸ë“œë¥¼ íšŒìˆ˜í•˜ì§€ ëª»í•˜ê²Œ ë˜ì–´
+                // retire/reclaimì´ ì§€ì—°ë  ìˆ˜ ìˆìŒ.
                 tls_hazard_ptr().store(nullptr, std::memory_order_release);
                 continue;
             }
@@ -200,16 +200,16 @@ private:
                 std::memory_order_acq_rel,
                 std::memory_order_relaxed))
             {
-                // pop ¼º°ø: º¸È£ ÇØÁ¦
+                // pop ì„±ê³µ: ë³´í˜¸ í•´ì œ
                 tls_hazard_ptr().store(nullptr, std::memory_order_release);
                 head->next = nullptr;
                 return head;
             }
 
-            // compare_exchange_weak ½ÇÆĞ·Î Àç½ÃµµÇÏ´Â °æ¿ì¿¡µµ
-            // ´ÙÀ½ ¹İº¹ ÀÌÀü¿¡ hazard¸¦ ÇØÁ¦ÇÏÁö ¾ÊÀ¸¸é µ¿ÀÏÇÑ ¹®Á¦ ¹ß»ı °¡´É.
-            // ¿©±â¼­´Â ·çÇÁ »ó´Ü¿¡¼­ ´Ù½Ã º¸È£¸¦ ¼³Á¤ÇÏ¹Ç·Î ¸í½ÃÀû ÇØÁ¦´Â ¼±ÅÃÀûÀÌÁö¸¸,
-            // ¾ÈÀüÀ» À§ÇØ ¸í½ÃÀûÀ¸·Î ÇØÁ¦.
+            // compare_exchange_weak ì‹¤íŒ¨ë¡œ ì¬ì‹œë„í•˜ëŠ” ê²½ìš°ì—ë„
+            // ë‹¤ìŒ ë°˜ë³µ ì´ì „ì— hazardë¥¼ í•´ì œí•˜ì§€ ì•Šìœ¼ë©´ ë™ì¼í•œ ë¬¸ì œ ë°œìƒ ê°€ëŠ¥.
+            // ì—¬ê¸°ì„œëŠ” ë£¨í”„ ìƒë‹¨ì—ì„œ ë‹¤ì‹œ ë³´í˜¸ë¥¼ ì„¤ì •í•˜ë¯€ë¡œ ëª…ì‹œì  í•´ì œëŠ” ì„ íƒì ì´ì§€ë§Œ,
+            // ì•ˆì „ì„ ìœ„í•´ ëª…ì‹œì ìœ¼ë¡œ í•´ì œ.
             tls_hazard_ptr().store(nullptr, std::memory_order_release);
         }
     }
@@ -240,7 +240,7 @@ private:
                 out.push_back(p);
         }
 
-        // ½ºÄµ ºñ¿ëÀ» ÁÙÀÌ±â À§ÇØ Á¤·Ä ÈÄ ÀÌÁø Å½»ö
+        // ìŠ¤ìº” ë¹„ìš©ì„ ì¤„ì´ê¸° ìœ„í•´ ì •ë ¬ í›„ ì´ì§„ íƒìƒ‰
         std::sort(out.begin(), out.end());
         out.erase(std::unique(out.begin(), out.end()), out.end());
     }
@@ -260,12 +260,12 @@ private:
             bool inUse = std::binary_search(hazards.begin(), hazards.end(), n);
             if (!inUse)
             {
-                // ´Ù¸¥ ½º·¹µå°¡ º¸È£ÇÏÁö ¾Ê´Â ³ëµå´Â free-list·Î È¸¼ö
+                // ë‹¤ë¥¸ ìŠ¤ë ˆë“œê°€ ë³´í˜¸í•˜ì§€ ì•ŠëŠ” ë…¸ë“œëŠ” free-listë¡œ íšŒìˆ˜
                 push_free_list(n);
             }
             else
             {
-                // ¾ÆÁ÷ »ç¿ë ÁßÀÌ¸é À¯Áö
+                // ì•„ì§ ì‚¬ìš© ì¤‘ì´ë©´ ìœ ì§€
                 retired[write++] = n;
             }
         }
@@ -287,8 +287,8 @@ private:
     void retire_node(Node* n)
     {
         n->next = nullptr;
-        // ShutDown ½Ã s_tlsRetired °¡ ¸ÕÀú ÆÄ±«ÈÄ¿¡ LF_Queue ¸¦ ÆÄ±«·Î ÀÎÇØ
-        // push_back ¿¡¼­ ¿À·ù ¹ß»ı
+        // ShutDown ì‹œ s_tlsRetired ê°€ ë¨¼ì € íŒŒê´´í›„ì— LF_Queue ë¥¼ íŒŒê´´ë¡œ ì¸í•´
+        // push_back ì—ì„œ ì˜¤ë¥˜ ë°œìƒ
         s_tlsRetired.push_back(n);
 
         if (s_tlsRetired.size() >= RETIRE_THRESHOLD)
@@ -298,9 +298,9 @@ private:
 public:
     CHMemoryPool() = default;
 
-    // ¼Ò¸êÀÚ´Â ¾ÈÀüÇÑ Àü¿ª Á¤¸®¸¦ ÀÚµ¿À¸·Î ÇÒ ¼ö ¾ø½À´Ï´Ù.
-    // (´Ù¸¥ ½º·¹µå°¡ ¿©ÀüÈ÷ Á¢±ÙÇÒ ¼ö ÀÖ´ÂÁö ÆÇ´Ü ºÒ°¡ + ´Ù¸¥ ½º·¹µå TLS retire Á¢±Ù ºÒ°¡)
-    // µû¶ó¼­ ¸í½ÃÀû Á¤¸® ÇÔ¼ö Á¦°ø.
+    // ì†Œë©¸ìëŠ” ì•ˆì „í•œ ì „ì—­ ì •ë¦¬ë¥¼ ìë™ìœ¼ë¡œ í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤.
+    // (ë‹¤ë¥¸ ìŠ¤ë ˆë“œê°€ ì—¬ì „íˆ ì ‘ê·¼í•  ìˆ˜ ìˆëŠ”ì§€ íŒë‹¨ ë¶ˆê°€ + ë‹¤ë¥¸ ìŠ¤ë ˆë“œ TLS retire ì ‘ê·¼ ë¶ˆê°€)
+    // ë”°ë¼ì„œ ëª…ì‹œì  ì •ë¦¬ í•¨ìˆ˜ ì œê³µ.
     ~CHMemoryPool() = default;
 
     std::uint64_t DebugNewNodes() const noexcept
@@ -316,7 +316,7 @@ public:
     void BeginShutdown() { m_bShutdowning.store(true); }
 
     // -------------------------
-    // API 1) Emplace/Destroy (±ÇÀå)
+    // API 1) Emplace/Destroy (ê¶Œì¥)
     // -------------------------
     template <class... Args>
     T* Emplace(Args&&... args)
@@ -328,7 +328,7 @@ public:
         }
         catch (...)
         {
-            // »ı¼º ½ÇÆĞ ½Ã ³ëµå´Â ¹Ù·Î free-list¿¡ µ¹·Á³õÀ½
+            // ìƒì„± ì‹¤íŒ¨ ì‹œ ë…¸ë“œëŠ” ë°”ë¡œ free-listì— ëŒë ¤ë†“ìŒ
             push_free_list(n);
             throw;
         }
@@ -340,7 +340,7 @@ public:
         if (!p) return;
 
         Node* n = node_from_data(p);
-        // T ¼Ò¸ê
+        // T ì†Œë©¸
         p->~T();
 
         if (m_bShutdowning.load())
@@ -354,9 +354,9 @@ public:
     }
 
     // -------------------------
-    // API 2) Alloc/Free (È£È¯)
-    // - Alloc(): ±âº» »ı¼º
-    // - Free(): ¼Ò¸ê + retire
+    // API 2) Alloc/Free (í˜¸í™˜)
+    // - Alloc(): ê¸°ë³¸ ìƒì„±
+    // - Free(): ì†Œë©¸ + retire
     // -------------------------
     T* Alloc()
     {
@@ -372,25 +372,25 @@ public:
     // Reclaim/clear utilities
     // -------------------------
 
-    // ÇöÀç ½º·¹µåÀÇ retire list¿¡ ´ëÇØ¼­¸¸ °­Á¦·Î reclaim ½Ãµµ
+    // í˜„ì¬ ìŠ¤ë ˆë“œì˜ retire listì— ëŒ€í•´ì„œë§Œ ê°•ì œë¡œ reclaim ì‹œë„
     void ForceReclaimCurrentThread()
     {
         reclaim_if_possible();
     }
 
-    // ¸ğµç ÀÛ¾÷ ½º·¹µå°¡ Á¾·á(join)µÈ µÚ¿¡¸¸ È£ÃâÇØ¾ß ÇÕ´Ï´Ù.
-    // - hazard pointers´Â ½º·¹µå Á¾·á ½Ã ~HazardOwner¿¡¼­ ÇØÁ¦µÇ¸ç,
-    // - °¢ ½º·¹µå retire list´Â "±× ½º·¹µå°¡ ForceReclaimCurrentThread()¸¦ ¸¶Áö¸·¿¡ È£Ãâ"ÇÏ°Å³ª,
-    //   ¾Æ´Ï¸é ³ëµå°¡ ³²¾Æ ÀÖÀ» ¼ö ÀÖ½À´Ï´Ù.
+    // ëª¨ë“  ì‘ì—… ìŠ¤ë ˆë“œê°€ ì¢…ë£Œ(join)ëœ ë’¤ì—ë§Œ í˜¸ì¶œí•´ì•¼ í•©ë‹ˆë‹¤.
+    // - hazard pointersëŠ” ìŠ¤ë ˆë“œ ì¢…ë£Œ ì‹œ ~HazardOwnerì—ì„œ í•´ì œë˜ë©°,
+    // - ê° ìŠ¤ë ˆë“œ retire listëŠ” "ê·¸ ìŠ¤ë ˆë“œê°€ ForceReclaimCurrentThread()ë¥¼ ë§ˆì§€ë§‰ì— í˜¸ì¶œ"í•˜ê±°ë‚˜,
+    //   ì•„ë‹ˆë©´ ë…¸ë“œê°€ ë‚¨ì•„ ìˆì„ ìˆ˜ ìˆìŠµë‹ˆë‹¤.
     //
-    // ÀÌ ÇÔ¼ö´Â "ÇöÀç ½º·¹µå ±âÁØ"À¸·Î free-list¸¦ ÀüºÎ deleteÇÕ´Ï´Ù.
-    // (¿©ÀüÈ÷ ´Ù¸¥ ½º·¹µå TLS retire¿¡ ³²¾Æ ÀÖ´Â ³ëµå´Â ¿©±â¼­ Á¢±Ù ºÒ°¡)
+    // ì´ í•¨ìˆ˜ëŠ” "í˜„ì¬ ìŠ¤ë ˆë“œ ê¸°ì¤€"ìœ¼ë¡œ free-listë¥¼ ì „ë¶€ deleteí•©ë‹ˆë‹¤.
+    // (ì—¬ì „íˆ ë‹¤ë¥¸ ìŠ¤ë ˆë“œ TLS retireì— ë‚¨ì•„ ìˆëŠ” ë…¸ë“œëŠ” ì—¬ê¸°ì„œ ì ‘ê·¼ ë¶ˆê°€)
     void ClearAfterAllThreadsJoined()
     {
-        // ³²Àº retire¸¦ ÃÖ´ëÇÑ free-list·Î µ¹¸²(ÇöÀç ½º·¹µå °Í¸¸)
+        // ë‚¨ì€ retireë¥¼ ìµœëŒ€í•œ free-listë¡œ ëŒë¦¼(í˜„ì¬ ìŠ¤ë ˆë“œ ê²ƒë§Œ)
         ForceReclaimCurrentThread();
 
-        // free-list¸¦ ÀüºÎ ÆÄ±«
+        // free-listë¥¼ ì „ë¶€ íŒŒê´´
         Node* head = m_freeList.exchange(nullptr, std::memory_order_acq_rel);
         while (head)
         {
@@ -399,11 +399,11 @@ public:
             head = next;
         }
 
-        // ÇöÀç ½º·¹µå retire list¿¡ ³²¾Æ ÀÖ´Â ³ëµå´Â
-        // "¾ÆÁ÷ hazard·Î º¸È£µÇ°í ÀÖ´Ù"´Â ¶æÀÌ¹Ç·Î,
-        // join ÀÌÈÄ¶ó¸é º¸Åë ³²Áö ¾Ê¾Æ¾ß Á¤»óÀÔ´Ï´Ù.
-        // ³²¾Æ ÀÖ´Ù¸é »ç¿ëÀÚ ÄÚµå°¡ ¸¶Áö¸· reclaimÀ» È£ÃâÇÏÁö ¾Ê¾Ò°Å³ª,
-        // ½º·¹µå°¡ ¾Æ´Ñ °÷¿¡¼­ ¿©ÀüÈ÷ Á¢±Ù ÁßÀÎ ¹ö±× °¡´É¼ºÀÌ Å®´Ï´Ù.
+        // í˜„ì¬ ìŠ¤ë ˆë“œ retire listì— ë‚¨ì•„ ìˆëŠ” ë…¸ë“œëŠ”
+        // "ì•„ì§ hazardë¡œ ë³´í˜¸ë˜ê³  ìˆë‹¤"ëŠ” ëœ»ì´ë¯€ë¡œ,
+        // join ì´í›„ë¼ë©´ ë³´í†µ ë‚¨ì§€ ì•Šì•„ì•¼ ì •ìƒì…ë‹ˆë‹¤.
+        // ë‚¨ì•„ ìˆë‹¤ë©´ ì‚¬ìš©ì ì½”ë“œê°€ ë§ˆì§€ë§‰ reclaimì„ í˜¸ì¶œí•˜ì§€ ì•Šì•˜ê±°ë‚˜,
+        // ìŠ¤ë ˆë“œê°€ ì•„ë‹Œ ê³³ì—ì„œ ì—¬ì „íˆ ì ‘ê·¼ ì¤‘ì¸ ë²„ê·¸ ê°€ëŠ¥ì„±ì´ í½ë‹ˆë‹¤.
         assert(s_tlsRetired.empty() && "Retired nodes remain in current thread. Call ForceReclaimCurrentThread() at thread shutdown.");
     }
 };
@@ -421,3 +421,4 @@ CHMemoryPool<T, MAX_THREADS, RETIRE_THRESHOLD>::s_tlsHazOwner;
 template <typename T, int MAX_THREADS, std::size_t RETIRE_THRESHOLD>
 thread_local std::vector<typename CHMemoryPool<T, MAX_THREADS, RETIRE_THRESHOLD>::Node*>
 CHMemoryPool<T, MAX_THREADS, RETIRE_THRESHOLD>::s_tlsRetired;
+

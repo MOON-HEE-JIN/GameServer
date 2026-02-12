@@ -27,17 +27,17 @@ private:
 	CRITICAL_SECTION cs;
 	CRITICAL_SECTION m_csSendQ;
 
-	// Á¢¼Ó Á¾·áÁßÀÎÁö
+	// ì ‘ì† ì¢…ë£Œì¤‘ì¸ì§€
 	std::atomic<bool> bCloseing;
-	// ¼¼¼ÇÀÇ »ç¿ë ¿ÏÀü	Á¾·á ÇÃ·¡±×
+	// ì„¸ì…˜ì˜ ì‚¬ìš© ì™„ì „	ì¢…ë£Œ í”Œë˜ê·¸
 	std::atomic<bool> bDisconnecting;
-	// Á¢¼Ó »óÅÂ ÇÃ·¡±×
+	// ì ‘ì† ìƒíƒœ í”Œë˜ê·¸
 	std::atomic<bool> bConnect;
 	std::atomic<int> RefCnt;
 private:
 	std::atomic<SESSION_HANDLE> m_ConnectKey;
-	int m_ConnectPlayerHandle;	// Á¢¼ÓÇÑ ÇÃ·¹ÀÌ¾î ID
-	std::atomic<int> m_ZoneID;			// Ã³¸® ½º·¹µå ID
+	int m_ConnectPlayerHandle;	// ì ‘ì†í•œ í”Œë ˆì´ì–´ ID
+	std::atomic<int> m_ZoneID;			// ì²˜ë¦¬ ìŠ¤ë ˆë“œ ID
 	std::atomic<int> m_ProcId;
 public:
 	int IncrementIOCnt() { return InterlockedIncrement(&IOCnt); }
@@ -82,3 +82,4 @@ public:
 	void SendPost();
 	bool RecvPost();
 };
+

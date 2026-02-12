@@ -89,3 +89,4 @@ int UnSerialization (char* buffer, st_STC_LoopBack& value)
 	return iSize;
 }
 
+

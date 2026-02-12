@@ -22,3 +22,4 @@ typedef struct st_Log
 		return *this;
 	}
 }LOG_JOB;
+

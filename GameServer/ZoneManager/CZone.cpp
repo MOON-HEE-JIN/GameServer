@@ -22,7 +22,7 @@ bool CZone::EnterZone(CPlayer* pPlayer)
 	if (m_vecPlayer.size() >= m_MaxZoneManagerCount)
 		return false;
 
-	// 이미 존재 한다면
+	// ?대? 議댁옱 ?쒕떎硫?
 	if (m_mapIDtoIndex.find(pPlayer->GetPlayerHandle()) != m_mapIDtoIndex.end())
 		return false;
 	
@@ -46,22 +46,22 @@ bool CZone::LeaveZone(CPlayer* pPlayer)
 
 	std::unordered_map<int, int>::iterator iter = m_mapIDtoIndex.find(pPlayer->GetPlayerHandle());
 	
-	// 해당 Zone 에 Player 없음
+	// ?대떦 Zone ??Player ?놁쓬
 	if (iter == m_mapIDtoIndex.end())
 		return false;
 
-	// 사라질 Player index
+	// ?щ씪吏?Player index
 	const int leaveIndex = iter->second;
 	if (leaveIndex < 0 || leaveIndex >= static_cast<int>(m_vecPlayer.size()))
 		return false;
 
-	// 끝자리에 있는 Player
+	// ?앹옄由ъ뿉 ?덈뒗 Player
 	CPlayer* ePlayer = m_vecPlayer.back();
 	
-	// 지워야 할 Player 가 끝자리 가 아니라면 바꿔주기
+	// 吏?뚯빞 ??Player 媛 ?앹옄由?媛 ?꾨땲?쇰㈃ 諛붽퓭二쇨린
 	if (ePlayer != pPlayer)
 	{
-		// 마지막 위차 Player 위치 바꾸기
+		// 留덉?留??꾩감 Player ?꾩튂 諛붽씀湲?
 		m_vecPlayer[leaveIndex] = ePlayer;
 		m_mapIDtoIndex[ePlayer->GetPlayerHandle()] = leaveIndex;
 	}
@@ -72,4 +72,5 @@ bool CZone::LeaveZone(CPlayer* pPlayer)
 	m_Cnt.fetch_sub(1);
 	return true;
 }
+
 

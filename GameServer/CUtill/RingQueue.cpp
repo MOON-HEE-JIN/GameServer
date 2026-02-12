@@ -97,7 +97,7 @@ int RingQueue::MovePacketPointer(int size)
 int RingQueue::Enqueue(const char* buf, int size)
 {
 	if (GetFreeSize() < size) return 0;
-	//Å©±â°¡ ÃæºÐÇÒ¶§
+	//í¬ê¸°ê°€ ì¶©ë¶„í• ë•Œ
 	if (GetDirectEnqueueSize() >= size)
 	{
 		memcpy_s(WritePointer, size, buf, size);
@@ -121,7 +121,7 @@ int RingQueue::Enqueue(const char* buf, int size)
 int RingQueue::Dequeue(char* buf, int size)
 {
 	if (GetUseSize() < size) return 0;
-	//Å©±â°¡ ÃæºÐÇÒ¶§
+	//í¬ê¸°ê°€ ì¶©ë¶„í• ë•Œ
 	if (GetDirectDequeueSize() >= size)
 	{
 		memcpy_s(buf, size, ReadPointer, size);
@@ -148,7 +148,7 @@ int RingQueue::Dequeue(char* buf, int size)
 int RingQueue::Peek(char* buf, int size)
 {
 	if (GetUseSize() < size) return 0;
-	//Å©±â°¡ ÃæºÐÇÒ¶§
+	//í¬ê¸°ê°€ ì¶©ë¶„í• ë•Œ
 	if (GetDirectDequeueSize() >= size)
 	{
 		memcpy_s(buf, size, ReadPointer, size);
@@ -167,5 +167,6 @@ int RingQueue::Peek(char* buf, int size)
 	ReadPointer = origniPointer;
 	return size;
 } 
+
 
 

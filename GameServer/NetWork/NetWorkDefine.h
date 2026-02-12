@@ -21,7 +21,7 @@ typedef struct st_ObjectHandle
 
 typedef struct st_PACKET_JOB
 {
-	int PlayerHandle;	// ÇØ´ç ÆÐÅ¶ Ã³¸®¸¦ ÇØ¾ßÇÒ Player ID
+	int PlayerHandle;	// í•´ë‹¹ íŒ¨í‚· ì²˜ë¦¬ë¥¼ í•´ì•¼í•  Player ID
 	int type;
 	CPacket packet;
 
@@ -65,3 +65,4 @@ typedef struct st_SendReq
 		return *this;
 	}
 } SEND_REQ;
+

@@ -59,27 +59,14 @@ int PacketProc::DO_GAME_CHANGEPID(CPlayer* pTarget, CPacket& pReqPacket)
     if (prevZoneID == data.pid)
         return ERROR_CODE::EQUAL_PID;
 
-    if (!g_ZoneManager.LeaveZone(pTarget))
+    // 기존 직접 Enter -> 요청 Job 을 주는쪽으로 수정
+
+    //  이동 실패
+    if (!g_ZoneManager.ReqEnterZone(pTarget, data.pid))
         return ERROR_CODE::NOT_FIND_PID;
 
-    if (!g_ZoneManager.EnterZone(pTarget, data.pid))
-    {
-        // Zone 에 못들어가면 기존 Zone 으로 이동
-        if (!g_ZoneManager.EnterZone(pTarget, prevZoneID))
-        {
-            g_LogServer.ELog("Zone rollback fail. PlayerHandle:%d PrevZone:%d NewZone:%d",
-                pTarget->GetPlayerHandle(), prevZoneID, data.pid);
-        }
-       return ERROR_CODE::NOT_FIND_PID;
-    }
-    //g_LogGame.DLog("Change ProcID : %d -> %d", pTarget->GetZoneID(), data.pid);
+    // 이동 성공 패킷은 이동이 완료되고 보낸다
 
-    st_STC_ChangePid req;
-    req.ret = ERROR_CODE::NOT_ERROR;
-    CPacket reqPacket;
-    reqPacket << req;
-
-    TrySend(pTarget->GetSessionHandle(), GAME::CHANGEPID, &reqPacket);
     return ERROR_CODE::NOT_ERROR;
 }
 

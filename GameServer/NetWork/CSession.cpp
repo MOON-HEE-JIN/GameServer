@@ -45,14 +45,10 @@ bool CSession::SetZoneID(int procID)
 	if (!g_ZoneManager.IsValidZoneID(procID))
 		return false;
 
-	if (AddRef())
-	{
-		m_ZoneID.store(procID);
-		m_ProcId.store(g_ZoneManager.GetProcID(procID));
-		SubRef();
-		return true;
-	}
-	return false;
+	m_ZoneID.store(procID);
+	m_ProcId.store(g_ZoneManager.GetProcID(procID));
+	
+	return true;
 }
 
 void CSession::OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key)

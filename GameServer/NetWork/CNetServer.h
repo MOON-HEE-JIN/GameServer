@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 //#include "CMemoryPool.h"
 
@@ -93,6 +93,7 @@ void SessionSendQEnqueue();
 void EnqueueDisConnectReq(CSession* pSession);
 void DequeueDisConnectReq();
 
+CPlayer* GetPlayer(int handle);
 CPlayer* AllocPlayer(int& outPlayerHandle);
 void FreePlayer(CPlayer* pPlayer);
 

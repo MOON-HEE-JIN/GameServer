@@ -1,4 +1,4 @@
-#pragma comment(lib, "winmm.lib")
+﻿#pragma comment(lib, "winmm.lib")
 #include "ProcWorkerThread.h"
 #include "GameServerDef.h"
 #include "NetWork/CNetServer.h"
@@ -6,6 +6,8 @@
 #include "./ZoneManager/CZoneManager.h"
 #include <Windows.h>
 #include <process.h>
+
+#include "ZoneManager/CZoneManager.h"
 
 static std::vector<HANDLE> s_ProcWorkerThreadHandles;
 static std::vector<int> s_ProcWorkerThreadIDs;
@@ -71,6 +73,9 @@ unsigned __stdcall ProcWorkerThread(void* arg)
 	int procID = *(int*)arg;
     timeBeginPeriod(1);
     int ret = 0;
+
+    s_ProcWorker[procID]->InitZoneVector();
+    
     while (CNetServer::g_ServerON)
     {
         //1000 Frames 1초당 1000 처리
@@ -83,7 +88,8 @@ unsigned __stdcall ProcWorkerThread(void* arg)
 		// 패킷 처리
 		s_ProcWorker[procID]->Proc();
 
-
+        // 관리 Zone 이벤트
+        s_ProcWorker[procID]->ZoneProc();
 
 		// 플레이어 삭제 처리
 		s_ProcWorker[procID]->DeletePlayerProcess();
@@ -105,6 +111,14 @@ void CProcWorker::Proc()
     }
 }
 
+void CProcWorker::ZoneProc()
+{
+    for (int i = 0; i < m_ZoneCnt; i++)
+    {
+        m_vecZone[i]->Update();
+    }
+}
+
 void CProcWorker::DeletePlayerProcess()
 {
     CPlayer* pPlayer = nullptr;
@@ -115,9 +129,14 @@ void CProcWorker::DeletePlayerProcess()
         //g_LogGame.ILog("Release Player PHandle : %d, SHandle : %d", pPlayer->GetPlayerHandle(), pPlayer->GetSessionHandle().Handle);
         CNetServer::DecrementPlayerCount();
         g_ZoneManager.LeaveZone(pPlayer);
-        pPlayer->SessionHandleClear();
 		FreePlayer(pPlayer);   
     }
+}
+
+void CProcWorker::InitZoneVector()
+{
+    g_ZoneManager.InitProcZoneVector(m_ProcID, m_vecZone);
+    m_ZoneCnt = m_vecZone.size();
 }
 
 void DeleteProcWorker()

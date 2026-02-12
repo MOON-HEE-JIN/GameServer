@@ -321,10 +321,17 @@ bool TryChangePid(const SESSION_HANDLE& key, int pid)
 	if (!pSession->GetBoolConnect()) return false;
 	if (pSession->GetConnectGen() != key.Gen) return false;
 
-	if (!pSession->SetZoneID(pid))
+	if (!pSession->AddRef()) return false;
+
+	if (!pSession->GetBoolConnect() || pSession->GetConnectGen() != key.Gen || pSession->GetBoolbCloseing())
+	{
+		pSession->SubRef();
 		return false;
-	
-	return true;
+	}
+
+	bool bRet = pSession->SetZoneID(pid);
+	pSession->SubRef();
+	return bRet;
 }
 
 bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket)
@@ -415,6 +422,14 @@ void DequeueDisConnectReq()
 	}
 
 	s_bSessionDisConnectDequeueRunning = false;
+}
+
+CPlayer* GetPlayer(int handle)
+{
+	if (handle < 0 || handle > MAX_CONNECT_COUNT)
+		return nullptr;
+
+	return g_PlayerManager[handle];
 }
 
 CPlayer* AllocPlayer(int& outPlayerHandle)
@@ -592,6 +607,7 @@ void CNetServer::DisConnect(CSession* pSession)
 	CPlayer* pPlayer = g_PlayerManager[pSession->GetConnectPlayerHandle()];
 	if (pPlayer != nullptr)
 	{
+		pPlayer->SetRelease();
 		s_ProcWorker[pSession->GetProcID()]->ReleasePlayer(pPlayer);
 	}
 

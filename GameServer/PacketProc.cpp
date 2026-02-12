@@ -1,4 +1,4 @@
-#include "PacketProc.h"
+﻿#include "PacketProc.h"
 #include "Stub/PacketEnumDef.h"
 #include "NetWork/CNetServer.h"
 #include "GameServerDef.h"
@@ -64,7 +64,7 @@ int PacketProc::DO_GAME_CHANGEPID(CPlayer* pTarget, CPacket& pReqPacket)
 
     if (!g_ZoneManager.EnterZone(pTarget, data.pid))
     {
-        // ??Zone ???낆옣 ?ㅽ뙣??湲곗〈 Zone ?쇰줈 ?ㅼ떆 ?낆옣
+        // Zone 에 못들어가면 기존 Zone 으로 이동
         if (!g_ZoneManager.EnterZone(pTarget, prevZoneID))
         {
             g_LogServer.ELog("Zone rollback fail. PlayerHandle:%d PrevZone:%d NewZone:%d",

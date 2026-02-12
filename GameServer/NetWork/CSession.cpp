@@ -1,4 +1,4 @@
-#include "CSession.h"
+﻿#include "CSession.h"
 #include <WS2tcpip.h>
 #include "../Stub/StructDef.h"
 #include "../Log/CLog.h"
@@ -100,16 +100,16 @@ void CSession::OnDisconnect()
 
 bool CSession::AddRef()
 {
-	// ?곌껐 以묒씤媛
+	// 종료중이 아니라면
 	if(!bCloseing.load())
 	{
-		// ?ъ슜以?
+		// 사용 증가
 		RefCnt.fetch_add(1);
 		if (!bCloseing.load())
 		{
 			return true;
 		}
-		// ?ъ슜以묒씠 ?꾨땲硫?媛먯냼
+		// 사용 끝나고 나가기
 		RefCnt.fetch_sub(1);
 	}
 	return false;
@@ -119,7 +119,7 @@ void CSession::CloseSocket()
 {
 	bool bf = false;
 
-	// ?대? 醫낅즺以??대씪硫?
+	// 중복 종료 막기
 	if (!bCloseing.compare_exchange_strong(bf, true))
 		return;
 	
@@ -247,7 +247,6 @@ bool CSession::RecvPost()
 		ret = WSAGetLastError();
 		if (ret != WSA_IO_PENDING)
 		{
-			// 10054 : ?곌껐??媛뺤젣濡??딄?, 10053 : 鍮꾩젙??醫낅즺
 			if (ret != 10054 && ret != 10053)
 			{
 				//printf("-- Recv WSARecv Error %d ---\n", ret);

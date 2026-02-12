@@ -1,11 +1,11 @@
-#include "CZoneManager.h"
+﻿#include "CZoneManager.h"
 
 #include "../GameServerDef.h"
 #include "../Log/CLog.h"
 #include <sstream>
 CZoneManager::CZoneManager()
 {
-	// ?대떦 ?앹꽦?????꾩떆 Packet ??泥섎━?섎뒗 ProcThread * 2 留뚰겮 ?앹꽦??ProcThread ??Zone 2媛쒖떇 ?좊떦
+	// 해당 생성자는 임시로 작성함 나중에 Zone 에 사용될 Map 완성시 수정해야함
 	m_maxZoneCnt = ProcThreadCnt * 2;
 	for (int i = 0; i < m_maxZoneCnt; i++)
 	{
@@ -21,7 +21,7 @@ CZoneManager::CZoneManager()
 
 CZoneManager::~CZoneManager()
 {
-	// ?꾩떆 ?뚮㈇??
+	// Zone 삭제
 	for (int i = 0; i <= m_maxZoneCnt; i++)
 	{
 		delete m_vecZone[i];

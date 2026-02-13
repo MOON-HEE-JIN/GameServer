@@ -80,6 +80,13 @@ void CZone::Update()
 				{
 					// Zone Enter 실패
 					pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+					{
+						st_STC_ChangePid s;
+						s.ret = ERROR_CODE::NOT_FIND_PID;
+						CPacket pPacket;
+						pPacket << s;
+						pPlayer->SendPacket(GAME::CHANGEPID, &pPacket);
+					}
 				}
 			}
 			// From --> To Zone 으로 Enter 요청
@@ -102,6 +109,13 @@ void CZone::Update()
 				
 				// 새로운 Zone 에 입장 완료
 				pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+				{
+					st_STC_ChangePid s;
+					s.ret = 0;
+					CPacket pPacket;
+					pPacket << s;
+					pPlayer->SendPacket(GAME::CHANGEPID, &pPacket);
+				}
 			}
 			else
 			{
@@ -133,9 +147,10 @@ void CZone::Update()
 			}
 			else
 			{
-				bool bRet = LeaveZone(pPlayer);
-				if (bRet)
+				if (pPlayer->GetZoneID() == m_ID)
 				{
+					bool bRet = LeaveZone(pPlayer);
+					
 					// OwnerZone 에서 Player Free 처리
 					CNetServer::DecrementPlayerCount();
 					FreePlayer(pPlayer);
@@ -147,7 +162,6 @@ void CZone::Update()
 					g_ZoneManager.ReqJob(req, pPlayer->GetZoneID());
 				}
 			}
-			
 		}
 			break;
 		default:
@@ -159,9 +173,6 @@ void CZone::Update()
 
 bool CZone::EnterZone(CPlayer* pPlayer)
 {
-	if (pPlayer->GetRelease())
-		return false;
-
 	pPlayer->SetZoneID(m_ID);
 
 	m_mapIDtoIndex[pPlayer->GetPlayerHandle()] = static_cast<int>(m_vecPlayer.size());

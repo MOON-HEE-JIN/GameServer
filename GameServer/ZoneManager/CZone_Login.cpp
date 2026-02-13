@@ -77,8 +77,11 @@ bool CZone_Login::LeaveZone(CPlayer* pPlayer)
 
 Crit::Crit(CRITICAL_SECTION* _cs)
 {
+	cs = _cs;
+	EnterCriticalSection(cs);
 }
 
 Crit::~Crit()
 {
+	LeaveCriticalSection(cs);
 }

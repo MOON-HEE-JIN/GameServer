@@ -21,7 +21,11 @@ protected:
 
 	std::vector<CPlayer*> m_vecPlayer;				// Zone 이 관리하고 있는 Player
 	std::unordered_map<int, int> m_mapIDtoIndex;	// <PlayerHandle,m_vecPlayerIndex>
+
 	CLockFreeQueue_MPSC<ZONE_JOB> m_queue;
+
+	bool PushTemp(CPlayer* pPlayer);
+
 public:
 	void Update();
 	void EnqueueJob(ZONE_JOB&& job) { m_queue.Enqueue(job); }

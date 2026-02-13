@@ -90,9 +90,6 @@ unsigned __stdcall ProcWorkerThread(void* arg)
 
         // 관리 Zone 이벤트
         s_ProcWorker[procID]->ZoneProc();
-
-		// 플레이어 삭제 처리
-		s_ProcWorker[procID]->DeletePlayerProcess();
     }
 
     g_LogThread.ILog("=== END THREAD ProcWorkerThread ===");

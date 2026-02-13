@@ -16,100 +16,150 @@ CZone::~CZone()
 
 }
 
+bool CZone::PushTemp(CPlayer* pPlayer)
+{
+	if (pPlayer == nullptr)
+		return false;
+
+	if (m_Cnt.load() + 1 >= m_MaxZoneManagerCount)
+		return false;
+
+	// 이미 존재 하는 Player 라면 false
+	if (m_mapIDtoIndex.find(pPlayer->GetPlayerHandle()) != m_mapIDtoIndex.end())
+		return false;
+
+	if (!TryChangePid(pPlayer->GetSessionHandle(), m_ID))
+		return false;
+
+	m_Cnt.fetch_add(1);
+	CNetServer::IncrementProcCount(m_ZonePid);
+	return true;
+}
+
 void CZone::Update()
 {
 	ZONE_JOB job;
+
 	while (m_queue.TryDequeue(job))
 	{
 		CPlayer* pPlayer = GetPlayer(job.handle);
 		if (pPlayer == nullptr)
-			return;
+			continue;
 
-		// Player 가 본인 Thread 가 아닌 곳에서 사용 해도 괜찮은것은가?
-		// EnterZone(pPlayer) --> if (!TryChangePid(pPlayer->GetSessionHandle(), m_ID))
-		// 1. Player 의 SESSINO_HANDLE 를 통해서 Player 와 Session 이 살아있는지 확인한다
-		// 2. 해당 함수 실패는 Session 의 종료 에 의해서 연결이 끊어진 상태니 false 하면 된다 Player 건드리지 않는다
-		// 3. 해당 함수 성공 시 Session, Player 살아있는 상태 만약 Enter 후 삭제 가 된다 하더라도
-		//    종료 의 의해 Player 삭제 처리는 EnterZone 의 ProcWorker::m_PlayerDeleteQueue 에서 처리
-		//    기존 Zone 에서 관리 를 빼주기 위해 ReqLeave 를 보내면 된다
-		//
-		bool bRet = false;
-		ZONE_JOB req;
+		// Player 가 종료 중 이라면 관련 없는 패킷 전부 Drop
+		if (pPlayer->GetRelease())
+			if (job.type != eZONESTATUS::RELEASE)
+				continue;
+
+		ZONE_JOB req = job;
+		req.time = GetTickCount();
+
 		switch (job.type)
 		{
 		case NONE:
-			continue;
+			break;
 		case STABLE:
-		{
-			pPlayer->SetZoneStatus(STABLE);
-		}
 			break;
 		case ENTER:
 		{
+			// To --> From Zone 으로 Enter 응답 
 			if (job.ack)
 			{
 				if (job.ret)
 				{
-					// 작업 성공 fromZone 에서 지우기
-					req(GetTickCount(), LEAVE, job.handle, job.toZone, job.fromZone, false, false);
-					st_STC_ChangePid req;
-					req.ret = ERROR_CODE::NOT_ERROR;
-
-					CPacket pReq;
-					pReq << req;
-					pPlayer->SendPacket(GAME::CHANGEPID, &pReq);
+					// Zone Enter 성공
+					pPlayer->SetZoneStatus(eZONESTATUS::ENTER); // Leave -> Enter 변경
+					
+					// 자신 Zone 에게 Leave 요청 보내기
+					// 여기서 Leave 를 처리해도 되지만 규칙성을 위해서 넣어준다
+					req.type = eZONESTATUS::LEAVE;
+					req.ack = false;
+					m_queue.Enqueue(req);
 				}
 				else
 				{
-					// 작업 실패 실패로 정상 작동 하게
-					req(GetTickCount(), STABLE, job.handle, job.toZone, job.fromZone, false, false);
-
-					st_STC_ChangePid req;
-					req.ret = ERROR_CODE::NOT_FIND_PID;
-				
-					CPacket pReq;
-					pReq << req;
-					pPlayer->SendPacket(GAME::CHANGEPID, &pReq);
+					// Zone Enter 실패
+					pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
 				}
 			}
+			// From --> To Zone 으로 Enter 요청
 			else
 			{
-				bRet = EnterZone(pPlayer);
-				req(GetTickCount(), ENTER, job.handle, job.toZone, job.fromZone, true, bRet);
+				bool bRet = PushTemp(pPlayer);
+				// From Zone 에서 응답 보내기
+				req.ack = true;
+				req.ret = bRet;
+				g_ZoneManager.ReqJob(req, job.fromZone);
 			}
 		}
 			break;
 		case LEAVE:
 		{
-			bRet = LeaveZone(pPlayer);
+			// From Zone 에서 Leave 완료 To Zone 에 넣어주기
+			if (job.ack)
+			{
+				EnterZone(pPlayer);
+				
+				// 새로운 Zone 에 입장 완료
+				pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+			}
+			else
+			{
+				bool bRet = LeaveZone(pPlayer);
+				req.ack = true;
+				req.ret = bRet;
+				// To Zone 에게 Leave 완료를 보낸다
+				g_ZoneManager.ReqJob(req, job.toZone);
+			}
+		}
+			break;
+		case RELEASE:
+		{
+			// ack == true 이전 Zone 관리가 아니라서 다시 보내는것
+			if (job.ack)
+			{
+				bool bRet = LeaveZone(pPlayer);
+				
+				// OwnerZone 에서 Player Free 처리 || 아무 Zone 에서 관리하지 않음
+				CNetServer::DecrementPlayerCount();
+				FreePlayer(pPlayer);
 
-			// 성공 / 실패 와 상관 없이 Stable 상태로 전환
-			// LEAVE 를 처리 한다는건 Enter(toZone) -> 성공 -> Leave(fromZone) 인 경우 이다
-			req(GetTickCount(), STABLE, job.handle, job.toZone, job.fromZone, false, false);
+				// ToZone 에서 관리 vector 전에 Release 되었을때
+				if (!bRet)
+				{
+					CNetServer::DecrementProcCount(m_ID);
+					m_Cnt.fetch_sub(1);
+				}
+			}
+			else
+			{
+				bool bRet = LeaveZone(pPlayer);
+				if (bRet)
+				{
+					// OwnerZone 에서 Player Free 처리
+					CNetServer::DecrementPlayerCount();
+					FreePlayer(pPlayer);
+				}
+				else
+				{
+					// 해당 Zone 에서 관리하지 않음
+					req.ack = true;
+					g_ZoneManager.ReqJob(req, pPlayer->GetZoneID());
+				}
+			}
+			
 		}
 			break;
 		default:
-			continue;
+			break;
 		}
-
-		g_ZoneManager.ReqJob(req, job.fromZone);
 	}
 
 }
 
 bool CZone::EnterZone(CPlayer* pPlayer)
 {
-	if (pPlayer == nullptr)
-		return false;
-
-	if (m_vecPlayer.size() >= m_MaxZoneManagerCount)
-		return false;
-
-	// Player 를 못찾았으면 나가기
-	if (m_mapIDtoIndex.find(pPlayer->GetPlayerHandle()) != m_mapIDtoIndex.end())
-		return false;
-	
-	if (!TryChangePid(pPlayer->GetSessionHandle(), m_ID))
+	if (pPlayer->GetRelease())
 		return false;
 
 	pPlayer->SetZoneID(m_ID);
@@ -117,8 +167,6 @@ bool CZone::EnterZone(CPlayer* pPlayer)
 	m_mapIDtoIndex[pPlayer->GetPlayerHandle()] = static_cast<int>(m_vecPlayer.size());
 	m_vecPlayer.push_back(pPlayer);
 
-	CNetServer::IncrementProcCount(m_ZonePid);
-	m_Cnt.fetch_add(1);
 	return true;
 }
 

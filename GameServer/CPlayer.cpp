@@ -6,7 +6,7 @@ void CPlayer::Init(SESSION_HANDLE sessionID, int handle, int procID)
 {
 	m_SessionHandle = sessionID;
 	m_PlayerHandle = handle;
-	m_ZoneID = procID;
+	m_OwnerZone = procID;
 
 	m_bRelease.store(false);
 }

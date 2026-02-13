@@ -9,6 +9,7 @@ enum eZONESTATUS
 	STABLE,		// 완료
 	ENTER,		// 들어가는 중
 	LEAVE,		// 나가는 중
+	RELEASE,	// 삭제
 };
 
 typedef struct st_Log

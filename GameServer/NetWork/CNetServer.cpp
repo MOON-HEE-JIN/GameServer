@@ -426,7 +426,7 @@ void DequeueDisConnectReq()
 
 CPlayer* GetPlayer(int handle)
 {
-	if (handle < 0 || handle > MAX_CONNECT_COUNT)
+	if (handle < 0 || handle >= MAX_CONNECT_COUNT)
 		return nullptr;
 
 	return g_PlayerManager[handle];
@@ -608,7 +608,9 @@ void CNetServer::DisConnect(CSession* pSession)
 	if (pPlayer != nullptr)
 	{
 		pPlayer->SetRelease();
-		s_ProcWorker[pSession->GetProcID()]->ReleasePlayer(pPlayer);
+		
+		ZONE_JOB z(GetTickCount(), eZONESTATUS::RELEASE, pPlayer->GetPlayerHandle(), 0, 0, 0, 0);
+		g_ZoneManager.ReqJob(z, pPlayer->GetZoneID());
 	}
 
 	pSession->OnDisconnect();

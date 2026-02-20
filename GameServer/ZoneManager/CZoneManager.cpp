@@ -113,7 +113,7 @@ void CZoneManager::Log()
 	{
 		const int zoneCount = m_vecZone[i]->m_Cnt.load();
 		std::ostringstream stream;
-		stream << "Zone[" << i << "] : " << zoneCount << " ";
+		stream << "Zone[" << i << "][" << zoneCount << "] ";
 		buf.append(stream.str());
 		Total += zoneCount;
 	}

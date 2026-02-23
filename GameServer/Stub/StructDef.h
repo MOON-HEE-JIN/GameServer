@@ -12,6 +12,7 @@ struct st_CTS_ChangePid
 };
 struct st_CTS_LoopBack
 {
+	__int32		zone;
 	__int64		data;
 };
 struct st_STC_ChangePid
@@ -21,6 +22,7 @@ struct st_STC_ChangePid
 struct st_STC_LoopBack
 {
 	__int32		ret;
+	__int32		zone;
 	__int64		data;
 };
 

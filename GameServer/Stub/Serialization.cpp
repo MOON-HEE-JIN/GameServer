@@ -12,6 +12,8 @@ int Serialization (char* buffer, st_CTS_ChangePid& value)
 int Serialization (char* buffer, st_CTS_LoopBack& value)
 {
 	int iSize = 0;
+	memcpy(buffer + iSize, &value.zone, sizeof(value.zone));
+	iSize += sizeof(value.zone);
 	memcpy(buffer + iSize, &value.data, sizeof(value.data));
 	iSize += sizeof(value.data);
 	return iSize;
@@ -40,6 +42,8 @@ int Serialization (char* buffer, st_STC_LoopBack& value)
 	int iSize = 0;
 	memcpy(buffer + iSize, &value.ret, sizeof(value.ret));
 	iSize += sizeof(value.ret);
+	memcpy(buffer + iSize, &value.zone, sizeof(value.zone));
+	iSize += sizeof(value.zone);
 	memcpy(buffer + iSize, &value.data, sizeof(value.data));
 	iSize += sizeof(value.data);
 	return iSize;
@@ -56,6 +60,8 @@ int UnSerialization (char* buffer, st_CTS_ChangePid& value)
 int UnSerialization (char* buffer, st_CTS_LoopBack& value)
 {
 	int iSize = 0;
+	memcpy(&value.zone, buffer + iSize, sizeof(value.zone));
+	iSize += sizeof(value.zone);
 	memcpy(&value.data, buffer + iSize, sizeof(value.data));
 	iSize += sizeof(value.data);
 	return iSize;
@@ -84,6 +90,8 @@ int UnSerialization (char* buffer, st_STC_LoopBack& value)
 	int iSize = 0;
 	memcpy(&value.ret, buffer + iSize, sizeof(value.ret));
 	iSize += sizeof(value.ret);
+	memcpy(&value.zone, buffer + iSize, sizeof(value.zone));
+	iSize += sizeof(value.zone);
 	memcpy(&value.data, buffer + iSize, sizeof(value.data));
 	iSize += sizeof(value.data);
 	return iSize;

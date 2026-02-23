@@ -31,6 +31,9 @@
     <Filter Include="소스 파일\LOG">
       <UniqueIdentifier>{10ef9a7c-f8f4-4e4f-8750-0c065857729d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\ZoneManager">
+      <UniqueIdentifier>{c2928eb9-bdf8-4689-a2f5-c1c4099af8ba}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -60,9 +63,6 @@
     <ClCompile Include="ProcWorkerThread.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="CPlayer.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="MemoryManager\MemoryManager.cpp">
       <Filter>소스 파일\MemoryManager</Filter>
     </ClCompile>
@@ -71,6 +71,18 @@
     </ClCompile>
     <ClCompile Include="NetWork\CGMSession.cpp">
       <Filter>소스 파일\NetWork</Filter>
+    </ClCompile>
+    <ClCompile Include="ZoneManager\CZone.cpp">
+      <Filter>소스 파일\ZoneManager</Filter>
+    </ClCompile>
+    <ClCompile Include="ZoneManager\CZoneManager.cpp">
+      <Filter>소스 파일\ZoneManager</Filter>
+    </ClCompile>
+    <ClCompile Include="ZoneManager\CZone_Login.cpp">
+      <Filter>소스 파일\ZoneManager</Filter>
+    </ClCompile>
+    <ClCompile Include="CPlayer.cpp">
+      <Filter>소스 파일\CObject</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -136,6 +148,15 @@
     </ClInclude>
     <ClInclude Include="NetWork\CGMSession.h">
       <Filter>소스 파일\NetWork</Filter>
+    </ClInclude>
+    <ClInclude Include="ZoneManager\CZone.h">
+      <Filter>소스 파일\ZoneManager</Filter>
+    </ClInclude>
+    <ClInclude Include="ZoneManager\CZoneManager.h">
+      <Filter>소스 파일\ZoneManager</Filter>
+    </ClInclude>
+    <ClInclude Include="ZoneManager\CZone_Login.h">
+      <Filter>소스 파일\ZoneManager</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

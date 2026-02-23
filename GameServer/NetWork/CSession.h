@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #pragma comment(lib, "ws2_32")
 
 #include <WinSock2.h>
@@ -69,7 +69,7 @@ public:
 	bool GetBoolConnect() { return bConnect; }
 
 	void SetConnectPlayerHandle(int playerID) { m_ConnectPlayerHandle = playerID; }
-	bool SetZoneID(int procID);
+	bool SetZoneID(int zoneID);
 public:
 	void OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key);
 	

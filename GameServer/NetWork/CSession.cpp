@@ -40,19 +40,15 @@ CSession::~CSession()
 	DeleteCriticalSection(&m_csSendQ);
 }
 
-bool CSession::SetZoneID(int procID)
+bool CSession::SetZoneID(int zoneID)
 {
-	if (!g_ZoneManager.IsValidZoneID(procID))
+	if (!g_ZoneManager.IsValidZoneID(zoneID))
 		return false;
 
-	if (AddRef())
-	{
-		m_ZoneID.store(procID);
-		m_ProcId.store(g_ZoneManager.GetProcID(procID));
-		SubRef();
-		return true;
-	}
-	return false;
+	m_ZoneID.store(zoneID);
+	m_ProcId.store(g_ZoneManager.GetProcID(zoneID));
+	
+	return true;
 }
 
 void CSession::OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key)
@@ -100,10 +96,10 @@ void CSession::OnDisconnect()
 
 bool CSession::AddRef()
 {
-	// 연결 중인가
+	// 종료중이 아니라면
 	if(!bCloseing.load())
 	{
-		// 사용중
+		// 사용 증가
 		RefCnt.fetch_add(1);
 		if (!bCloseing.load())
 		{

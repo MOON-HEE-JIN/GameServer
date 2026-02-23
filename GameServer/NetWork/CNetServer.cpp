@@ -166,7 +166,7 @@ unsigned __stdcall GMAceeptThread(void* arg)
 			continue;
 		}
 		g_LogServer.ILog("GM Connect");
-		// 愿由??뚯?? ?숆린 濡?愿由?
+		// 관리 소케은 동기 로 관리
 		CGMSession gmSession(client_sock);
 		gmSession.Run();
 	}

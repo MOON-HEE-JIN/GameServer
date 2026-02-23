@@ -25,3 +25,4 @@ struct st_STC_LoopBack
 	__int32		zone;
 	__int64		data;
 };
+

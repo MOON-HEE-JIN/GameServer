@@ -54,7 +54,7 @@ public:
         T out;
         while (TryDequeue(out)) {}
 
-        // 마지막 dummy 회수
+        // 留吏留 dummy 
         m_pool.Free(m_head);
     }
 
@@ -66,14 +66,14 @@ public:
     void Enqueue(const T& v)
     {
         Node* n = m_pool.Alloc();
-        // placement-new 형태가 아니라 pool이 raw Node를 주므로 대입으로 초기화
+        // placement-new 媛  pool raw Node瑜 二쇰濡 쇰 珥湲고
         n->data = v;
         n->next.store(nullptr, std::memory_order_relaxed);
 
-        // 1) tail을 새 노드로 교체 (멀티 producer 경쟁 지점)
+        // 1) tail  몃濡 援泥 (硫 producer 寃쎌 吏�)
         Node* prev = m_tail.exchange(n, std::memory_order_acq_rel);
 
-        // 2) prev->next에 새 노드를 publish (consumer는 acquire로 읽음)
+        // 2) prev->next  몃瑜 publish (consumer acquire濡 쎌)
         prev->next.store(n, std::memory_order_release);
     }
 
@@ -88,8 +88,8 @@ public:
         prev->next.store(n, std::memory_order_release);
     }
 
-    // Consumer(단일): pop
-    // empty면 false, 성공하면 out 채우고 true
+    // Consumer(⑥): pop
+    // empty硫 false, 깃났硫 out 梨곌� true
     bool TryDequeue(T& out)
     {
         Node* h = m_head;
@@ -97,8 +97,8 @@ public:
 
         if (next == nullptr)
         {
-            // 중요: producer가 tail은 바꿨는데 prev->next publish가 아직일 수 있음.
-            // head != tail 이면 "진짜 empty"가 아님 → 잠깐 대기 후 재확인
+            // 以: producer媛 tail 諛轅⑤ prev->next publish媛 吏  .
+            // head != tail 대㈃ "吏吏 empty"媛   源 湲  ы
             if (m_tail.load(std::memory_order_acquire) != h)
             {
                 do
@@ -113,25 +113,25 @@ public:
             }
             else
             {
-                return false; // 진짜 empty
+                return false; // 吏吏 empty
             }
         }
 
-        // next는 실제 데이터 노드
+        // next ㅼ 곗댄 몃
         out = std::move(next->data);
 
-        // dummy를 한 칸 전진: next가 새 dummy가 됨
+        // dummy瑜  移 �吏: next媛  dummy媛 
         m_head = next;
 
-        // 이전 dummy(h)는 consumer가 단독으로 retire/free
+        // 댁 dummy(h) consumer媛 ⑤쇰 retire/free
         m_pool.Free(h);
         return true;
     }
 
-    // 디버그/관찰용(정확 size는 MPSC에서도 비용/정확성 문제가 있어 보통 안 둠)
+    // 踰洹/愿李곗(� size MPSC 鍮/� 臾몄媛  蹂댄  )
     int GetMemoryPoolSize() { return m_pool.GetAllocCount(); }
 
-    // 필요 시: consumer 스레드에서 주기적으로 호출해 reclaim 압박 줄이기
+    //  : consumer ㅻ 二쇨린�쇰 몄 reclaim 諛 以닿린
     void ForceReclaimOnThisThread()
     {
         m_pool.ForceReclaimCurrentThread();

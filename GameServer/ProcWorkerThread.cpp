@@ -1,11 +1,13 @@
-#pragma comment(lib, "winmm.lib")
+ï»¿#pragma comment(lib, "winmm.lib")
 #include "ProcWorkerThread.h"
 #include "GameServerDef.h"
 #include "NetWork/CNetServer.h"
 #include "Log/CLog.h"
-
+#include "./ZoneManager/CZoneManager.h"
 #include <Windows.h>
 #include <process.h>
+
+#include "ZoneManager/CZoneManager.h"
 
 static std::vector<HANDLE> s_ProcWorkerThreadHandles;
 static std::vector<int> s_ProcWorkerThreadIDs;
@@ -34,7 +36,7 @@ void CreateProcWorkerThread()
         s_ProcWorkerThreadHandles.push_back(h);
     }
 
-    // manual-reset(TRUE), ÃÊ±â ºñ½ÅÈ£(FALSE)
+    // manual-reset(TRUE), ì´ˆê¸° ë¹„ì‹ í˜¸(FALSE)
     s_hExit = CreateEvent(NULL, TRUE, FALSE, NULL);
 }
 
@@ -61,7 +63,7 @@ void WaitProcWorkerThread()
 
 void PostMessageProcThreadExit()
 {
-	// Á¾·á ÀÌº¥Æ® ¹ß»ý
+	// ì¢…ë£Œ ì´ë²¤íŠ¸ ë°œìƒ
 	SetEvent(s_hExit);
 }
 
@@ -71,22 +73,23 @@ unsigned __stdcall ProcWorkerThread(void* arg)
 	int procID = *(int*)arg;
     timeBeginPeriod(1);
     int ret = 0;
+
+    s_ProcWorker[procID]->InitZoneVector();
+    
     while (CNetServer::g_ServerON)
     {
-        //1000 Frames 1ÃÊ´ç 1000 Ã³¸®
+        //1000 Frames 1ì´ˆë‹¹ 1000 ì²˜ë¦¬
         ret = WaitForSingleObject(s_hExit, 1);
 
-        // Á¾·á ÀÌº¥Æ®
+        // ì¢…ë£Œ ì´ë²¤íŠ¸
         if (ret == WAIT_OBJECT_0)
             break;
 
-		// ÆÐÅ¶ Ã³¸®
+		// íŒ¨í‚· ì²˜ë¦¬
 		s_ProcWorker[procID]->Proc();
 
-
-
-		// ÇÃ·¹ÀÌ¾î »èÁ¦ Ã³¸®
-		s_ProcWorker[procID]->DeletePlayerProcess();
+        // ê´€ë¦¬ Zone ì´ë²¤íŠ¸
+        s_ProcWorker[procID]->ZoneProc();
     }
 
     g_LogThread.ILog("=== END THREAD ProcWorkerThread ===");
@@ -101,7 +104,17 @@ void CProcWorker::Proc()
         CPlayer* pPlayer = g_PlayerManager[job.PlayerHandle];
         if (pPlayer == nullptr)
             continue;
+        if (pPlayer->GetZoneStatus() != eZONESTATUS::STABLE)
+            continue;
         m_pPacketProc->DO_GAME_Proc(job.type, pPlayer, job.packet);
+    }
+}
+
+void CProcWorker::ZoneProc()
+{
+    for (int i = 0; i < m_ZoneCnt; i++)
+    {
+        m_vecZone[i]->ZoneMoveJobProcess();
     }
 }
 
@@ -112,11 +125,17 @@ void CProcWorker::DeletePlayerProcess()
     {
 		if (pPlayer == nullptr)
             continue;
-        g_LogGame.ILog("Release Player PHandle : %d, SHandle : %d", pPlayer->GetPlayerHandle(), pPlayer->GetSessionHandle().Handle);
+        //g_LogGame.ILog("Release Player PHandle : %d, SHandle : %d", pPlayer->GetPlayerHandle(), pPlayer->GetSessionHandle().Handle);
         CNetServer::DecrementPlayerCount();
-        pPlayer->SessionHandleClear();
+        g_ZoneManager.LeaveZone(pPlayer);
 		FreePlayer(pPlayer);   
     }
+}
+
+void CProcWorker::InitZoneVector()
+{
+    g_ZoneManager.InitProcZoneVector(m_ProcID, m_vecZone);
+    m_ZoneCnt = m_vecZone.size();
 }
 
 void DeleteProcWorker()

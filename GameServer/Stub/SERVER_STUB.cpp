@@ -19,3 +19,4 @@ void Stub<Object,Packet>::DO_GAME_Proc(int type, Object* pTarget, Packet& cPacke
 	ret = m_mapGAMEProc[type](pTarget, cPacket);
 	if(ret != 0)		DO_ERROR_RESULT(pTarget, ret, type);
 }
+

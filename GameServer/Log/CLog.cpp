@@ -1,4 +1,4 @@
-#include "CLog.h"
+﻿#include "CLog.h"
 
 #include "../MemoryManager/MemoryManager.h"
 #include "../NetWork/CNetServer.h"
@@ -122,7 +122,6 @@ unsigned __stdcall LogThread(void* arg)
 	int ret = 0;
 	while (CNetServer::g_ServerON)
 	{
-		//1000 Frames 1ÃÊ´ç 1000 Ã³¸®
 		ret = WaitForSingleObject(h_hExit, 1);
 
 		CNetServer::ServerLog();
@@ -156,7 +155,7 @@ unsigned __stdcall LogThread(void* arg)
 		fclose(fp);
 	}
 
-	// LogThread 는 마지막에 종료되어야 한다
+	// LogThread 로그 다 찍고 마지막에 제거
 	Sleep(1000);
 
 	fputs("=== END THREAD LogThread ===\n", stdout);
@@ -168,3 +167,4 @@ CLog g_LogTemp("temp.log", "TEMP");
 CLog g_LogServer("server.log", "SERVER");
 CLog g_LogGame("game.log", "GAME");
 CLog g_LogThread("thread.log", "THREAD");
+

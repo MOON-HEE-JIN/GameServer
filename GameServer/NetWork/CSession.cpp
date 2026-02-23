@@ -1,8 +1,8 @@
-#include "CSession.h"
+ï»¿#include "CSession.h"
 #include <WS2tcpip.h>
 #include "../Stub/StructDef.h"
 #include "../Log/CLog.h"
-
+#include "../ZoneManager/CZoneManager.h"
 CSession::CSession()
 {
 	sock = 0;
@@ -26,7 +26,8 @@ CSession::CSession()
 	m_ConnectKey.store(SESSION_HANDLE(-1, 0));
 
 	m_ConnectPlayerHandle = -1;
-	m_ProcID = 0;
+	m_ZoneID = 0;
+	m_ProcId = 0;
 }
 
 CSession::~CSession()
@@ -39,15 +40,15 @@ CSession::~CSession()
 	DeleteCriticalSection(&m_csSendQ);
 }
 
-bool CSession::SetProcID(int procID)
+bool CSession::SetZoneID(int zoneID)
 {
-	if (AddRef())
-	{
-		m_ProcID.store(procID);
-		SubRef();
-		return true;
-	}
-	return false;
+	if (!g_ZoneManager.IsValidZoneID(zoneID))
+		return false;
+
+	m_ZoneID.store(zoneID);
+	m_ProcId.store(g_ZoneManager.GetProcID(zoneID));
+	
+	return true;
 }
 
 void CSession::OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key)
@@ -64,7 +65,9 @@ void CSession::OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key)
 	SendQ->Clear();
 
 	m_ConnectKey = std::move(key);
-	m_ProcID = 0;
+	m_ConnectPlayerHandle = -1;
+	m_ZoneID = 0;
+	m_ProcId = 0;
 	bCloseing = false;
 	bDisconnecting = false;
 	RefCnt = 0;
@@ -86,22 +89,23 @@ void CSession::OnDisconnect()
 	RecvQ->Clear();
 	SendQ->Clear();
 	m_ConnectPlayerHandle = -1;
-	m_ProcID = 0;
+	m_ZoneID = 0;
+	m_ProcId = 0;
 	CloseSocket();
 }
 
 bool CSession::AddRef()
 {
-	// ¿¬°á ÁßÀÎ°¡
+	// ì¢…ë£Œì¤‘ì´ ì•„ë‹ˆë¼ë©´
 	if(!bCloseing.load())
 	{
-		// »ç¿ëÁß
+		// ì‚¬ìš© ì¦ê°€
 		RefCnt.fetch_add(1);
 		if (!bCloseing.load())
 		{
 			return true;
 		}
-		// »ç¿ëÁßÀÌ ¾Æ´Ï¸é °¨¼Ò
+		// ì‚¬ìš© ëë‚˜ê³  ë‚˜ê°€ê¸°
 		RefCnt.fetch_sub(1);
 	}
 	return false;
@@ -111,11 +115,11 @@ void CSession::CloseSocket()
 {
 	bool bf = false;
 
-	// ÀÌ¹Ì Á¾·áÁß ÀÌ¶ó¸é
+	// ì¤‘ë³µ ì¢…ë£Œ ë§‰ê¸°
 	if (!bCloseing.compare_exchange_strong(bf, true))
 		return;
 	
-	g_LogServer.ILog("CloseSocket SessionHandle : %d", GetConnectHandle());
+	//g_LogServer.ILog("CloseSocket SessionHandle : %d", GetConnectHandle());
 
 	if (bConnect.exchange(false))
 	{
@@ -239,7 +243,6 @@ bool CSession::RecvPost()
 		ret = WSAGetLastError();
 		if (ret != WSA_IO_PENDING)
 		{
-			// 10054 : ¿¬°áÀÌ °­Á¦·Î ²÷±è, 10053 : ºñÁ¤»ó Á¾·á
 			if (ret != 10054 && ret != 10053)
 			{
 				//printf("-- Recv WSARecv Error %d ---\n", ret);

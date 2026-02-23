@@ -1,18 +1,28 @@
-#include "PacketProc.h"
+﻿#include "PacketProc.h"
 #include "Stub/PacketEnumDef.h"
 #include "NetWork/CNetServer.h"
 #include "GameServerDef.h"
 #include "Stub/EnumDef.h"
 #include "Log/CLog.h"
+#include "ZoneManager/CZoneManager.h"
 
 int PacketProc::DO_GAME_LOOPBACK(CPlayer* pTarget, CPacket& pReqPacket)
 {
+    if (pTarget == nullptr)
+        return ERROR_CODE::NOT_FIND_PID;
+
     st_CTS_LoopBack data;
     pReqPacket >> data;
     
+    if (pTarget->GetZoneID() != data.zone && pTarget->GetZoneID() != 0)
+    {
+        g_LogGame.ELog("Not Equal Zone Client[%d] - Server[%d]", data.zone, pTarget->GetZoneID());
+    }
+
     st_STC_LoopBack req;
     req.ret = 0;
     req.data = data.data;
+    req.zone = pTarget->GetZoneID();
     CPacket reqPacket;
     reqPacket << req;
 
@@ -28,6 +38,9 @@ int PacketProc::DO_ERROR_PACKET(CPlayer* pTarget, CPacket& pReqPacket)
 
 int PacketProc::DO_ERROR_RESULT(CPlayer* pTarget, int ret, int type)
 {
+    if (pTarget == nullptr)
+        return ERROR_CODE::NOT_FIND_PID;
+
     CPacket req;
     req << ret;
     TrySend(pTarget->GetSessionHandle(), type, &req);
@@ -36,27 +49,30 @@ int PacketProc::DO_ERROR_RESULT(CPlayer* pTarget, int ret, int type)
 
 int PacketProc::DO_GAME_CHANGEPID(CPlayer* pTarget, CPacket& pReqPacket)
 {
+    if (pTarget == nullptr)
+        return ERROR_CODE::NOT_FIND_PID;
+
     st_CTS_ChangePid data;
     pReqPacket >> data;
-    
-    if (data.pid >= ProcThreadCnt || data.pid < 0)
+
+    if (!g_ZoneManager.IsValidZoneID(data.pid))
         return ERROR_CODE::NOT_FIND_PID;
 
-    if (pTarget->GetProcID() == data.pid)
+    const int prevZoneID = pTarget->GetZoneID();
+    if (!g_ZoneManager.IsValidZoneID(prevZoneID))
+        return ERROR_CODE::NOT_FIND_PID;
+
+    if (prevZoneID == data.pid)
         return ERROR_CODE::EQUAL_PID;
 
-    if (!TryChangePid(pTarget->GetSessionHandle(), data.pid))
+    // 기존 직접 Enter -> 요청 Job 을 주는쪽으로 수정
+
+    //  이동 실패
+    if (!g_ZoneManager.ReqEnterZone(pTarget, data.pid))
         return ERROR_CODE::NOT_FIND_PID;
 
-    //g_LogGame.DLog("Change ProcID : %d -> %d", pTarget->GetProcID(), data.pid);
-    
-    pTarget->ChangeProcID(data.pid);
-    
-    st_STC_ChangePid req;
-    req.ret = ERROR_CODE::NOT_ERROR;
-    CPacket reqPacket;
-    reqPacket << req;
+    // 이동 성공 패킷은 이동이 완료되고 보낸다
 
-    TrySend(pTarget->GetSessionHandle(), GAME::CHANGEPID, &reqPacket);
     return ERROR_CODE::NOT_ERROR;
 }
+

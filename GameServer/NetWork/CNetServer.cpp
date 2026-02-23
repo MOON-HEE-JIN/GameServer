@@ -1,4 +1,4 @@
-癤#include "CNetServer.h"
+﻿#include "CNetServer.h"
 #include <process.h>
 #include <ws2tcpip.h>
 #include <iostream>
@@ -224,14 +224,7 @@ unsigned __stdcall WorkerThread(void* arg)
 				int err = WSAGetLastError();
 				if (err != 64 && err != 997 && err != 0 && err != 10038 && err != 1236)
 				{
-					/*
-					* ERROR_NETNAME_DELETED(64) : TCP 곌껐 鍮�� 醫猷
-					* WSA_IO_PENDING(997) : 以泥 I/O  以 猷
-					* ERROR_NETWORK_UNREACHABLE(1236) : ㅽ몄 곌껐 ㅽ  以
-					* linger 듭 ㅼ RST 瑜 利 � RST   곌껐 醫猷  湲곗 recv  ㅻ
-					* WSAENOTSOCKET(10038) : nonsocket   耳 
-					printf("WorkerThread GQCS Error %d\n", err);
-					*/
+					
 				}
 				pSession->CloseSocket();
 			}
@@ -247,7 +240,7 @@ unsigned __stdcall WorkerThread(void* arg)
 				{
 					size = pSession->GetRecvBuffer()->GetUseSize();
 
-					//怨� ш린 Header ш린 
+					//고정된 크기의 Header 크기 확인
 					if (size < sizeof(st_Header))
 						break;
 
@@ -282,14 +275,7 @@ unsigned __stdcall WorkerThread(void* arg)
 				int err = WSAGetLastError();
 				if (err != 64 && err != 997 && err != 0 && err != 10038 && err != 1236)
 				{
-					/*
-					* ERROR_NETNAME_DELETED(64) : TCP 곌껐 鍮�� 醫猷
-					* WSA_IO_PENDING(997) : 以泥 I/O  以 猷
-					* ERROR_NETWORK_UNREACHABLE(1236) : ㅽ몄 곌껐 ㅽ  以
-					* linger 듭 ㅼ RST 瑜 利 � RST   곌껐 醫猷  湲곗 recv  ㅻ
-					* WSAENOTSOCKET(10038) : nonsocket   耳 
-					printf("WorkerThread GQCS Error %d\n", err);
-					*/
+					
 				}
 				pSession->CloseSocket();
 			}
@@ -317,7 +303,7 @@ bool TryChangeZone(const SESSION_HANDLE& key, int zoneID)
 	if (pSession == nullptr)
 		return false;
 
-	// 곌껐 諛 ъъ  泥댄
+	// 연결 및 재사용 횟수 체크
 	if (!pSession->GetBoolConnect()) return false;
 	if (pSession->GetConnectGen() != key.Gen) return false;
 
@@ -340,7 +326,7 @@ bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket)
 	if (pSession == nullptr)
 		return false;
 	
-	// 곌껐 諛 ъъ  泥댄
+	// 연결 및 재사용 횟수 체크
 	if (!pSession->GetBoolConnect()) return false;
 	if (pSession->GetConnectGen() != key.Gen) return false;
 
@@ -600,7 +586,6 @@ CSession* CNetServer::AddSession(SOCKET sock)
 
 void CNetServer::DisConnect(CSession* pSession)
 {
-	// 대� 醫猷以대㈃ 臾댁
 	if (!pSession->OnStartDisconnect())
 		return;
 

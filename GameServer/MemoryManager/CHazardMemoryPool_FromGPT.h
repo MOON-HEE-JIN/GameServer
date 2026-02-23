@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <atomic>
 #include <cassert>
@@ -12,16 +12,16 @@
 #include <algorithm>
 #include <stdexcept>
 
-// Hazard Pointer + Retire/Reclaim 湲곕 ⑥ 硫紐⑤━ 
+// Hazard Pointer + Retire/Reclaim 기반 단순 메모리 풀
 // - Lock-free free-list (Treiber stack)
-// - Hazard pointer濡 pop  ABA/Use-after-free 諛⑹
-// - Retire list TLS (thread_local)濡 蹂닿  怨移留 ㅼ/
+// - Hazard pointer로 pop 시 ABA/Use-after-free 방지
+// - Retire list는 TLS (thread_local)로 보관 후 임계치마다 스캔/회수
 //
-// 二쇱/洹:
-// 1) MAX_THREADS瑜 珥怨쇳 ㅻ媛    ъ⑺硫 /assert濡 ㅽ⑦⑸.
-// 2)  愿 � ㅻⅨ ㅻ媛 ъ 몃瑜 李몄“  쇰㈃ � delete媛 遺媛ν⑸.
-//    곕쇱 ClearAfterAllThreadsJoined() "紐⑤  ㅻ媛 醫猷(join)" ㅼ留 몄댁 ⑸.
-// 3)  T  щ CHMemoryPool<T> 몄ㅽ댁ㅻ� 댁 寃쎌 retire TLS媛 蹂 遺由щ吏 쇰濡 鍮沅.
+// 주의/규약:
+// 1) MAX_THREADS를 초과하는 스레드가 동시에 이 풀을 사용하면 예외/assert로 실패합니다.
+// 2) 풀 파괴 시점에 다른 스레드가 여전히 노드를 참조할 수 있으면 안전한 delete가 불가능합니다.
+//    따라서 ClearAfterAllThreadsJoined()는 "모든 작업 스레드가 종료(join)"된 뒤에만 호출해야 합니다.
+// 3) 동일 T에 대해 여러 CHMemoryPool<T> 인스턴스를 운영하는 경우 retire TLS가 풀별 분리되지 않으므로 비권장.
 
 template <typename T, int MAX_THREADS = 16, std::size_t RETIRE_THRESHOLD = 512>
 class CHMemoryPool
@@ -33,40 +33,24 @@ private:
     struct Node
     {
         Node* next;
-        // T 瑜 닿린  踰쇰� storge   ��ъ T  ��щ 留異
+        // T 를 담기 위한 버퍼를 storge 하는데 이 정렬을 T에 대한 정렬로 맞춤
         alignas(T) std::byte storage[sizeof(T)];
 
         T* data_ptr() noexcept
         {
-            // placement-new濡 깅 T �洹쇳  launder ъ 沅
+            // placement-new로 생성된 T에 접근할 때 launder 사용 권장
             return std::launder(reinterpret_cast<T*>(storage));
         }
         const T* data_ptr() const noexcept
         {
             return std::launder(reinterpret_cast<const T*>(storage));
         }
-        /*
-        std::launder  濡 媛泥댁 뱀 誘명
-         댁
-        alloc  placement new 瑜 듯댁 깆瑜 몄 ⑥ 곕 媛泥댁 紐二쇨린  誘명
-        free  硫몄 몄 듯댁 媛泥댁 醫猷瑜 誘명
-        대 alloc  ъ⑺二 瑜 ㅼ 以寃쎌
-        ex
-            T* p = alloc;
-            free(p);
-            T* q = alloc;
-
-        댁 곕Ⅴ硫 而댄쇰щ 쇳 밸 二쇱瑜 ъ⑺寃  ш린 p  q 瑜  媛泥대 ш만  ъ媛 湲대
-        洹몃ㅻ㈃ 댁 �洹쇳댁 살 p   媛 吏泥 ъ⑺ 怨 臾몄 媛 諛
-
-        std::lanunder  而댄쇰 寃 대 二쇱 濡 媛泥댁 由곕(X, 濡 媛泥)
-        */
     };
 
     // free-list head
     std::atomic<Node*> m_freeList{ nullptr };
 
-    // 踰洹/듦: 濡 밸 몃 , free-list濡  몃 
+    // 디버그/통계: 새로 할당된 노드 수, free-list로 회수된 노드 수
     std::atomic<std::uint64_t> m_debugNewNodes{ 0 };
     std::atomic<std::uint64_t> m_debugRecycledToFreeList{ 0 };
 
@@ -79,7 +63,7 @@ private:
 
     struct HazardRecord
     {
-        std::atomic<std::uintptr_t> ownerToken; // 0대㈃ 誘몄ъ
+        std::atomic<std::uintptr_t> ownerToken;
         std::atomic<Node*> protectedPtr;
 
         HazardRecord() : ownerToken(0), protectedPtr(nullptr) {}
@@ -87,14 +71,14 @@ private:
 
     static HazardRecord s_hazardRecs[MAX_THREADS];
 
-    // 媛 ㅻ媛 湲 곗 媛怨 hazard record瑜 1媛 
+    // 각 스레드가 자기 토큰을 갖고 hazard record를 1개 소유
     class HazardOwner
     {
     public:
         HazardOwner()
         {
-            // ㅻ蹂 怨 : TLS 二쇱瑜 ъ(濡몄  쇱 媛�)
-            // (以�쇰 "二쇱 쇱" ъㅼ 蹂댁λ 愿⑹ ⑦)
+            // 스레드별 고유 토큰: TLS 주소를 사용(프로세스 내 유일성 가정)
+            // (표준적으로 "주소 유일성"은 사실상 보장되는 관용적 패턴)
             m_token = reinterpret_cast<std::uintptr_t>(&s_tlsTokenMarker);
             if (m_token == 0)
                 m_token = 1;
@@ -114,14 +98,14 @@ private:
 
             if (!m_rec)
             {
-                // ㅻ щ’ 怨媛: 紐�쇰 ㅽ
+                // 스레드 슬롯 고갈: 명시적으로 실패
                 throw std::runtime_error("CHMemoryPool: Hazard slot exhausted (MAX_THREADS exceeded).");
             }
         }
 
         ~HazardOwner()
         {
-            // ㅻ 醫猷 � hazard pointer瑜 鍮곌� щ’ 諛
+            // 스레드 종료 시점에 hazard pointer를 비우고 슬롯 반환
             if (m_rec)
             {
                 m_rec->protectedPtr.store(nullptr, std::memory_order_release);
@@ -139,7 +123,7 @@ private:
         HazardRecord* m_rec{ nullptr };
         std::uintptr_t m_token{ 0 };
 
-        static inline thread_local int s_tlsTokenMarker = 0; // 곗 留而
+        static inline thread_local int s_tlsTokenMarker = 0;
     };
 
     static thread_local HazardOwner s_tlsHazOwner;
@@ -149,7 +133,6 @@ private:
         return s_tlsHazOwner.protected_ptr_ref();
     }
 
-    // retire list: ㅻ 濡而
     static thread_local std::vector<Node*> s_tlsRetired;
 
 private:
@@ -159,8 +142,8 @@ private:
 
     static Node* node_from_data(T* p) noexcept
     {
-        // Node T瑜 吏� 硫ㅻ濡 ы⑦吏 쇰濡 standard-layout닿�,
-        // storage ㅽ �寃 痍④ 媛
+        // Node는 T를 직접 멤버로 포함하지 않으므로 standard-layout이고,
+        // storage의 오프셋은 안전하게 취급 가능
         std::byte* b = reinterpret_cast<std::byte*>(p);
         Node* n = reinterpret_cast<Node*>(b - offsetof(Node, storage));
         return n;
@@ -173,15 +156,15 @@ private:
         {
             Node* head = m_freeList.load(std::memory_order_acquire);
 
-            //  head瑜 hazard濡 蹂댄
+            // 현재 head를 hazard로 보호
             tls_hazard_ptr().store(head, std::memory_order_release);
 
-            // head媛 諛쇰㈃ ㅼ
+            // head가 바뀌었으면 다시
             if (head != m_freeList.load(std::memory_order_acquire))
             {
-                // ъ � 蹂댄몃� 댁吏 쇰㈃
-                // ㅻⅨ ㅻ 대 몃瑜 吏 紐삵寃 
-                // retire/reclaim 吏곕  .
+                // 재시도 전에 보호를 해제하지 않으면
+                // 다른 스레드에서 해당 노드를 회수하지 못하게 되어
+                // retire/reclaim이 지연될 수 있음.
                 tls_hazard_ptr().store(nullptr, std::memory_order_release);
                 continue;
             }
@@ -200,16 +183,16 @@ private:
                 std::memory_order_acq_rel,
                 std::memory_order_relaxed))
             {
-                // pop 깃났: 蹂댄 댁
+                // pop 성공: 보호 해제
                 tls_hazard_ptr().store(nullptr, std::memory_order_release);
                 head->next = nullptr;
                 return head;
             }
 
-            // compare_exchange_weak ㅽ⑤ ъ 寃쎌곗
-            // ㅼ 諛蹂 댁 hazard瑜 댁吏 쇰㈃ 쇳 臾몄 諛 媛.
-            // ш린 猷⑦ ⑥ ㅼ 蹂댄몃� ㅼ誘濡 紐� 댁 �댁留,
-            // �  紐�쇰 댁.
+            // compare_exchange_weak 실패로 재시도하는 경우에도
+            // 다음 반복 이전에 hazard를 해제하지 않으면 동일한 문제 발생 가능.
+            // 여기서는 루프 상단에서 다시 보호를 설정하므로 명시적 해제는 선택적이지만,
+            // 안전을 위해 명시적으로 해제.
             tls_hazard_ptr().store(nullptr, std::memory_order_release);
         }
     }
@@ -240,7 +223,7 @@ private:
                 out.push_back(p);
         }
 
-        // ㅼ 鍮⑹ 以닿린  ��  댁 
+        // 스캔 비용을 줄이기 위해 정렬 후 이진 탐색
         std::sort(out.begin(), out.end());
         out.erase(std::unique(out.begin(), out.end()), out.end());
     }
@@ -260,12 +243,12 @@ private:
             bool inUse = std::binary_search(hazards.begin(), hazards.end(), n);
             if (!inUse)
             {
-                // ㅻⅨ ㅻ媛 蹂댄명吏  몃 free-list濡 
+                // 다른 스레드가 보호하지 않는 노드는 free-list로 회수
                 push_free_list(n);
             }
             else
             {
-                // 吏 ъ 以대㈃ 吏
+                // 아직 사용 중이면 유지
                 retired[write++] = n;
             }
         }
@@ -287,13 +270,9 @@ private:
     void retire_node(Node* n)
     {
         n->next = nullptr;
-<<<<<<< develop
-        // ShutDown  s_tlsRetired 媛 癒쇱 愿댄 LF_Queue 瑜 愿대 명
-        // push_back  ㅻ 諛
-=======
+
         // ShutDown 시 s_tlsRetired 가 먼저 파괴후에 LF_Queue 를 파괴로 인해
         // push_back 에서 오류 발생
->>>>>>> main
         s_tlsRetired.push_back(n);
 
         if (s_tlsRetired.size() >= RETIRE_THRESHOLD)
@@ -303,9 +282,9 @@ private:
 public:
     CHMemoryPool() = default;
 
-    // 硫몄 � � �由щ� 쇰   듬.
-    // (ㅻⅨ ㅻ媛 ъ �洹쇳  吏  遺媛 + ㅻⅨ ㅻ TLS retire �洹 遺媛)
-    // 곕쇱 紐� �由 ⑥ �怨.
+    // 소멸자는 안전한 전역 정리를 자동으로 할 수 없습니다.
+    // (다른 스레드가 여전히 접근할 수 있는지 판단 불가 + 다른 스레드 TLS retire 접근 불가)
+    // 따라서 명시적 정리 함수 제공.
     ~CHMemoryPool() = default;
 
     std::uint64_t DebugNewNodes() const noexcept
@@ -321,7 +300,7 @@ public:
     void BeginShutdown() { m_bShutdowning.store(true); }
 
     // -------------------------
-    // API 1) Emplace/Destroy (沅)
+    // API 1) Emplace/Destroy (권장)
     // -------------------------
     template <class... Args>
     T* Emplace(Args&&... args)
@@ -333,7 +312,7 @@ public:
         }
         catch (...)
         {
-            //  ㅽ  몃 諛濡 free-list �ㅻ
+            // 생성 실패 시 노드는 바로 free-list에 돌려놓음
             push_free_list(n);
             throw;
         }
@@ -345,7 +324,7 @@ public:
         if (!p) return;
 
         Node* n = node_from_data(p);
-        // T 硫
+
         p->~T();
 
         if (m_bShutdowning.load())
@@ -359,9 +338,9 @@ public:
     }
 
     // -------------------------
-    // API 2) Alloc/Free (명)
-    // - Alloc(): 湲곕낯 
-    // - Free(): 硫 + retire
+    // API 2) Alloc/Free (호환)
+    // - Alloc(): 기본 생성
+    // - Free(): 소멸 + retire
     // -------------------------
     T* Alloc()
     {
@@ -377,25 +356,25 @@ public:
     // Reclaim/clear utilities
     // -------------------------
 
-    //  ㅻ retire list 댁留 媛�濡 reclaim 
+     // 현재 스레드의 retire list에 대해서만 강제로 reclaim 시도
     void ForceReclaimCurrentThread()
     {
         reclaim_if_possible();
     }
 
-    // 紐⑤  ㅻ媛 醫猷(join) ㅼ留 몄댁 ⑸.
-    // - hazard pointers ㅻ 醫猷  ~HazardOwner 댁硫,
-    // - 媛 ㅻ retire list "洹 ㅻ媛 ForceReclaimCurrentThread()瑜 留吏留 몄"嫄곕,
-    //   硫 몃媛 ⑥   듬.
+    // 모든 작업 스레드가 종료(join)된 뒤에만 호출해야 합니다.
+    // - hazard pointers는 스레드 종료 시 ~HazardOwner에서 해제되며,
+    // - 각 스레드 retire list는 "그 스레드가 ForceReclaimCurrentThread()를 마지막에 호출"하거나,
+    //   아니면 노드가 남아 있을 수 있습니다.
     //
-    //  ⑥ " ㅻ 湲곗"쇰 free-list瑜 �遺 delete⑸.
-    // (ъ ㅻⅨ ㅻ TLS retire ⑥  몃 ш린 �洹 遺媛)
+    // 이 함수는 "현재 스레드 기준"으로 free-list를 전부 delete합니다.
+    // (여전히 다른 스레드 TLS retire에 남아 있는 노드는 여기서 접근 불가)
     void ClearAfterAllThreadsJoined()
     {
-        // ⑥ retire瑜 理 free-list濡 由( ㅻ 寃留)
+        // 남은 retire를 최대한 free-list로 돌림(현재 스레드 것만)
         ForceReclaimCurrentThread();
 
-        // free-list瑜 �遺 愿
+        // free-list를 전부 파괴
         Node* head = m_freeList.exchange(nullptr, std::memory_order_acq_rel);
         while (head)
         {
@@ -404,11 +383,11 @@ public:
             head = next;
         }
 
-        //  ㅻ retire list ⑥  몃
-        // "吏 hazard濡 蹂댄몃怨 " 살대濡,
-        // join 댄쇰㈃ 蹂댄 ⑥  �.
-        // ⑥ ㅻ㈃ ъ⑹ 肄媛 留吏留 reclaim 몄吏 嫄곕,
-        // ㅻ媛  怨녹 ъ �洹 以 踰洹 媛μ깆 쎈.
+        // 현재 스레드 retire list에 남아 있는 노드는
+        // "아직 hazard로 보호되고 있다"는 뜻이므로,
+        // join 이후라면 보통 남지 않아야 정상입니다.
+        // 남아 있다면 사용자 코드가 마지막 reclaim을 호출하지 않았거나,
+        // 스레드가 아닌 곳에서 여전히 접근 중인 버그 가능성이 큽니다.
         assert(s_tlsRetired.empty() && "Retired nodes remain in current thread. Call ForceReclaimCurrentThread() at thread shutdown.");
     }
 };

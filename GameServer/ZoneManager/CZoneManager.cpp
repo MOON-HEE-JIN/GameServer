@@ -3,6 +3,8 @@
 #include "../GameServerDef.h"
 #include "../Log/CLog.h"
 #include "CZone_Login.h"
+#include "../Stub/PacketEnumDef.h"
+#include "../Stub/EnumDef.h"
 
 #include <sstream>
 CZoneManager::CZoneManager()
@@ -44,11 +46,42 @@ bool CZoneManager::ReqEnterZone(CPlayer* pPlayer, int toZone)
 	if (!TryEnterZone(toZone))
 		return false;
 
-	m_vecZone[toZone]->EnqueueJob({ GetTickCount(), eZONESTATUS::ENTER, pPlayer->GetPlayerHandle()
-		,toZone, pPlayer->GetZoneID()
-		,false, false });
-	pPlayer->SetZoneStatus(eZONESTATUS::LEAVE);
-	return true;
+	int preZone = pPlayer->GetZoneID();
+
+	if (IsEqualProcZoneID(preZone, toZone))
+	{
+		bool ret = 0;
+		
+		if (!m_vecZone[preZone]->LeaveZone(pPlayer))
+			return false;
+		if (!m_vecZone[toZone]->PushTemp(pPlayer))
+		{
+			// 다시 돌아가기
+			m_vecZone[preZone]->EnterZone(pPlayer);
+			return false;
+		}
+		
+		if (!m_vecZone[toZone]->EnterZone(pPlayer))
+			return false;
+		else
+		{
+			st_STC_ChangePid s;
+			s.ret = 0;
+			CPacket pPacket;
+			pPacket << s;
+			pPlayer->SendPacket(GAME::CHANGEPID, &pPacket);
+		}
+
+		return true;
+	}
+	else
+	{
+		m_vecZone[toZone]->EnqueueJob({ GetTickCount(), eZONESTATUS::ENTER, pPlayer->GetPlayerHandle()
+			,toZone, pPlayer->GetZoneID()
+			,false, false });
+		pPlayer->SetZoneStatus(eZONESTATUS::LEAVE);
+		return true;
+	}
 }
 
 void CZoneManager::ReqJob(ZONE_JOB& job, int zone)
@@ -74,6 +107,13 @@ int CZoneManager::InitProcZoneVector(int pid, std::vector<CZone*>& vec)
 bool CZoneManager::IsValidZoneID(int zoneid) const
 {
 	return zoneid >= 0 && zoneid < static_cast<int>(m_vecZone.size());
+}
+
+bool CZoneManager::IsEqualProcZoneID(int from, int to)
+{
+	int fromprocid = GetProcID(from);
+	int toprocid = GetProcID(to);
+	return fromprocid == toprocid;
 }
 
 int CZoneManager::GetProcID(int zone)

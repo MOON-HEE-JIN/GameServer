@@ -23,6 +23,8 @@ public:
 	int InitProcZoneVector(int pid, std::vector<CZone*>& vec);
 
 	bool IsValidZoneID(int zoneid) const;
+	bool IsEqualProcZoneID(int from, int to);
+
 	bool EnterZone(CPlayer* pPlayer, int zoneid);
 	bool LeaveZone(CPlayer* pPlayer);
 	void Log();

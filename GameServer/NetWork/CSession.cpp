@@ -40,13 +40,13 @@ CSession::~CSession()
 	DeleteCriticalSection(&m_csSendQ);
 }
 
-bool CSession::SetZoneID(int procID)
+bool CSession::SetZoneID(int zoneID)
 {
-	if (!g_ZoneManager.IsValidZoneID(procID))
+	if (!g_ZoneManager.IsValidZoneID(zoneID))
 		return false;
 
-	m_ZoneID.store(procID);
-	m_ProcId.store(g_ZoneManager.GetProcID(procID));
+	m_ZoneID.store(zoneID);
+	m_ProcId.store(g_ZoneManager.GetProcID(zoneID));
 	
 	return true;
 }

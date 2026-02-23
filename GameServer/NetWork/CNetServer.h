@@ -86,7 +86,7 @@ static unsigned __stdcall LogThread(void* arg);			// 로그 처리 Thread
 
 static unsigned __stdcall GMAceeptThread(void* arg);
 
-bool TryChangePid(const SESSION_HANDLE& key, int pid);
+bool TryChangeZone(const SESSION_HANDLE& key, int zoneID);
 bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket);
 void SessionSendQEnqueue();
 

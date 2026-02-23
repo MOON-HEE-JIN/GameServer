@@ -104,6 +104,8 @@ void CProcWorker::Proc()
         CPlayer* pPlayer = g_PlayerManager[job.PlayerHandle];
         if (pPlayer == nullptr)
             continue;
+        if (pPlayer->GetZoneStatus() != eZONESTATUS::STABLE)
+            continue;
         m_pPacketProc->DO_GAME_Proc(job.type, pPlayer, job.packet);
     }
 }
@@ -112,7 +114,7 @@ void CProcWorker::ZoneProc()
 {
     for (int i = 0; i < m_ZoneCnt; i++)
     {
-        m_vecZone[i]->Update();
+        m_vecZone[i]->ZoneMoveJobProcess();
     }
 }
 

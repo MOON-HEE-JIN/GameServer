@@ -26,7 +26,7 @@ bool CZone_Login::EnterZone(CPlayer* pPlayer)
 	if (m_mapIDtoIndex.find(pPlayer->GetPlayerHandle()) != m_mapIDtoIndex.end())
 		return false;
 
-	if (!TryChangePid(pPlayer->GetSessionHandle(), m_ID))
+	if (!TryChangeZone(pPlayer->GetSessionHandle(), m_ID))
 		return false;
 
 	pPlayer->SetZoneID(m_ID);

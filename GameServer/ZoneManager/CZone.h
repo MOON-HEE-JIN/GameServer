@@ -24,11 +24,12 @@ protected:
 
 	CLockFreeQueue_MPSC<ZONE_JOB> m_queue;
 
-	bool PushTemp(CPlayer* pPlayer);
 
 public:
-	void Update();
+	void ZoneMoveJobProcess();
 	void EnqueueJob(ZONE_JOB&& job) { m_queue.Enqueue(job); }
+
+	bool PushTemp(CPlayer* pPlayer);
 
 	virtual bool EnterZone(CPlayer* pPlayer);
 	virtual bool LeaveZone(CPlayer* pPlayer);

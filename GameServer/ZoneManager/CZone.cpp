@@ -28,7 +28,7 @@ bool CZone::PushTemp(CPlayer* pPlayer)
 	if (m_mapIDtoIndex.find(pPlayer->GetPlayerHandle()) != m_mapIDtoIndex.end())
 		return false;
 
-	if (!TryChangePid(pPlayer->GetSessionHandle(), m_ID))
+	if (!TryChangeZone(pPlayer->GetSessionHandle(), m_ID))
 		return false;
 
 	m_Cnt.fetch_add(1);
@@ -36,7 +36,7 @@ bool CZone::PushTemp(CPlayer* pPlayer)
 	return true;
 }
 
-void CZone::Update()
+void CZone::ZoneMoveJobProcess()
 {
 	ZONE_JOB job;
 
@@ -217,7 +217,7 @@ bool CZone::LeaveZone(CPlayer* pPlayer)
 
 bool CZone::TryEnterZone()
 {
-	return m_Cnt.load() < m_MaxZoneManagerCount;
+	return m_Cnt.load() <= m_MaxZoneManagerCount;
 }
 
 

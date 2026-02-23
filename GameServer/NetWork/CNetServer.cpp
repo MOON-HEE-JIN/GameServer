@@ -86,7 +86,7 @@ bool OnClientJoin(CSession* pSession)
 		CNetServer::DecrementPlayerCount();
 		return false;
 	}
-
+	pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
 	return true;
 }
 
@@ -311,7 +311,7 @@ unsigned __stdcall WorkerThread(void* arg)
 	return 0;
 }
 
-bool TryChangePid(const SESSION_HANDLE& key, int pid)
+bool TryChangeZone(const SESSION_HANDLE& key, int zoneID)
 {
 	CSession* pSession = CNetServer::GetSession(key.Handle);
 	if (pSession == nullptr)
@@ -329,7 +329,7 @@ bool TryChangePid(const SESSION_HANDLE& key, int pid)
 		return false;
 	}
 
-	bool bRet = pSession->SetZoneID(pid);
+	bool bRet = pSession->SetZoneID(zoneID);
 	pSession->SubRef();
 	return bRet;
 }

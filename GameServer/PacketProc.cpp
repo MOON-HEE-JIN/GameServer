@@ -14,9 +14,15 @@ int PacketProc::DO_GAME_LOOPBACK(CPlayer* pTarget, CPacket& pReqPacket)
     st_CTS_LoopBack data;
     pReqPacket >> data;
     
+    if (pTarget->GetZoneID() != data.zone && pTarget->GetZoneID() != 0)
+    {
+        g_LogGame.ELog("Not Equal Zone Client[%d] - Server[%d]", data.zone, pTarget->GetZoneID());
+    }
+
     st_STC_LoopBack req;
     req.ret = 0;
     req.data = data.data;
+    req.zone = pTarget->GetZoneID();
     CPacket reqPacket;
     reqPacket << req;
 

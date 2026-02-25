@@ -24,15 +24,22 @@ protected:
 
 	CLockFreeQueue_MPSC<ZONE_JOB> m_queue;
 
-
+	std::vector<CPlayer*> m_vecMovePlayer;			// 움직임 전용 Update Vector
 public:
 	void ZoneMoveJobProcess();
 	void EnqueueJob(ZONE_JOB&& job) { m_queue.Enqueue(job); }
 
 	bool PushTemp(CPlayer* pPlayer);
 
+	void PushMoveUpdate(CPlayer* pPlayer);
+	void PopMoveUpdate(CPlayer* pPlayer);
+
+	bool SendZoneInfo(CPlayer* pPlayer);
+	void SendBroadCast(CPacket* pPacket, CPlayer* pPlayer = nullptr);
+public:
 	virtual bool EnterZone(CPlayer* pPlayer);
 	virtual bool LeaveZone(CPlayer* pPlayer);
 	virtual bool TryEnterZone();
+public:
 	int GetPid() { return m_ZonePid; }
 };

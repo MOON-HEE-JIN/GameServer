@@ -5,7 +5,8 @@ template<typename Object, typename Packet>
 void Stub<Object,Packet>::InitRegisterFuncPointer()
 {
 	m_mapGAMEProc[GAME::LOOPBACK] = std::bind(&Stub::DO_GAME_LOOPBACK, this, std::placeholders::_1, std::placeholders::_2);
-	m_mapGAMEProc[GAME::CHANGEPID] = std::bind(&Stub::DO_GAME_CHANGEPID, this, std::placeholders::_1, std::placeholders::_2);
+	m_mapGAMEProc[GAME::CHANGEZONE] = std::bind(&Stub::DO_GAME_CHANGEZONE, this, std::placeholders::_1, std::placeholders::_2);
+	m_mapGAMEProc[GAME::ENTERZONE] = std::bind(&Stub::DO_GAME_ENTERZONE, this, std::placeholders::_1, std::placeholders::_2);
 }
 template<typename Object, typename Packet>
 void Stub<Object,Packet>::DO_GAME_Proc(int type, Object* pTarget, Packet& cPacket)
@@ -19,4 +20,3 @@ void Stub<Object,Packet>::DO_GAME_Proc(int type, Object* pTarget, Packet& cPacke
 	ret = m_mapGAMEProc[type](pTarget, cPacket);
 	if(ret != 0)		DO_ERROR_RESULT(pTarget, ret, type);
 }
-

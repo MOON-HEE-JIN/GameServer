@@ -27,7 +27,12 @@ public:
 
 	bool EnterZone(CPlayer* pPlayer, int zoneid);
 	bool LeaveZone(CPlayer* pPlayer);
+public:
+	void SendZone(int zone, CPacket* pPacket, CPlayer* pPlayer = nullptr);
+	bool SendZoneInfo(int zone, CPlayer* pPlayer);
+public:
 	void Log();
+
 };
 
 extern CZoneManager g_ZoneManager;

@@ -3,8 +3,9 @@
 #include "CUtill/CPacket.h"
 #include "NetWork/NetWorkDefine.h"
 #include "GameServerDef.h"
+#include "CEntity.h"
 
-class CPlayer
+class CPlayer : public CEntity
 {
 public:
 	CPlayer() {};
@@ -22,7 +23,7 @@ private:
 
 private:
 	void SessionHandleClear() { m_SessionHandle = SESSION_HANDLE(-1, 0); }
-
+	
 public:
 	SESSION_HANDLE GetSessionHandle() { return m_SessionHandle; }
 	int GetPlayerHandle() { return m_PlayerHandle; }
@@ -34,5 +35,15 @@ public:
 	void SetZoneStatus(eZONESTATUS type) { m_eZoneStatus = type; }
 	void SetRelease();
 public:
-	void SendPacket(int type, CPacket* pPacket);
+	void EnterZone();		// Zone 에 입장시 주위 플레이어 들에게 알림 && 주위 플레이어 알림
+
+public:
+	void SendPacket(CPacket* pPacket);
+	template<typename T>
+	void SendPacket(T& value)
+	{
+		CPacket pack;
+		pack << value;
+		SendPacket(&pack);
+	}
 };

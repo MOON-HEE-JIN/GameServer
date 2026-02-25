@@ -27,6 +27,7 @@ public:
 	
 	void Proc();
 	void ZoneProc();
+	void ZonePlayerMoveUpdate();
 
 	void ReleasePlayer(CPlayer* pPlayer)
 	{

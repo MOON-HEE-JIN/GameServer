@@ -38,7 +38,23 @@ CZoneManager::~CZoneManager()
 
 bool CZoneManager::TryEnterZone(int toZone)
 {
+	if (!IsValidZoneID(toZone))
+		return false;
 	return m_vecZone[toZone]->TryEnterZone();
+}
+
+void CZoneManager::SendZone(int zone, CPacket* pPacket, CPlayer* pPlayer)
+{
+	if (!IsValidZoneID(zone))
+		return;
+	m_vecZone[zone]->SendBroadCast(pPacket, pPlayer);
+}
+
+bool CZoneManager::SendZoneInfo(int zone, CPlayer* pPlayer)
+{
+	if (!IsValidZoneID(zone))
+		return false;
+	return m_vecZone[zone]->SendZoneInfo(pPlayer);
 }
 
 bool CZoneManager::ReqEnterZone(CPlayer* pPlayer, int toZone)
@@ -65,11 +81,11 @@ bool CZoneManager::ReqEnterZone(CPlayer* pPlayer, int toZone)
 			return false;
 		else
 		{
-			st_STC_ChangePid s;
-			s.ret = 0;
-			CPacket pPacket;
-			pPacket << s;
-			pPlayer->SendPacket(GAME::CHANGEPID, &pPacket);
+			st_STC_ChangeZone pack;
+			pack.ret = 0;
+			pack.zone = toZone;
+			
+			pPlayer->SendPacket(pack);
 		}
 
 		return true;

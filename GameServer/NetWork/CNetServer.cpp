@@ -87,6 +87,11 @@ bool OnClientJoin(CSession* pSession)
 		return false;
 	}
 	pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+
+	st_STC_ConnectInfo pack;
+	pack.info.ID = PlayerHandle;
+
+	pPlayer->SendPacket(pack);
 	return true;
 }
 
@@ -320,7 +325,7 @@ bool TryChangeZone(const SESSION_HANDLE& key, int zoneID)
 	return bRet;
 }
 
-bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket)
+bool TrySend(const SESSION_HANDLE& key, CPacket* pPacket)
 {
 	CSession* pSession = CNetServer::GetSession(key.Handle);
 	if (pSession == nullptr)
@@ -338,7 +343,7 @@ bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket)
 		return false;
 	}
 
-	pSession->SendPacket(type, pPacket);
+	pSession->SendPacket(pPacket);
 	pSession->SubRef();
 
 	return true;
@@ -374,7 +379,7 @@ void SessionSendQEnqueue()
 				pSession->SubRef();
 				continue;
 			}
-			pSession->SendPacket(sendReq.type, &sendReq.packet);
+			pSession->SendPacket(&sendReq.packet);
 			pSession->SubRef();
 		}
 		if (pSession->GetIOCnt() == 0 && pSession->GetRefCnt() == 0 && pSession->GetBoolbCloseing())

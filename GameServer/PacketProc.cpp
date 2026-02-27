@@ -154,6 +154,11 @@ int PacketProc::DO_GAME_MOVESTART(CPlayer* pTarget, CPacket& pReqPacket)
     res.pos = pTarget->GetPosition();
     pTarget->SendPacket(res);
 
+	// Zone 에 있는 다른 Player 들에게 이동 시작 패킷 보내기
+	CPacket pack;
+    pack << res;
+	g_ZoneManager.SendZone(pTarget->GetZoneID(), &pack, pTarget);
+
     return 0;
 }
 

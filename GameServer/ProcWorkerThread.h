@@ -27,7 +27,7 @@ public:
 	
 	void Proc();
 	void ZoneProc();
-	void ZonePlayerMoveUpdate();
+	void ZoneUpdateByFrame();			// 서버 프레임에 영향을 받는 Zone Update 
 
 	void ReleasePlayer(CPlayer* pPlayer)
 	{

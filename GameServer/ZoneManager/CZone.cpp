@@ -36,27 +36,36 @@ bool CZone::PushTemp(CPlayer* pPlayer)
 	return true;
 }
 
-void CZone::PushMoveUpdate(CPlayer* pPlayer)
+void CZone::PushMoveVector(CEntity* pEntity)
 {
-	int index = m_vecMovePlayer.size();
-	m_vecMovePlayer.push_back(pPlayer);
-	pPlayer->SetMoveIndex(index);
+	if (pEntity->GetMoveIndex() != -1)
+		return;
+	
+	int index = m_vecEntityMoveVector.size();
+	m_vecEntityMoveVector.push_back(pEntity);
+	pEntity->SetMoveIndex(index);
 }
 
-void CZone::PopMoveUpdate(CPlayer* pPlayer)
+void CZone::PopMoveVector(CEntity* pEntity)
 {
-	int index = pPlayer->GetMoveIndex();
-	int lastindex = m_vecMovePlayer.size() - 1;
-	pPlayer->SetMoveIndex(-1);
+	int index = pEntity->GetMoveIndex();
 	
+	if (index == -1)
+		return;
+
+	int lastindex = m_vecEntityMoveVector.size() - 1;
+	pEntity->SetMoveIndex(-1);
+	if (lastindex < 0)
+		return;
 	if (index != lastindex)
 	{
-		CPlayer* pLast = m_vecMovePlayer[lastindex];
-		m_vecMovePlayer[index] = pLast;
+		CEntity* pLast = m_vecEntityMoveVector[lastindex];
+		m_vecEntityMoveVector[index] = pLast;
 		pLast->SetMoveIndex(index);
 	}
 
-	m_vecMovePlayer.pop_back();
+	m_vecEntityMoveVector.pop_back();
+	pEntity->SetMoveIndex(-1);
 }
 
 bool CZone::SendZoneInfo(CPlayer* pPlayer)
@@ -86,6 +95,10 @@ bool CZone::SendZoneInfo(CPlayer* pPlayer)
 			pPlayer->SendPacket(info);
 			ZeroMemory(&info, sizeof(info));
 		}
+	}
+	if (info.Loop1 > 0)
+	{
+		pPlayer->SendPacket(info);
 	}
 	return true;
 }
@@ -237,6 +250,27 @@ void CZone::ZoneMoveJobProcess()
 
 }
 
+void CZone::ZoneEntityMoveProcess()
+{
+	int nLoop = m_vecEntityMoveVector.size();
+	std::vector<CEntity*> vec;
+	int eraseCnt = 0;
+	for (int i = 0; i < nLoop; i++)
+	{
+		if (m_vecEntityMoveVector[i]->MoveUpdate())
+		{
+			// 이동이 완료된 CEntity;
+			vec.push_back(m_vecEntityMoveVector[i]);
+			eraseCnt++;
+		}
+	}
+
+	for (int i = 0; i < eraseCnt; i++)
+	{
+		PopMoveVector(vec[i]);
+	}
+}
+
 bool CZone::EnterZone(CPlayer* pPlayer)
 {
 	pPlayer->SetZoneID(m_ID);
@@ -273,6 +307,9 @@ bool CZone::LeaveZone(CPlayer* pPlayer)
 		m_vecPlayer[leaveIndex] = ePlayer;
 		m_mapIDtoIndex[ePlayer->GetPlayerHandle()] = leaveIndex;
 	}
+
+	// 이동 중이라면 Vector 에서 제거
+	PopMoveVector(pPlayer);
 
 	m_vecPlayer.pop_back();
 	m_mapIDtoIndex.erase(iter);

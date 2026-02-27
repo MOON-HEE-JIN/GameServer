@@ -160,6 +160,22 @@ bool CZoneManager::LeaveZone(CPlayer* pPlayer)
 	return m_vecZone[zoneID]->LeaveZone(pPlayer);
 }
 
+void CZoneManager::PushZoneMoveVector(CEntity* pEntity)
+{
+	if (!IsValidZoneID(pEntity->GetZoneID()))
+		return ;
+
+	m_vecZone[pEntity->GetZoneID()]->PushMoveVector(pEntity);
+}
+
+void CZoneManager::PopZoneMoveVector(CEntity* pEntity)
+{
+	if (!IsValidZoneID(pEntity->GetZoneID()))
+		return ;
+
+	m_vecZone[pEntity->GetZoneID()]->PopMoveVector(pEntity);
+}
+
 void CZoneManager::Log()
 {
 	std::string buf;

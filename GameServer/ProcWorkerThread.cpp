@@ -6,8 +6,7 @@
 #include "./ZoneManager/CZoneManager.h"
 #include <Windows.h>
 #include <process.h>
-
-#include "ZoneManager/CZoneManager.h"
+#include "CUtill/CUtill.h"
 
 static std::vector<HANDLE> s_ProcWorkerThreadHandles;
 static std::vector<int> s_ProcWorkerThreadIDs;
@@ -76,6 +75,9 @@ unsigned __stdcall ProcWorkerThread(void* arg)
 
     s_ProcWorker[procID]->InitZoneVector();
     
+    double accumulatedtime = 0.0f;
+    double lasttime = CUtil::GetQPCNowTime();
+
     while (CNetServer::g_ServerON)
     {
         //1000 Frames 1초당 1000 처리
@@ -90,6 +92,29 @@ unsigned __stdcall ProcWorkerThread(void* arg)
 
         // 관리 Zone 이벤트
         s_ProcWorker[procID]->ZoneProc();
+
+        // 지연 시간 누적
+        double nowtime = CUtil::GetQPCNowTime();
+        double frame = nowtime - lasttime;
+        lasttime = nowtime;
+
+        accumulatedtime += frame;
+
+        int nLoop = 0;
+        while (accumulatedtime >= FIXED_DELTA && nLoop < MAX_FRAME_LOOP_COUNT)
+        {
+            s_ProcWorker[procID]->ZoneUpdateByFrame();
+            accumulatedtime -= FIXED_DELTA;
+            nLoop++;
+        }
+        
+        // 너무 많은 frame 이 쌓인다면 쌓인 frame 처리하느라 더 지연 최대 frame 만큼만 돌리기
+        if (nLoop == MAX_FRAME_LOOP_COUNT)
+        {
+            g_LogServer.ELog("=== %d ProcThread AccumulateTime Warnning ===", procID);
+            accumulatedtime = 0.0f;
+        }
+        
     }
 
     g_LogThread.ILog("=== END THREAD ProcWorkerThread ===");
@@ -115,6 +140,14 @@ void CProcWorker::ZoneProc()
     for (int i = 0; i < m_ZoneCnt; i++)
     {
         m_vecZone[i]->ZoneMoveJobProcess();
+    }
+}
+
+void CProcWorker::ZoneUpdateByFrame()
+{
+    for (int i = 0; i < m_ZoneCnt; i++)
+    {
+        m_vecZone[i]->ZoneEntityMoveProcess();
     }
 }
 

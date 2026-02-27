@@ -1,21 +1,17 @@
 #pragma once
 
 #include <string>
+#include "ProjectDefineStruct.h"
 struct st_Header
 {
 	__int32		type;
 	__int32		size;
 };
-struct st_Vector
-{
-	float		X;
-	float		Y;
-};
 struct st_EntityInfo
 {
 	__int32		type;
 	__int32		ID;
-	st_Vector		pos;
+	st_Vector3F		pos;
 };
 struct st_ConnectInfo
 {
@@ -34,6 +30,16 @@ struct st_CTS_LoopBack
 	__int32		zone;
 	__int64		data;
 };
+struct st_CTS_MoveStart
+{
+	st_Vector3F		dir;
+	st_Vector3F		goal;
+	st_Vector3F		pos;
+};
+struct st_CTS_MoveStop
+{
+	st_Vector3F		pos;
+};
 struct st_STC_ChangeZone
 {
 	__int32		ret;
@@ -46,7 +52,8 @@ struct st_STC_ConnectInfo
 struct st_STC_CreateChar
 {
 	__int32		ID;
-	st_Vector		pos;
+	st_Vector3F		pos;
+	float		speed;
 };
 struct st_STC_EnterZone
 {
@@ -64,4 +71,16 @@ struct st_STC_LoopBack
 	__int32		ret;
 	__int32		zone;
 	__int64		data;
+};
+struct st_STC_MoveStart
+{
+	__int32		ret;
+	st_Vector3F		pos;
+};
+struct st_STC_MoveStop
+{
+	__int32		ret;
+	__int32		type;
+	__int32		ID;
+	st_Vector3F		pos;
 };

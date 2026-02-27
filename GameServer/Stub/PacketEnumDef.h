@@ -10,6 +10,8 @@ namespace GAME
 		ENTERZONE,					//해당 Zone 에 대한 정보 요청
 		LEAVEZONE,					//4
 		CREATECHAR,					//5
+		MOVESTART,					//6
+		MOVESTOP,					//7
 	};
 };
 

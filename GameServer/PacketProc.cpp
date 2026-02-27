@@ -5,6 +5,7 @@
 #include "Stub/EnumDef.h"
 #include "Log/CLog.h"
 #include "ZoneManager/CZoneManager.h"
+#include "CUtill/CUtill.h"
 
 int PacketProc::DO_GAME_LOOPBACK(CPlayer* pTarget, CPacket& pReqPacket)
 {
@@ -39,10 +40,34 @@ int PacketProc::DO_ERROR_RESULT(CPlayer* pTarget, int ret, int type)
     if (pTarget == nullptr)
         return ERROR_CODE::NOT_FIND_PID;
 
-    CPacket pack;
-    // header + returnvalue
-    pack << type << 4 << ret;
-    pTarget->SendPacket(&pack);
+    switch (type)
+    {
+    case GAME::MOVESTART:
+    {
+        st_STC_MoveStart e;
+        e.ret = ret;
+        e.pos = pTarget->GetPosition();
+        pTarget->SendPacket(e);
+        break;
+    }
+    case GAME::MOVESTOP:
+    {
+        st_STC_MoveStop e;
+        e.ret = ret;
+        e.pos = pTarget->GetPosition();
+        pTarget->SendPacket(e);
+        break;
+    }
+    default:
+    {
+        CPacket pack;
+        // header + returnvalue
+        pack << type << 4 << ret;
+        pTarget->SendPacket(&pack);
+        break;
+    }
+    }
+
     return 0;
 }
 
@@ -91,8 +116,64 @@ int PacketProc::DO_GAME_ENTERZONE(CPlayer* pTarget, CPacket& pReqPacket)
     st_STC_CreateChar pack;
     pack.ID = pTarget->GetPlayerHandle();
     pack.pos.X = 0;
-    pack.pos.Y = 0;
+	pack.pos.Y = 0;
+    pack.pos.Z = 0;
+    pack.speed = pTarget->GetMoveSpeed();
     pTarget->SendPacket(pack);
+
+    return 0;
+}
+
+int PacketProc::DO_GAME_MOVESTART(CPlayer* pTarget, CPacket& pReqPacket)
+{
+    st_CTS_MoveStart req;
+    pReqPacket >> req;
+
+    float dist = pTarget->GetPosition().DistanceToNSquared(req.pos);
+    if (dist > POSITION_TOLERANCE * POSITION_TOLERANCE)
+        return ERROR_CODE::NOT_EQUAL_POSITION;
+    
+#ifdef __DEBUG__
+	st_Vector3F dir = pTarget->GetPosition().Direction(req.goal);
+    if (dir.X != req.dir.X || dir.Y != req.dir.Y)
+    {
+        g_LogGame.DLog("NOT EQUAL DIRECTION CLIENT[%.2f, %.2f] - SERVER[%.2f, %.2f]",
+            req.dir.X, req.dir.Y, dir.X, dir.Y);
+    }
+#endif // __DEBUG__
+
+    int ret = pTarget->MoveStart(req.goal, req.dir);
+    if (ret != 0)
+        return ret;
+
+    //g_LogGame.DLog("Player[%d] MoveStart Goal[%.2f, %.2f, %.2f] Dir[%.2f, %.2f, %.2f]",
+		//pTarget->GetPlayerHandle(), req.goal.X, req.goal.Y, req.goal.Z, req.dir.X, req.dir.Y, req.dir.Z);
+
+    st_STC_MoveStart res;
+    res.ret = 0;
+    res.pos = pTarget->GetPosition();
+    pTarget->SendPacket(res);
+
+    return 0;
+}
+
+int PacketProc::DO_GAME_MOVESTOP(CPlayer* pTarget, CPacket& pReqPacket)
+{
+    st_CTS_MoveStop req;
+    pReqPacket >> req;
+
+	float dist = pTarget->GetPosition().DistanceToNSquared(req.pos);
+    if (dist > POSITION_TOLERANCE * POSITION_TOLERANCE)
+        return ERROR_CODE::NOT_EQUAL_POSITION;
+
+    int ret = pTarget->MoveStop(req.pos);
+    if (ret != 0)
+        return ret;
+
+    st_STC_MoveStop res;
+    res.ret = 0;
+    res.pos = pTarget->GetPosition();
+    pTarget->SendPacket(res);
     return 0;
 }
 

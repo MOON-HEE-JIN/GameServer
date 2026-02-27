@@ -2,6 +2,17 @@
 #include <string>
 
 #define ProcThreadCnt 3
+#define POSITION_TOLERANCE 5
+#define FIXED_DELTA 0.01667f
+#define MAX_FRAME_LOOP_COUNT 6
+
+
+enum eMOVESTATE
+{
+	STOPPED,
+	MOVEING,
+	RUNNING,
+};
 
 enum eZONESTATUS
 {

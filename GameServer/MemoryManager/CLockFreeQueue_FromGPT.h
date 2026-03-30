@@ -50,10 +50,11 @@ public:
     ~CLockFreeQueue_MPSC()
     {
         m_pool.BeginShutdown();
-
+        // 전제: 파괴 시점에 producer/consumer 스레드가 모두 중지(join)된 상태여야 안전
         T out;
         while (TryDequeue(out)) {}
 
+        // 마지막 dummy 회수
         m_pool.Free(m_head);
     }
 
@@ -112,7 +113,7 @@ public:
             }
             else
             {
-                return false;
+                return false; // 진짜 empty
             }
         }
 

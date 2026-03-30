@@ -45,6 +45,22 @@ private:
         {
             return std::launder(reinterpret_cast<const T*>(storage));
         }
+        /*
+        std::launder 는 새로운 객체의 할당을 의미한다
+        필요한 이유
+        alloc 할때 placement new 를 통해서 생성자를 호출 함에 따라 객체의 생명주기의 시작을 의미한다
+        free 할때 소멸자 호출을 통해서 객체의 종료를 의미한다
+        이때 alloc 시 사용한주 를 다시 줄경우
+        ex
+            T* p = alloc;
+            free(p);
+            T* q = alloc;
+
+        이에 따르면 컴파일러는 동일한 할당받은 주소를 사용하게 되는데 여기서 p 와 q 를 동일 객체로 여길수 있는 여지가 생긴다
+        그렇다면 이전에 접근해서 얻은 p 에 대한 값을 유지한체 사용할수 있고 문제 가 발생한다
+
+        std::lanunder 은 컴파일러 에게 해당 주소의 새로운 객체임을 알린다(할당X, 새로운 객체)
+        */
     };
 
     // free-list head
@@ -63,7 +79,7 @@ private:
 
     struct HazardRecord
     {
-        std::atomic<std::uintptr_t> ownerToken;
+        std::atomic<std::uintptr_t> ownerToken; // 0이면 미사용
         std::atomic<Node*> protectedPtr;
 
         HazardRecord() : ownerToken(0), protectedPtr(nullptr) {}
@@ -123,7 +139,7 @@ private:
         HazardRecord* m_rec{ nullptr };
         std::uintptr_t m_token{ 0 };
 
-        static inline thread_local int s_tlsTokenMarker = 0;
+        static inline thread_local int s_tlsTokenMarker = 0; // 토큰용 마커
     };
 
     static thread_local HazardOwner s_tlsHazOwner;
@@ -133,6 +149,7 @@ private:
         return s_tlsHazOwner.protected_ptr_ref();
     }
 
+    // retire list: 스레드 로컬
     static thread_local std::vector<Node*> s_tlsRetired;
 
 private:
@@ -270,7 +287,6 @@ private:
     void retire_node(Node* n)
     {
         n->next = nullptr;
-
         // ShutDown 시 s_tlsRetired 가 먼저 파괴후에 LF_Queue 를 파괴로 인해
         // push_back 에서 오류 발생
         s_tlsRetired.push_back(n);
@@ -324,7 +340,7 @@ public:
         if (!p) return;
 
         Node* n = node_from_data(p);
-
+        // T 소멸
         p->~T();
 
         if (m_bShutdowning.load())
@@ -356,7 +372,7 @@ public:
     // Reclaim/clear utilities
     // -------------------------
 
-     // 현재 스레드의 retire list에 대해서만 강제로 reclaim 시도
+    // 현재 스레드의 retire list에 대해서만 강제로 reclaim 시도
     void ForceReclaimCurrentThread()
     {
         reclaim_if_possible();

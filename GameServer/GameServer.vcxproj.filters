@@ -92,6 +92,7 @@
     </ClCompile>
     <ClCompile Include="CEntity.cpp">
       <Filter>소스 파일</Filter>
+    </ClCompile>
     <ClCompile Include="CUtill\CBinFile.cpp">
       <Filter>소스 파일\CUtill</Filter>
     </ClCompile>
@@ -180,6 +181,7 @@
     </ClInclude>
     <ClInclude Include="Stub\ProjectDefineStruct.h">
       <Filter>소스 파일\Stub</Filter>
+    </ClInclude>
     <ClInclude Include="CUtill\CBinFileDefine.h">
       <Filter>소스 파일\CUtill</Filter>
     </ClInclude>

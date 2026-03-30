@@ -167,4 +167,4 @@ CLog g_LogTemp("temp.log", "TEMP");
 CLog g_LogServer("server.log", "SERVER");
 CLog g_LogGame("game.log", "GAME");
 CLog g_LogThread("thread.log", "THREAD");
-
+CLog g_LogFile("file.log", "FILE");

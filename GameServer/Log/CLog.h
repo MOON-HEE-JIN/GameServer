@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <string>
 
@@ -29,3 +29,4 @@ extern CLog g_LogTemp;
 extern CLog g_LogServer;
 extern CLog g_LogGame;
 extern CLog g_LogThread;
+extern CLog g_LogFile;

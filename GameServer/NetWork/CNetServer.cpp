@@ -166,7 +166,7 @@ unsigned __stdcall GMAceeptThread(void* arg)
 			continue;
 		}
 		g_LogServer.ILog("GM Connect");
-		// 愿由??뚯?? ?숆린 濡?愿由?
+		// 관리 소케은 동기 로 관리
 		CGMSession gmSession(client_sock);
 		gmSession.Run();
 	}
@@ -640,6 +640,10 @@ void CNetServer::ServerLog()
 void CNetServer::StartServer()
 {
 	Init();
+
+	// Log Thread 먼저 생성
+	CreateLogThread();
+
 	h_AceeptThread = (HANDLE)_beginthreadex(NULL, 0, AceeptThread, 0, 0, NULL);
 	h_GmAceeptThread = (HANDLE)_beginthreadex(NULL, 0, GMAceeptThread, 0, 0, NULL);
 	h_WorkerThread = new HANDLE[OVERALP_CREATE_THREAD];
@@ -652,7 +656,6 @@ void CNetServer::StartServer()
 	,CNetServer::Port, OVERALP_CREATE_THREAD, OVERLAP_RUN_THREAD, MAX_CONNECT_COUNT);
 
 	CreateProcWorkerThread();
-	CreateLogThread();
 }
 
 void CNetServer::ServerShutDown()

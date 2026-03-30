@@ -129,6 +129,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CPlayer.cpp" />
+    <ClCompile Include="CUtill\CBinFile.cpp" />
     <ClCompile Include="CUtill\CPacket.cpp" />
     <ClCompile Include="CUtill\RingQueue.cpp" />
     <ClCompile Include="Log\CLog.cpp" />
@@ -144,11 +145,15 @@
     <ClCompile Include="ZoneManager\CZone.cpp" />
     <ClCompile Include="ZoneManager\CZoneManager.cpp" />
     <ClCompile Include="ZoneManager\CZone_Login.cpp" />
+    <ClCompile Include="Zone\CBinZone.cpp" />
+    <ClCompile Include="Zone\CBinZoneIdx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CEntity.h" />
     <ClInclude Include="CObject.h" />
     <ClInclude Include="CPlayer.h" />
+    <ClInclude Include="CUtill\CBinFile.h" />
+    <ClInclude Include="CUtill\CBinFileDefine.h" />
     <ClInclude Include="CUtill\CPacket.h" />
     <ClInclude Include="CUtill\RingQueue.h" />
     <ClInclude Include="GameServerDef.h" />
@@ -170,6 +175,8 @@
     <ClInclude Include="ZoneManager\CZone.h" />
     <ClInclude Include="ZoneManager\CZoneManager.h" />
     <ClInclude Include="ZoneManager\CZone_Login.h" />
+    <ClInclude Include="Zone\CBinZone.h" />
+    <ClInclude Include="Zone\CBinZoneIdx.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

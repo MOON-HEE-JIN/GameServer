@@ -87,6 +87,11 @@ bool OnClientJoin(CSession* pSession)
 		return false;
 	}
 	pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+
+	st_STC_ConnectInfo pack;
+	pack.info.ID = PlayerHandle;
+
+	pPlayer->SendPacket(pack);
 	return true;
 }
 
@@ -224,7 +229,14 @@ unsigned __stdcall WorkerThread(void* arg)
 				int err = WSAGetLastError();
 				if (err != 64 && err != 997 && err != 0 && err != 10038 && err != 1236)
 				{
-					
+					/*
+					* ERROR_NETNAME_DELETED(64) : TCP 연결이 비정상적 종료
+					* WSA_IO_PENDING(997) : 중첩 I/O 작업 나중에 완료
+					* ERROR_NETWORK_UNREACHABLE(1236) : 네트워크 연결이 시스템에 의해 중단
+					* linger 옵션이 설정시 RST 를 즉시 전송 RST 에의 해 연결이 종료 되어 대기중인 recv 에서 오류
+					* WSAENOTSOCKET(10038) : nonsocket 에 대한 소켓 작업
+					printf("WorkerThread GQCS Error %d\n", err);
+					*/
 				}
 				pSession->CloseSocket();
 			}
@@ -275,7 +287,14 @@ unsigned __stdcall WorkerThread(void* arg)
 				int err = WSAGetLastError();
 				if (err != 64 && err != 997 && err != 0 && err != 10038 && err != 1236)
 				{
-					
+					/*
+					* ERROR_NETNAME_DELETED(64) : TCP 연결이 비정상적 종료
+					* WSA_IO_PENDING(997) : 중첩 I/O 작업 나중에 완료
+					* ERROR_NETWORK_UNREACHABLE(1236) : 네트워크 연결이 시스템에 의해 중단
+					* linger 옵션이 설정시 RST 를 즉시 전송 RST 에의 해 연결이 종료 되어 대기중인 recv 에서 오류
+					* WSAENOTSOCKET(10038) : nonsocket 에 대한 소켓 작업
+					printf("WorkerThread GQCS Error %d\n", err);
+					*/
 				}
 				pSession->CloseSocket();
 			}
@@ -320,7 +339,7 @@ bool TryChangeZone(const SESSION_HANDLE& key, int zoneID)
 	return bRet;
 }
 
-bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket)
+bool TrySend(const SESSION_HANDLE& key, CPacket* pPacket)
 {
 	CSession* pSession = CNetServer::GetSession(key.Handle);
 	if (pSession == nullptr)
@@ -338,7 +357,7 @@ bool TrySend(const SESSION_HANDLE& key, int type, CPacket* pPacket)
 		return false;
 	}
 
-	pSession->SendPacket(type, pPacket);
+	pSession->SendPacket(pPacket);
 	pSession->SubRef();
 
 	return true;
@@ -374,7 +393,7 @@ void SessionSendQEnqueue()
 				pSession->SubRef();
 				continue;
 			}
-			pSession->SendPacket(sendReq.type, &sendReq.packet);
+			pSession->SendPacket(&sendReq.packet);
 			pSession->SubRef();
 		}
 		if (pSession->GetIOCnt() == 0 && pSession->GetRefCnt() == 0 && pSession->GetBoolbCloseing())
@@ -586,6 +605,7 @@ CSession* CNetServer::AddSession(SOCKET sock)
 
 void CNetServer::DisConnect(CSession* pSession)
 {
+	// 이미 종료중이면 무시
 	if (!pSession->OnStartDisconnect())
 		return;
 

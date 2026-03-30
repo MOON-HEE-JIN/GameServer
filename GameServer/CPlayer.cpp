@@ -1,6 +1,6 @@
 ﻿#include "CPlayer.h"
 #include "NetWork/CNetServer.h"
-
+#include "ZoneManager/CZoneManager.h"
 
 void CPlayer::Init(SESSION_HANDLE sessionID, int handle, int procID)
 {
@@ -18,8 +18,8 @@ void CPlayer::SetRelease()
 	SessionHandleClear();
 }
 
-void CPlayer::SendPacket(int type, CPacket* pPacket)
+void CPlayer::SendPacket(CPacket* pPacket)
 {
-	TrySend(m_SessionHandle, type, pPacket);
+	TrySend(m_SessionHandle, pPacket);
 }
 

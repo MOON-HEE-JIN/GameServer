@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Stub/SERVER_STUB.h"
 #include "Stub/SERVER_STUB.cpp"
 #include "NetWork/CSession.h"
@@ -13,5 +13,12 @@ class PacketProc : public Stub<CPlayer, CPacket>
 	int DO_ERROR_RESULT(CPlayer* pTarget, int ret, int type) override;
 
 	// Stub을(를) 통해 상속됨
-	int DO_GAME_CHANGEPID(CPlayer* pTarget, CPacket& pReqPacket) override;
+	int DO_GAME_CHANGEZONE(CPlayer* pTarget, CPacket& pReqPacket) override;
+
+	// Stub을(를) 통해 상속됨
+	int DO_GAME_ENTERZONE(CPlayer* pTarget, CPacket& pReqPacket) override;
+
+	// Stub을(를) 통해 상속됨
+	int DO_GAME_MOVESTART(CPlayer* pTarget, CPacket& pReqPacket) override;
+	int DO_GAME_MOVESTOP(CPlayer* pTarget, CPacket& pReqPacket) override;
 };

@@ -78,7 +78,7 @@ public:
 
 public:
 	void CloseSocket();
-	void SendPacket(int _type, CPacket* _pPacket);
+	void SendPacket(CPacket* _pPacket);
 	void SendPost();
 	bool RecvPost();
 };

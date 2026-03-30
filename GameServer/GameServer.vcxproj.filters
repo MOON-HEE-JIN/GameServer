@@ -87,6 +87,12 @@
     <ClCompile Include="CPlayer.cpp">
       <Filter>소스 파일\CObject</Filter>
     </ClCompile>
+    <ClCompile Include="CUtill\CUtill.cpp">
+      <Filter>소스 파일\Utill</Filter>
+    </ClCompile>
+    <ClCompile Include="CEntity.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
     <ClCompile Include="CUtill\CBinFile.cpp">
       <Filter>소스 파일\CUtill</Filter>
     </ClCompile>
@@ -169,6 +175,12 @@
     </ClInclude>
     <ClInclude Include="ZoneManager\CZone_Login.h">
       <Filter>소스 파일\ZoneManager</Filter>
+    </ClInclude>
+    <ClInclude Include="CUtill\CUtill.h">
+      <Filter>소스 파일\Utill</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub\ProjectDefineStruct.h">
+      <Filter>소스 파일\Stub</Filter>
     </ClInclude>
     <ClInclude Include="CUtill\CBinFileDefine.h">
       <Filter>소스 파일\CUtill</Filter>

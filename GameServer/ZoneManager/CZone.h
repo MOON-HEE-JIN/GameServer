@@ -30,6 +30,11 @@ protected:
 	std::unordered_map<int, int> m_mapIDtoIndex;	// <PlayerHandle,m_vecPlayerIndex>
 
 	CLockFreeQueue_MPSC<ZONE_JOB> m_queue;
+
+	std::vector<CEntity*> m_vecEntityMoveVector;			// 움직임 전용 Update Vector
+public:
+	void ZoneMoveJobProcess();		// Zone 이동 Job 처리
+	void ZoneEntityMoveProcess();	// Entity Position 이동 처리
 public:
 	void InitZone(const st_ZoneBounds& bounds) { m_ZoneBounds = bounds; }
 	void InsertPortal(st_Portal portal) { m_vecPortal.push_back(portal); }
@@ -38,13 +43,19 @@ public:
 	void InsertTriggerVolumeParam(int index, std::vector<st_TriggerVolumeParam> param) { m_mapTriggerVolumeParams[index] = param; }
 
 public:
-	void ZoneMoveJobProcess();
 	void EnqueueJob(ZONE_JOB&& job) { m_queue.Enqueue(job); }
 
 	bool PushTemp(CPlayer* pPlayer);
 
+	void PushMoveVector(CEntity* pEntity);
+	void PopMoveVector(CEntity* pEntity);
+
+	bool SendZoneInfo(CPlayer* pPlayer);
+	void SendBroadCast(CPacket* pPacket, CPlayer* pPlayer = nullptr);
+public:
 	virtual bool EnterZone(CPlayer* pPlayer);
 	virtual bool LeaveZone(CPlayer* pPlayer);
 	virtual bool TryEnterZone();
+public:
 	int GetPid() { return m_ZonePid; }
 };

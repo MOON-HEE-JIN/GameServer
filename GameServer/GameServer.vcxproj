@@ -102,7 +102,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>__DEBUG__;WIN64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -128,10 +128,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CEntity.cpp" />
     <ClCompile Include="CPlayer.cpp" />
     <ClCompile Include="CUtill\CBinFile.cpp" />
     <ClCompile Include="CUtill\CBinFileManager.cpp" />
     <ClCompile Include="CUtill\CPacket.cpp" />
+    <ClCompile Include="CUtill\CUtill.cpp" />
     <ClCompile Include="CUtill\RingQueue.cpp" />
     <ClCompile Include="Log\CLog.cpp" />
     <ClCompile Include="main.cpp" />
@@ -157,6 +159,7 @@
     <ClInclude Include="CUtill\CBinFileDefine.h" />
     <ClInclude Include="CUtill\CBinFileManager.h" />
     <ClInclude Include="CUtill\CPacket.h" />
+    <ClInclude Include="CUtill\CUtill.h" />
     <ClInclude Include="CUtill\RingQueue.h" />
     <ClInclude Include="GameServerDef.h" />
     <ClInclude Include="Log\CLog.h" />
@@ -171,6 +174,7 @@
     <ClInclude Include="ProcWorkerThread.h" />
     <ClInclude Include="Stub\EnumDef.h" />
     <ClInclude Include="Stub\PacketEnumDef.h" />
+    <ClInclude Include="Stub\ProjectDefineStruct.h" />
     <ClInclude Include="Stub\Serialization.h" />
     <ClInclude Include="Stub\SERVER_STUB.h" />
     <ClInclude Include="Stub\StructDef.h" />

@@ -4,7 +4,6 @@
 CBinFile::CBinFile()
 {
 }
-
 CBinFile::~CBinFile()
 {
 }

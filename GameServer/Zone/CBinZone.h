@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "../CUtill/CBinFile.h"
 #pragma pack(push, 1)
-struct ZoneBounds
+struct BinZoneBounds
 {
 	int ZoneId = 0;
 	float OriginX = 0;
@@ -14,7 +14,7 @@ struct ZoneBounds
 	char ZoneName[64] = {};
 };
 
-struct Portal
+struct BinPortal
 {
 	int PortalId = 0;
 	int FromZoneId = 0;
@@ -29,7 +29,7 @@ struct Portal
 	float TargetZ = 0;
 };
 
-struct SpawnPoint
+struct BinSpawnPoint
 {
 	int ZoneId = 0;
 	int SpawnId = 0;
@@ -44,7 +44,7 @@ struct SpawnPoint
 	float LocationZ = 0;
 };
 
-struct TriggerVolume
+struct BinTriggerVolume
 {
 	int ZoneId = 0;
 	int TriggerId = 0;
@@ -56,7 +56,7 @@ struct TriggerVolume
 	int ParamCount = 0;
 };
 
-struct TriggerVolumeParam
+struct BinTriggerVolumeParam
 {
 	char Key[64] = {};
 	char Value[64] = {};
@@ -68,17 +68,17 @@ class CBinZone :
     public CBinFile
 {
 public:
-	std::vector<ZoneBounds> m_vecZoneBounds;
-	std::vector<Portal> m_vecPortals;
-	std::vector<SpawnPoint> m_vecSpawnPoints;
-	std::vector<TriggerVolume> m_vecTriggerVolumes;
-	std::unordered_map<int, std::vector<TriggerVolumeParam>> m_mapTriggerVolumeParams;
+	std::vector<BinZoneBounds> m_vecZoneBounds;
+	std::vector<BinPortal> m_vecPortals;
+	std::vector<BinSpawnPoint> m_vecSpawnPoints;
+	std::vector<BinTriggerVolume> m_vecTriggerVolumes;
+	std::unordered_map<int, std::vector<BinTriggerVolumeParam>> m_mapTriggerVolumeParams;
 
-	const std::vector<ZoneBounds>& GetZoneBoundsVector() const { return m_vecZoneBounds; }
-	const std::vector<Portal>& GetPortalVector() const { return m_vecPortals; }
-	const std::vector<SpawnPoint>& GetSpawnPointVector() const { return m_vecSpawnPoints; }
-	const std::vector<TriggerVolume>& GetTriggerVolumeVector() const { return m_vecTriggerVolumes; }
-	const std::unordered_map<int, std::vector<TriggerVolumeParam>>& GetTriggerVolumeParamMap() const { return m_mapTriggerVolumeParams; }
+	const std::vector<BinZoneBounds>& GetZoneBoundsVector() const { return m_vecZoneBounds; }
+	const std::vector<BinPortal>& GetPortalVector() const { return m_vecPortals; }
+	const std::vector<BinSpawnPoint>& GetSpawnPointVector() const { return m_vecSpawnPoints; }
+	const std::vector<BinTriggerVolume>& GetTriggerVolumeVector() const { return m_vecTriggerVolumes; }
+	const std::unordered_map<int, std::vector<BinTriggerVolumeParam>>& GetTriggerVolumeParamMap() const { return m_mapTriggerVolumeParams; }
 
 private:
 	virtual bool ChunkToData() override;

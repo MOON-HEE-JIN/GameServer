@@ -40,35 +40,6 @@ CZoneManager::~CZoneManager()
 	}
 }
 
-bool CZoneManager::ReadZoneBinFile(const char* filepath)
-{
-	CBinZoneIdx binZoneIdx;
-	if (!binZoneIdx.Open(filepath))
-		return false;
-	
-	const std::vector<IDX> vecZoneIdx = binZoneIdx.GetZoneIdxVector();
-	int Loop = vecZoneIdx.size();
-	for (int i = 0; i < Loop; i++)
-	{
-		const IDX& idx = vecZoneIdx[i];
-		m_mapZoneName[idx.ZoneId] = idx.ZoneName;
-		m_mapZoneIDtoIndex[idx.ZoneId] = i;
-	}
-	m_vecTempZone.reserve(Loop);
-
-	CBinZone binZone;
-	if (!binZone.Open(filepath))
-		return false;
-
-	binZone.GetZoneBoundsVector();
-	binZone.GetPortalVector();
-	binZone.GetSpawnPointVector();
-	binZone.GetTriggerVolumeVector();
-	binZone.GetTriggerVolumeParamMap();
-
-	return false;
-}
-
 bool CZoneManager::TryEnterZone(int toZone)
 {
 	return m_vecZone[toZone]->TryEnterZone();

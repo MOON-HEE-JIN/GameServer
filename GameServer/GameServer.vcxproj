@@ -130,6 +130,7 @@
   <ItemGroup>
     <ClCompile Include="CPlayer.cpp" />
     <ClCompile Include="CUtill\CBinFile.cpp" />
+    <ClCompile Include="CUtill\CBinFileManager.cpp" />
     <ClCompile Include="CUtill\CPacket.cpp" />
     <ClCompile Include="CUtill\RingQueue.cpp" />
     <ClCompile Include="Log\CLog.cpp" />
@@ -154,6 +155,7 @@
     <ClInclude Include="CPlayer.h" />
     <ClInclude Include="CUtill\CBinFile.h" />
     <ClInclude Include="CUtill\CBinFileDefine.h" />
+    <ClInclude Include="CUtill\CBinFileManager.h" />
     <ClInclude Include="CUtill\CPacket.h" />
     <ClInclude Include="CUtill\RingQueue.h" />
     <ClInclude Include="GameServerDef.h" />
@@ -177,6 +179,7 @@
     <ClInclude Include="ZoneManager\CZone_Login.h" />
     <ClInclude Include="Zone\CBinZone.h" />
     <ClInclude Include="Zone\CBinZoneIdx.h" />
+    <ClInclude Include="Zone\ZoneDefines.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

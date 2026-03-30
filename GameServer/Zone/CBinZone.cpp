@@ -17,10 +17,10 @@ bool CBinZone::ChunkToData()
 
 		int chunkDataSize = strChunkData.size();
 		int offset = 0;
-		int offsizefset = sizeof(ZoneBounds);
+		int offsizefset = sizeof(BinZoneBounds);
 		while (chunkDataSize > 0)
 		{
-			ZoneBounds zoneBounds = { 0 };
+			BinZoneBounds zoneBounds = { 0 };
 			memcpy(&zoneBounds, strChunkData.c_str() + offset, offsizefset);
 			m_vecZoneBounds.push_back(zoneBounds);
 			offset += offsizefset;
@@ -39,10 +39,10 @@ bool CBinZone::ChunkToData()
 		std::string strChunkData = m_mapChunk[ChunkTag];
 		int chunkDataSize = strChunkData.size();
 		int offset = 0;
-		int offsizefset = sizeof(Portal);
+		int offsizefset = sizeof(BinPortal);
 		while (chunkDataSize > 0)
 		{
-			Portal portal = { 0 };
+			BinPortal portal = { 0 };
 			memcpy(&portal, strChunkData.c_str() + offset, offsizefset);
 			m_vecPortals.push_back(portal);
 			offset += offsizefset;
@@ -61,10 +61,10 @@ bool CBinZone::ChunkToData()
 		std::string strChunkData = m_mapChunk[ChunkTag];
 		int chunkDataSize = strChunkData.size();
 		int offset = 0;
-		int offsizefset = sizeof(SpawnPoint);
+		int offsizefset = sizeof(BinSpawnPoint);
 		while (chunkDataSize > 0)
 		{
-			SpawnPoint spawnPoint = { 0 };
+			BinSpawnPoint spawnPoint = { 0 };
 			memcpy(&spawnPoint, strChunkData.c_str() + offset, offsizefset);
 			m_vecSpawnPoints.push_back(spawnPoint);
 			offset += offsizefset;
@@ -83,10 +83,10 @@ bool CBinZone::ChunkToData()
 		std::string strChunkData = m_mapChunk[ChunkTag];
 		int chunkDataSize = strChunkData.size();
 		int offset = 0;
-		int offsizefset = sizeof(TriggerVolume);
+		int offsizefset = sizeof(BinTriggerVolume);
 		while (chunkDataSize > 0)
 		{
-			TriggerVolume triggerVolume = { 0 };
+			BinTriggerVolume triggerVolume = { 0 };
 			memcpy(&triggerVolume, strChunkData.c_str() + offset, offsizefset);
 			m_vecTriggerVolumes.push_back(triggerVolume);
 			offset += offsizefset;
@@ -95,10 +95,10 @@ bool CBinZone::ChunkToData()
 			int paramCount = triggerVolume.ParamCount;
 			for (size_t i = 0; i < paramCount; i++)
 			{
-				TriggerVolumeParam param = { 0 };
-				memcpy(&param, strChunkData.c_str() + offset, sizeof(TriggerVolumeParam));
-				offset += sizeof(TriggerVolumeParam);
-				chunkDataSize -= sizeof(TriggerVolumeParam);
+				BinTriggerVolumeParam param = { 0 };
+				memcpy(&param, strChunkData.c_str() + offset, sizeof(BinTriggerVolumeParam));
+				offset += sizeof(BinTriggerVolumeParam);
+				chunkDataSize -= sizeof(BinTriggerVolumeParam);
 				
 				m_mapTriggerVolumeParams[triggerVolume.TriggerId].push_back(param);
 			}

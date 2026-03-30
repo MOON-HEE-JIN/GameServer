@@ -36,6 +36,85 @@ bool CZone::PushTemp(CPlayer* pPlayer)
 	return true;
 }
 
+void CZone::PushMoveVector(CEntity* pEntity)
+{
+	if (pEntity->GetMoveIndex() != -1)
+		return;
+	
+	int index = m_vecEntityMoveVector.size();
+	m_vecEntityMoveVector.push_back(pEntity);
+	pEntity->SetMoveIndex(index);
+}
+
+void CZone::PopMoveVector(CEntity* pEntity)
+{
+	int index = pEntity->GetMoveIndex();
+	
+	if (index == -1)
+		return;
+
+	int lastindex = m_vecEntityMoveVector.size() - 1;
+	pEntity->SetMoveIndex(-1);
+	if (lastindex < 0)
+		return;
+	if (index != lastindex)
+	{
+		CEntity* pLast = m_vecEntityMoveVector[lastindex];
+		m_vecEntityMoveVector[index] = pLast;
+		pLast->SetMoveIndex(index);
+	}
+
+	m_vecEntityMoveVector.pop_back();
+	pEntity->SetMoveIndex(-1);
+}
+
+bool CZone::SendZoneInfo(CPlayer* pPlayer)
+{
+	if (pPlayer->GetZoneID() != m_ID)
+		return false;
+
+	int nLoop = m_vecPlayer.size();
+	int index = 0;
+
+	st_STC_EnterZone info = { 0, };
+
+	while (1)
+	{
+		int i = index++;
+		if (index >= nLoop)
+			break;
+		if (m_vecPlayer[i] == pPlayer || m_vecPlayer[i] == nullptr)
+			continue;
+
+		info.info[info.Loop1].type = 0;
+		info.info[info.Loop1].ID = pPlayer->GetPlayerHandle();
+		info.info[info.Loop1].pos = pPlayer->GetPosition();
+		info.Loop1++;
+		if (info.Loop1 >= 50)
+		{
+			pPlayer->SendPacket(info);
+			ZeroMemory(&info, sizeof(info));
+		}
+	}
+	if (info.Loop1 > 0)
+	{
+		pPlayer->SendPacket(info);
+	}
+	return true;
+}
+
+void CZone::SendBroadCast(CPacket* pPacket, CPlayer* pPlayer)
+{
+	int nLoop = m_vecPlayer.size();
+	for (int i = 0; i < nLoop; i++)
+	{
+		if (m_vecPlayer[i] == pPlayer)
+			continue;
+
+		m_vecPlayer[i]->SendPacket(pPacket);
+	}
+}
+
 void CZone::ZoneMoveJobProcess()
 {
 	ZONE_JOB job;
@@ -81,11 +160,11 @@ void CZone::ZoneMoveJobProcess()
 					// Zone Enter 실패
 					pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
 					{
-						st_STC_ChangePid s;
-						s.ret = ERROR_CODE::NOT_FIND_PID;
-						CPacket pPacket;
-						pPacket << s;
-						pPlayer->SendPacket(GAME::CHANGEPID, &pPacket);
+						st_STC_ChangeZone pack;
+						pack.ret = ERROR_CODE::NOT_FIND_PID;
+						pack.zone = job.toZone;
+
+						pPlayer->SendPacket(pack);
 					}
 				}
 			}
@@ -110,11 +189,11 @@ void CZone::ZoneMoveJobProcess()
 				// 새로운 Zone 에 입장 완료
 				pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
 				{
-					st_STC_ChangePid s;
-					s.ret = 0;
-					CPacket pPacket;
-					pPacket << s;
-					pPlayer->SendPacket(GAME::CHANGEPID, &pPacket);
+					st_STC_ChangeZone pack;
+					pack.ret = 0;
+					pack.zone = job.toZone;
+
+					pPlayer->SendPacket(pack);
 				}
 			}
 			else
@@ -171,6 +250,27 @@ void CZone::ZoneMoveJobProcess()
 
 }
 
+void CZone::ZoneEntityMoveProcess()
+{
+	int nLoop = m_vecEntityMoveVector.size();
+	std::vector<CEntity*> vec;
+	int eraseCnt = 0;
+	for (int i = 0; i < nLoop; i++)
+	{
+		if (m_vecEntityMoveVector[i]->MoveUpdate())
+		{
+			// 이동이 완료된 CEntity;
+			vec.push_back(m_vecEntityMoveVector[i]);
+			eraseCnt++;
+		}
+	}
+
+	for (int i = 0; i < eraseCnt; i++)
+	{
+		PopMoveVector(vec[i]);
+	}
+}
+
 bool CZone::EnterZone(CPlayer* pPlayer)
 {
 	pPlayer->SetZoneID(m_ID);
@@ -208,10 +308,16 @@ bool CZone::LeaveZone(CPlayer* pPlayer)
 		m_mapIDtoIndex[ePlayer->GetPlayerHandle()] = leaveIndex;
 	}
 
+	// 이동 중이라면 Vector 에서 제거
+	PopMoveVector(pPlayer);
+
 	m_vecPlayer.pop_back();
 	m_mapIDtoIndex.erase(iter);
 	CNetServer::DecrementProcCount(m_ZonePid);
 	m_Cnt.fetch_sub(1);
+
+
+
 	return true;
 }
 

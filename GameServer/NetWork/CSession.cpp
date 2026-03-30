@@ -127,15 +127,11 @@ void CSession::CloseSocket()
 	}
 }
 
-void CSession::SendPacket(int _type, CPacket* _packet)
+void CSession::SendPacket(CPacket* _packet)
 {
 	EnterCriticalSection(&m_csSendQ);
-	st_Header header;
-	header.type = _type;
-	header.size = _packet->GetDataSize();
-	int ret = SendQ->Enqueue((char*)&header, sizeof(st_Header));
-
-	ret = SendQ->Enqueue(_packet->GetReadBuffPtr(), _packet->GetDataSize());
+	
+	int ret = SendQ->Enqueue(_packet->GetReadBuffPtr(), _packet->GetDataSize());
 	LeaveCriticalSection(&m_csSendQ);
 
 	SendPost();

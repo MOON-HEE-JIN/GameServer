@@ -12,8 +12,11 @@ private:
 	std::map<int, std::function<int(Object*, Packet&)>> m_mapGAMEProc;
 	void InitRegisterFuncPointer();
 private:
-	virtual int DO_GAME_CHANGEPID(Object* pTarget, Packet& pReqPacket) = 0;
+	virtual int DO_GAME_CHANGEZONE(Object* pTarget, Packet& pReqPacket) = 0;
+	virtual int DO_GAME_ENTERZONE(Object* pTarget, Packet& pReqPacket) = 0;
 	virtual int DO_GAME_LOOPBACK(Object* pTarget, Packet& pReqPacket) = 0;
+	virtual int DO_GAME_MOVESTART(Object* pTarget, Packet& pReqPacket) = 0;
+	virtual int DO_GAME_MOVESTOP(Object* pTarget, Packet& pReqPacket) = 0;
 	virtual int DO_ERROR_PACKET(Object* pTarget, Packet& pReqPacket) = 0;
 	virtual int DO_ERROR_RESULT(Object* pTarget, int ret, int type) = 0;
 

@@ -1,9 +1,9 @@
-#include "CPacket.h"
+﻿#include "CPacket.h"
 #include <malloc.h>
 #include <memory.h>
 #include <stdio.h>
 
-static const int DefualtSize = 1400;
+static const int DefualtSize = 4096;
 
 struct PACKET_BUFFER
 {

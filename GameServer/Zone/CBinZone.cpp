@@ -6,7 +6,7 @@ bool CBinZone::ChunkToData()
 {
 	// ZONEBOUDNS
 	{
-		int ChunkTag = TAG_ZONEBOUNDS.Tag;
+		int ChunkTag = TZoneBounds;
 		if (m_mapChunk.find(ChunkTag) == m_mapChunk.end())
 		{
 			g_LogFile.ELog("Chunk with ZoneBounds Tag 0x%X not found.", ChunkTag);
@@ -30,7 +30,7 @@ bool CBinZone::ChunkToData()
 
 	// PORTAL
 	{
-		int ChunkTag = TAG_PORTAL.Tag;
+		int ChunkTag = TPortal;
 		if (m_mapChunk.find(ChunkTag) == m_mapChunk.end())
 		{
 			g_LogFile.ELog("Chunk with Portal Tag 0x%X not found.", ChunkTag);
@@ -52,7 +52,7 @@ bool CBinZone::ChunkToData()
 
 	// SPAWN
 	{
-		int ChunkTag = TAG_SPAWN.Tag;
+		int ChunkTag = TSpawn;
 		if (m_mapChunk.find(ChunkTag) == m_mapChunk.end())
 		{
 			g_LogFile.ELog("Chunk with Spawn Tag 0x%X not found.", ChunkTag);
@@ -74,7 +74,7 @@ bool CBinZone::ChunkToData()
 
 	// TRIGGER
 	{
-		int ChunkTag = TAG_TRIGGER.Tag;
+		int ChunkTag = TTrigger;
 		if (m_mapChunk.find(ChunkTag) == m_mapChunk.end())
 		{
 			g_LogFile.ELog("Chunk with Trigger Tag 0x%X not found.", ChunkTag);

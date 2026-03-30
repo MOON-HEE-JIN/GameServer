@@ -3,21 +3,24 @@
 #define MAPTOOL_MAGIC 0xDEADBEEF
 #define MAPTOOL_VERSION  1
 
-struct FMT_BinFileTag
+static unsigned int MT_MAKE_TAG(char A, char B, char C, char D)
 {
-	unsigned int Tag;
+	return (static_cast<unsigned int>(A) << 24) |
+		(static_cast<unsigned int>(B) << 16) |
+		(static_cast<unsigned int>(C) << 8) |
+		static_cast<unsigned int>(D);
+}
 
-	FMT_BinFileTag(unsigned char c1, unsigned char c2, unsigned char c3, unsigned char c4)
-	{
-		Tag = (c1 << 24) | (c2 << 16) | (c3 << 8) | c4;
-	}
-};
-
-static const FMT_BinFileTag TAG_ZONEIDX('Z', 'I', 'D', 'X'); // Zone Index
-static const FMT_BinFileTag TAG_ZONEBOUNDS('Z', 'B', 'N', 'D'); // Zone Bounds
-static const FMT_BinFileTag TAG_PORTAL('P', 'O', 'R', 'T'); // Portal
-static const FMT_BinFileTag TAG_SPAWN('S', 'P', 'W', 'N'); // Spawn Point
-static const FMT_BinFileTag TAG_TRIGGER('T', 'R', 'I', 'G'); // Trigger Volume
+static const unsigned int TZoneIDX = MT_MAKE_TAG('Z', 'I', 'D', 'X'); // Zone Index
+static const unsigned int TZoneBounds = MT_MAKE_TAG('Z', 'B', 'N', 'D'); // Zone Bounds
+static const unsigned int TPortal = MT_MAKE_TAG('P', 'O', 'R', 'T'); // Portal
+static const unsigned int TSpawn = MT_MAKE_TAG('S', 'P', 'W', 'N'); // Spawn Point
+static const unsigned int TTrigger = MT_MAKE_TAG('T', 'R', 'I', 'G'); // Trigger Volume
+static const unsigned int TZoneInfo = MT_MAKE_TAG('Z', 'I', 'N', 'F'); // Zone Info
+static const unsigned int TGridInfo = MT_MAKE_TAG('G', 'R', 'D', 'I'); // Grid Info
+static const unsigned int TBuildInfo = MT_MAKE_TAG('B', 'L', 'D', 'I'); // Build Info
+static const unsigned int TOccupancy = MT_MAKE_TAG('O', 'C', 'C', 'U'); // Voxel Data
+static const unsigned int TWalkable = MT_MAKE_TAG('W', 'A', 'L', 'K'); // Walkable Surface
 
 #pragma pack(push, 1) // 구조체의 멤버들이 1바이트 단위로 정렬되도록 설정
 struct FMT_BinFileHeader

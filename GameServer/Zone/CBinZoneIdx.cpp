@@ -4,7 +4,7 @@
 
 bool CBinZoneIdx::ChunkToData()
 {
-	int ChunkTag = TAG_ZONEIDX.Tag;
+	int ChunkTag = TZoneIDX;
 
 	if (m_mapChunk.find(ChunkTag) == m_mapChunk.end())
 	{

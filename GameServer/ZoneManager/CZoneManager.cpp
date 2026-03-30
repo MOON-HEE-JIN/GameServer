@@ -7,6 +7,10 @@
 #include "../Stub/EnumDef.h"
 
 #include <sstream>
+
+#include "../Zone/CBinZoneIdx.h"
+#include "../Zone/CBinZone.h"
+
 CZoneManager::CZoneManager()
 {
 	// 해당 생성자는 임시로 작성함 나중에 Zone 에 사용될 Map 완성시 수정해야함
@@ -34,6 +38,35 @@ CZoneManager::~CZoneManager()
 	{
 		delete m_vecZone[i];
 	}
+}
+
+bool CZoneManager::ReadZoneBinFile(const char* filepath)
+{
+	CBinZoneIdx binZoneIdx;
+	if (!binZoneIdx.Open(filepath))
+		return false;
+	
+	const std::vector<IDX> vecZoneIdx = binZoneIdx.GetZoneIdxVector();
+	int Loop = vecZoneIdx.size();
+	for (int i = 0; i < Loop; i++)
+	{
+		const IDX& idx = vecZoneIdx[i];
+		m_mapZoneName[idx.ZoneId] = idx.ZoneName;
+		m_mapZoneIDtoIndex[idx.ZoneId] = i;
+	}
+	m_vecTempZone.reserve(Loop);
+
+	CBinZone binZone;
+	if (!binZone.Open(filepath))
+		return false;
+
+	binZone.GetZoneBoundsVector();
+	binZone.GetPortalVector();
+	binZone.GetSpawnPointVector();
+	binZone.GetTriggerVolumeVector();
+	binZone.GetTriggerVolumeParamMap();
+
+	return false;
 }
 
 bool CZoneManager::TryEnterZone(int toZone)

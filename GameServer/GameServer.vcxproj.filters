@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="소스 파일\Utill">
-      <UniqueIdentifier>{fae99b45-0d3b-4e8c-aa07-a6c0fe53fced}</UniqueIdentifier>
-    </Filter>
     <Filter Include="소스 파일\NetWork">
       <UniqueIdentifier>{ecfd8ff0-1616-4775-9c63-499b4e34673a}</UniqueIdentifier>
     </Filter>
@@ -34,6 +31,12 @@
     <Filter Include="소스 파일\ZoneManager">
       <UniqueIdentifier>{c2928eb9-bdf8-4689-a2f5-c1c4099af8ba}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\CUtill">
+      <UniqueIdentifier>{fae99b45-0d3b-4e8c-aa07-a6c0fe53fced}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Zone">
+      <UniqueIdentifier>{83ff806e-d13d-472f-94af-128cc320981b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -43,10 +46,10 @@
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="CUtill\CPacket.cpp">
-      <Filter>소스 파일\Utill</Filter>
+      <Filter>소스 파일\CUtill</Filter>
     </ClCompile>
     <ClCompile Include="CUtill\RingQueue.cpp">
-      <Filter>소스 파일\Utill</Filter>
+      <Filter>소스 파일\CUtill</Filter>
     </ClCompile>
     <ClCompile Include="Stub\Serialization.cpp">
       <Filter>소스 파일\Stub</Filter>
@@ -89,6 +92,14 @@
     </ClCompile>
     <ClCompile Include="CEntity.cpp">
       <Filter>소스 파일</Filter>
+    <ClCompile Include="CUtill\CBinFile.cpp">
+      <Filter>소스 파일\CUtill</Filter>
+    </ClCompile>
+    <ClCompile Include="Zone\CBinZone.cpp">
+      <Filter>소스 파일\Zone</Filter>
+    </ClCompile>
+    <ClCompile Include="Zone\CBinZoneIdx.cpp">
+      <Filter>소스 파일\Zone</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -96,10 +107,10 @@
       <Filter>소스 파일</Filter>
     </ClInclude>
     <ClInclude Include="CUtill\CPacket.h">
-      <Filter>소스 파일\Utill</Filter>
+      <Filter>소스 파일\CUtill</Filter>
     </ClInclude>
     <ClInclude Include="CUtill\RingQueue.h">
-      <Filter>소스 파일\Utill</Filter>
+      <Filter>소스 파일\CUtill</Filter>
     </ClInclude>
     <ClInclude Include="Stub\EnumDef.h">
       <Filter>소스 파일\Stub</Filter>
@@ -169,6 +180,17 @@
     </ClInclude>
     <ClInclude Include="Stub\ProjectDefineStruct.h">
       <Filter>소스 파일\Stub</Filter>
+    <ClInclude Include="CUtill\CBinFileDefine.h">
+      <Filter>소스 파일\CUtill</Filter>
+    </ClInclude>
+    <ClInclude Include="CUtill\CBinFile.h">
+      <Filter>소스 파일\CUtill</Filter>
+    </ClInclude>
+    <ClInclude Include="Zone\CBinZone.h">
+      <Filter>소스 파일\Zone</Filter>
+    </ClInclude>
+    <ClInclude Include="Zone\CBinZoneIdx.h">
+      <Filter>소스 파일\Zone</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -18,7 +18,7 @@ public:
 class CZone_Login : public CZone
 {
 public:
-	CZone_Login(int managerIndex, int pid, int max);
+	CZone_Login(int managerIndex, int pid, int max, const char* name);
 	~CZone_Login();
 private:
 	CRITICAL_SECTION cs;

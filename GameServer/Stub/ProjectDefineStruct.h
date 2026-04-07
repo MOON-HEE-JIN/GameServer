@@ -1,5 +1,5 @@
 ﻿#pragma once
-
+#include <cmath>
 struct st_Vector3F
 {
 	float X;
@@ -34,6 +34,14 @@ struct st_Vector3F
 		return *this;
 	}
 
+	st_Vector3F& operator()(float x, float y, float z)
+	{
+		this->X = x;
+		this->Y = y;
+		this->Z = z;
+		return *this;
+	}
+
 	float Length() const
 	{
 		return static_cast<float>(sqrt(X * X + Y * Y + Z * Z));
@@ -59,5 +67,76 @@ struct st_Vector3F
 			return st_Vector3F(dir.X / len, dir.Y / len, dir.Z / len);
 		}
 		return st_Vector3F(0, 0, 0);
+	}
+};
+
+struct st_Vector3D
+{
+	int X;
+	int Y;
+	int Z;
+
+	st_Vector3D() : X(0), Y(0), Z(0) {}
+	st_Vector3D(int x, int y, int z) : X(x), Y(y), Z(z) {}
+	st_Vector3D operator+(const st_Vector3D& other) const
+	{
+		return st_Vector3D(X + other.X, Y + other.Y, Z + other.Z);
+	}
+
+	st_Vector3D& operator+=(const st_Vector3D& other)
+	{
+		X += other.X;
+		Y += other.Y;
+		Z += other.Z;
+		return *this;
+	}
+
+	st_Vector3D operator-(const st_Vector3D& other) const
+	{
+		return st_Vector3D(X - other.X, Y - other.Y, Z - other.Z);
+	}
+
+	st_Vector3D& operator-=(const st_Vector3D& other)
+	{
+		X -= other.X;
+		Y -= other.Y;
+		Z -= other.Z;
+		return *this;
+	}
+
+	st_Vector3D& operator()(int x, int y, int z)
+	{
+		this->X = x;
+		this->Y = y;
+		this->Z = z;
+		return *this;
+	}
+
+	int Length() const
+	{
+		return static_cast<int>(sqrt(X * X + Y * Y + Z * Z));
+	}
+
+	int DistanceToSquared(const st_Vector3D& other) const
+	{
+		return (*this - other).Length();
+	}
+
+	int DistanceToNSquared(const st_Vector3D& other) const
+	{
+		st_Vector3D diff = *this - other;
+		return diff.X * diff.X + diff.Y * diff.Y + diff.Z * diff.Z;
+	}
+
+	st_Vector3D Direction(const st_Vector3D& target) const
+	{
+		st_Vector3D dir = target - *this;
+		int len = dir.Length();
+		float DivLen = 1.0f / len;
+		if (len > 0)
+		{
+			return st_Vector3D(static_cast<int>(dir.X * DivLen), static_cast<int>(dir.Y * DivLen), static_cast<int>(dir.Z * DivLen));
+		}
+		return st_Vector3D(0, 0, 0);
 	}
 };

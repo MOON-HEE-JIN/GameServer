@@ -9,6 +9,7 @@
 #include "../Log/CLog.h"
 #include "CGMSession.h"
 #include "../ZoneManager/CZoneManager.h"
+#include "../CUtill/CBinFileManager.h"
 
 unsigned short CNetServer::Port = 7799;
 unsigned short CNetServer::GmPort = 7700;
@@ -638,8 +639,6 @@ void CNetServer::ServerLog()
 	g_LogServer.ILog("S:%d, P:%d, TS:%d, TP:%d Proc0 : %d, Proc1 : %d, Proc2 : %d",
 		ConnectSessionCount.load(), ConnectPlayerCount.load(), TotalConnectSessionCount.load(), TotalConnectPlayerCount.load(),
 		ConnectProcCount[0].load(), ConnectProcCount[1].load(), ConnectProcCount[2].load());
-
-	g_ZoneManager.Log();
 }
 
 void CNetServer::StartServer()
@@ -648,6 +647,9 @@ void CNetServer::StartServer()
 
 	// Log Thread 먼저 생성
 	CreateLogThread();
+
+	CBinFileManager binFileManager;
+	binFileManager.LoadBinFiles();
 
 	h_AceeptThread = (HANDLE)_beginthreadex(NULL, 0, AceeptThread, 0, 0, NULL);
 	h_GmAceeptThread = (HANDLE)_beginthreadex(NULL, 0, GMAceeptThread, 0, 0, NULL);

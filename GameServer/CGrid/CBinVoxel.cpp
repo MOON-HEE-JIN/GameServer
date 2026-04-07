@@ -1,5 +1,6 @@
 ﻿#include "CBinVoxel.h"
 #include "../CUtill/CBinFileDefine.h"
+#include "../Log/CLog.h"
 
 bool CBinVoxel::ChunkToData()
 {
@@ -26,20 +27,12 @@ bool CBinVoxel::ChunkToData()
 			m_Zone = info;
 			offset += offsizefset;
 			chunkDataSize -= offsizefset;
-#ifdef __TEST_PROJECT_PRINTF__
-			printf("\nZoneId: %d\n", info.ZoneId);
-			printf("ZoneOriginX: %f\n", info.ZoneOriginX);
-			printf("ZoneOriginY: %f\n", info.ZoneOriginY);
-			printf("ZoneOriginZ: %f\n", info.ZoneOriginZ);
 
-			printf("BoundsExtentMinX: %f\n", info.BoundsExtentMinX);
-			printf("BoundsExtentMinY: %f\n", info.BoundsExtentMinY);
-			printf("BoundsExtentMinZ: %f\n", info.BoundsExtentMinZ);
-
-			printf("BoundsExtentMaxX: %f\n", info.BoundsExtentMaxX);
-			printf("BoundsExtentMaxY: %f\n", info.BoundsExtentMaxY);
-			printf("BoundsExtentMaxZ: %f\n", info.BoundsExtentMaxZ);
-#endif
+			g_LogFile.ILog("ZoneId: %d, ZoneOrigin: (%f, %f, %f), BoundsExtentMin: (%f, %f, %f), BoundsExtentMax: (%f, %f, %f)",
+				info.ZoneId,
+				info.ZoneOriginX, info.ZoneOriginY, info.ZoneOriginZ,
+				info.BoundsExtentMinX, info.BoundsExtentMinY, info.BoundsExtentMinZ,
+				info.BoundsExtentMaxX, info.BoundsExtentMaxY, info.BoundsExtentMaxZ);
 		}
 	}
 
@@ -66,21 +59,12 @@ bool CBinVoxel::ChunkToData()
 			m_Grid = info;
 			offset += offsizefset;
 			chunkDataSize -= offsizefset;
-#ifdef __TEST_PROJECT_PRINTF__
-			printf("\nGridOriginX: %f\n", info.GridOriginX);
-			printf("GridOriginY: %f\n", info.GridOriginY);
-			printf("GridOriginZ: %f\n", info.GridOriginZ);
 
-			printf("VoxelSize: %f\n", info.VoxelSize);
-
-			printf("GridSizeX: %d\n", info.GridSizeX);
-			printf("GridSizeY: %d\n", info.GridSizeY);
-			printf("GridSizeZ: %d\n", info.GridSizeZ);
-
-			printf("ChunkSizeX: %d\n", info.ChunkSizeX);
-			printf("ChunkSizeY: %d\n", info.ChunkSizeY);
-			printf("ChunkSizeZ: %d\n", info.ChunkSizeZ);
-#endif
+			g_LogFile.ILog("GridOrigin: (%f, %f, %f), VoxelSize: %f, GridSize: (%d, %d, %d), ChunkSize: (%d, %d, %d)",
+				info.GridOriginX, info.GridOriginY, info.GridOriginZ,
+				info.VoxelSize,
+				info.GridSizeX, info.GridSizeY, info.GridSizeZ,
+				info.ChunkSizeX, info.ChunkSizeY, info.ChunkSizeZ);
 		}
 	}
 
@@ -113,6 +97,7 @@ bool CBinVoxel::ChunkToData()
 #endif
 	}
 
+#ifdef __READ_ALL_VOXEL__
 	// Occupancy
 	{
 		int ChunkTag = TOccupancy;
@@ -131,7 +116,7 @@ bool CBinVoxel::ChunkToData()
 		int offsizefset = sizeof(__int8);
 		while (chunkDataSize > 0)
 		{
-			__int8 bits = 0;
+			unsigned __int8 bits = 0;
 			memcpy(&bits, strChunkData.c_str() + offset, offsizefset);
 
 			m_vecOccupancyData.push_back(bits);
@@ -139,7 +124,7 @@ bool CBinVoxel::ChunkToData()
 			chunkDataSize -= offsizefset;
 		}
 #ifdef __TEST_PROJECT_PRINTF__
-			printf("\nOccupancyData Vector Size %lld\n", m_vecOccupancyData.size());
+		printf("\nOccupancyData Vector Size %lld\n", m_vecOccupancyData.size());
 #endif
 	}
 
@@ -161,7 +146,7 @@ bool CBinVoxel::ChunkToData()
 		int offsizefset = sizeof(__int8);
 		while (chunkDataSize > 0)
 		{
-			__int8 bits = 0;
+			unsigned __int8 bits = 0;
 			memcpy(&bits, strChunkData.c_str() + offset, offsizefset);
 
 			m_vecWalkableData.push_back(bits);
@@ -169,10 +154,55 @@ bool CBinVoxel::ChunkToData()
 			chunkDataSize -= offsizefset;
 		}
 #ifdef __TEST_PROJECT_PRINTF__
-			printf("\nWalkableData Vector Size %lld\n", m_vecWalkableData.size());
+		printf("\nWalkableData Vector Size %lld\n", m_vecWalkableData.size());
 
 #endif
 	}
+#endif // __READ_ALL_VOXEL__
 
+	// Sparse Block
+	{
+		unsigned int ChunkTag = TSparseBlocks;
+		if (m_mapChunk.find(ChunkTag) == m_mapChunk.end())
+		{
+#ifdef __TEST_PROJECT_PRINTF__
+			printf("Chunk with Tag 0x%X not found.\n", ChunkTag);
+#endif
+			return false;
+		}
+
+		std::string strChunkData = m_mapChunk[ChunkTag];
+
+		int chunkDataSize = strChunkData.size();
+		int offset = 0;
+		int offsizefset = sizeof(BinSparseBlock);
+		while (chunkDataSize > 0)
+		{
+			Block block;
+			memcpy(&block.Info, strChunkData.c_str() + offset, offsizefset);
+			offset += offsizefset;
+
+			int LoopVoxelType = block.Info.VoxelCount;
+			int LoopWord = block.Info.WordCount;
+			block.Bits.CustomBits.resize(LoopVoxelType);
+
+			for (int i = 0; i < LoopVoxelType; i++)
+			{
+				for (int j = 0; j < LoopWord; j++)
+				{
+					unsigned __int64 Bits;
+					memcpy(&Bits, strChunkData.c_str() + offset, sizeof(Bits));
+					offset += sizeof(Bits);
+					block.Bits.CustomBits[i].push_back(Bits);
+				}
+			}
+			Blocks.push_back(block);
+			chunkDataSize -= offsizefset + (sizeof(__int64) * LoopVoxelType * LoopWord);
+		}
+#ifdef __TEST_PROJECT_PRINTF__
+		printf("\nOccupancyData Vector Size %lld\n", m_vecOccupancyData.size());
+#endif
+
+	}
 	return true;
 }

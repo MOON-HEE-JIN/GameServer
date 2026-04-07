@@ -11,25 +11,21 @@ public:
 	CZoneManager();
 	~CZoneManager();
 
-public:
-	bool ReadZoneBinFile(const char* filepath);
-
 private:
-	std::vector<CZone*> m_vecZone;
+	std::unordered_map<int, CZone*> m_mapZone;	// <ZoneID, Zone*>
 	std::unordered_map<int, st_IDX> m_mapZoneIDX;
-	std::vector<CZone*> m_vecTempZone;// BinFile 에서 Zone 정보를 읽어올 때 임시로 저장하는 벡터 이후 m_vecZone 대체
-	std::unordered_map<int, int> m_mapZoneIDtoIndex; // <ZoneID, m_vecZone Index>
-	int m_maxZoneCnt;
-
+	
 private:
 	bool TryEnterZone(int toZone);
 
-public :
-	void InsertZoneIDX(const st_IDX& idx) { m_mapZoneIDX[idx.ZoneId] = idx; }
+public:
+	void InsertZone(CZone* pZone) { m_mapZone[pZone->GetID()] = pZone; }
+	const std::unordered_map<int, st_IDX>& GetZoneIDXMap() { return m_mapZoneIDX; }
+
 public:
 	int GetProcID(int zone);
-	int GetMaxZoneCnt(){ return m_maxZoneCnt; }
-	
+	CZone* GetZone(int zone) { return IsValidZoneID(zone) ? m_mapZone[zone] : nullptr; }
+
 	bool ReqEnterZone(CPlayer* pPlayer, int toZone);
 	void ReqJob(ZONE_JOB& job, int zone);
 	int InitProcZoneVector(int pid, std::vector<CZone*>& vec);
@@ -48,6 +44,7 @@ public:
 public:
 	void Log();
 
+	friend class CBinFileManager;
 };
 
 extern CZoneManager g_ZoneManager;

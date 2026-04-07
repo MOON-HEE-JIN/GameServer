@@ -21,6 +21,7 @@ static const unsigned int TGridInfo = MT_MAKE_TAG('G', 'R', 'D', 'I'); // Grid I
 static const unsigned int TBuildInfo = MT_MAKE_TAG('B', 'L', 'D', 'I'); // Build Info
 static const unsigned int TOccupancy = MT_MAKE_TAG('O', 'C', 'C', 'U'); // Voxel Data
 static const unsigned int TWalkable = MT_MAKE_TAG('W', 'A', 'L', 'K'); // Walkable Surface
+static const unsigned int TSparseBlocks = MT_MAKE_TAG('S', 'P', 'B', 'L'); // Sparse Voxel Blocks
 
 #pragma pack(push, 1) // 구조체의 멤버들이 1바이트 단위로 정렬되도록 설정
 struct FMT_BinFileHeader

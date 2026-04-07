@@ -105,5 +105,5 @@ bool CBinZone::ChunkToData()
 		}
 	}
 
-    return false;
+    return true;
 }

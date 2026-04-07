@@ -3,6 +3,8 @@
 #include "../ZoneManager/CZoneManager.h"
 #include "../Zone/CBinZoneIdx.h"
 #include "../Zone/CBinZone.h"
+#include "../CGrid/CBinVoxel.h"
+#include "../CGrid/CZoneGrid.h"
 
 CBinFileManager::CBinFileManager()
 {
@@ -10,6 +12,36 @@ CBinFileManager::CBinFileManager()
 
 CBinFileManager::~CBinFileManager()
 {
+}
+
+bool CBinFileManager::LoadBinFiles()
+{
+	std::string basePath = DATA_PATH_ROOT;
+
+	std::string FilePath;
+
+	FilePath = basePath + "/Zone/Zones.idx";
+	if (!ReadBinZoneIdxFile(FilePath.c_str()))
+		return false;
+	std::unordered_map<int, st_IDX> mapZoneIDX = g_ZoneManager.GetZoneIDXMap();
+	std::unordered_map<int, st_IDX>::iterator iter = mapZoneIDX.begin();
+	std::unordered_map<int, st_IDX>::iterator eiter = mapZoneIDX.end();
+	for (iter; iter != eiter; iter++)
+	{
+		const st_IDX& idx = iter->second;
+		char name[128] = {};
+		snprintf(name, sizeof(name), "Zone%03d", idx.ZoneId);
+
+		FilePath = basePath + "/Zone/" + name + ".bin";
+		if (!ReadBinZoneFile(FilePath.c_str()))
+			return false;
+
+		FilePath = basePath + "/Zone/" + name + ".vol";
+		if (!ReadBinVoxelFile(FilePath.c_str()))
+			return false;
+	}
+
+	return true;
 }
 
 bool CBinFileManager::ReadBinZoneIdxFile(const char* filepath)
@@ -29,7 +61,8 @@ bool CBinFileManager::ReadBinZoneIdxFile(const char* filepath)
 		idx.FileSizeBytes = data.FileSizeBytes;
 		idx.Crc32 = data.Crc32;
 		strcpy_s(idx.ZoneName, data.ZoneName);
-		g_ZoneManager.InsertZoneIDX(idx);
+
+		g_ZoneManager.m_mapZoneIDX[idx.ZoneId] = idx;
 	}
 	return true;
 }
@@ -44,21 +77,16 @@ bool CBinFileManager::ReadBinZoneFile(const char* filepath)
 	static int Index = 1;
 
 	int procid = (Index + 1) % (ProcThreadCnt - 1) + 1;	// 1 ~ 2 까지
-	CZone* pZone = new CZone(Index, procid, 2000);
-
 	std::vector<BinZoneBounds> vecZoneBounds = bin.GetZoneBoundsVector();
+
+	CZone* pZone = new CZone(vecZoneBounds[0].ZoneId, procid, 2000, vecZoneBounds[0].ZoneName);
+
 	{
-		st_ZoneBounds zoneBounds;
-		zoneBounds.ZoneId = vecZoneBounds[0].ZoneId;
-		zoneBounds.OriginX = vecZoneBounds[0].OriginX;
-		zoneBounds.OriginY = vecZoneBounds[0].OriginY;
-		zoneBounds.OriginZ = vecZoneBounds[0].OriginZ;
-		zoneBounds.ExtentX = vecZoneBounds[0].ExtentX;
-		zoneBounds.ExtentY = vecZoneBounds[0].ExtentY;
-		zoneBounds.ExtentZ = vecZoneBounds[0].ExtentZ;
-		strcpy_s(zoneBounds.ZoneName, vecZoneBounds[0].ZoneName);
+		pZone->m_ZoneBounds.OriginX = vecZoneBounds[0].OriginX;
+		pZone->m_ZoneBounds.OriginY = vecZoneBounds[0].OriginY;
+		pZone->m_ZoneBounds.OriginZ = vecZoneBounds[0].OriginZ;
 	}
-	
+
 	std::vector<BinPortal> vecPortal = bin.GetPortalVector();
 	{
 		int Loop = vecPortal.size();
@@ -76,7 +104,7 @@ bool CBinFileManager::ReadBinZoneFile(const char* filepath)
 			portal.TargetY = vecPortal[i].TargetY;
 			portal.TargetZ = vecPortal[i].TargetZ;
 		
-			pZone->InsertPortal(portal);
+			pZone->m_vecPortal.push_back(portal);
 		}
 	}
 
@@ -96,7 +124,8 @@ bool CBinFileManager::ReadBinZoneFile(const char* filepath)
 			spawn.LocationX = vecSpawnPoint[i].LocationX;
 			spawn.LocationY = vecSpawnPoint[i].LocationY;
 			spawn.LocationZ = vecSpawnPoint[i].LocationZ;
-			pZone->InsertSpawnPoint(spawn);
+			
+			pZone->m_vecSpawnPoint.push_back(spawn);
 		}
 	}
 
@@ -112,7 +141,8 @@ bool CBinFileManager::ReadBinZoneFile(const char* filepath)
 			trigger.LocationY = vecTriggerVolume[i].LocationY;
 			trigger.LocationZ = vecTriggerVolume[i].LocationZ;
 			trigger.ParamCount = vecTriggerVolume[i].ParamCount;
-			pZone->InsertTriggerVolume(trigger);
+
+			pZone->m_vecTriggerVolume.push_back(trigger);
 		}
 	}
 
@@ -134,15 +164,51 @@ bool CBinFileManager::ReadBinZoneFile(const char* filepath)
 				strcpy_s(stParam.Value, vecParam[i].Value);
 				vecStParam.push_back(stParam);
 			}
-			pZone->InsertTriggerVolumeParam(triggerId, vecStParam);
+
+			pZone->m_mapTriggerVolumeParams[triggerId] = vecStParam;
 		}
 	}
 
+	g_ZoneManager.InsertZone(pZone);
 	return true;
 }
 
 bool CBinFileManager::ReadBinVoxelFile(const char* filepath)
 {
+	CBinVoxel bin;
+
+	if (!bin.Open(filepath))
+		return false;
 	
-	return false;
+	CZoneGrid* pGrid = new CZoneGrid();
+	pGrid->m_iID = bin.m_Zone.ZoneId;
+	pGrid->m_fVoxelSize = bin.m_Grid.VoxelSize;
+
+	pGrid->m_stOrigin(bin.m_Grid.GridOriginX, bin.m_Grid.GridOriginY, bin.m_Grid.GridOriginZ);
+	pGrid->m_stMinExtent(bin.m_Zone.BoundsExtentMinX, bin.m_Zone.BoundsExtentMinY, bin.m_Zone.BoundsExtentMinZ);
+	pGrid->m_stMaxExtent(bin.m_Zone.BoundsExtentMaxX, bin.m_Zone.BoundsExtentMaxY, bin.m_Zone.BoundsExtentMaxZ);
+	pGrid->m_stGridSize(bin.m_Grid.GridSizeX, bin.m_Grid.GridSizeY, bin.m_Grid.GridSizeZ);
+
+	//pGrid->PushBitData(eBitType::OCCUPANCY, bin.m_vecOccupancyData);
+	//pGrid->PushBitData(eBitType::WALKABLE, bin.m_vecWalkableData);
+
+	int Loop = bin.Blocks.size();
+	for (int i = 0; i < Loop; i++)
+	{
+		const Block& block = bin.Blocks[i];
+		BlockCoord coord(block.Info.BlockX, block.Info.BlockY, block.Info.BlockZ);
+		BlockData data;
+		data.OccupancyBits = block.Bits.CustomBits[eBitType::OCCUPANCY]; // 예시로 CustomBits[0]을 OccupancyBits로 사용
+		data.WalkableBits = block.Bits.CustomBits[eBitType::WALKABLE];  // 예시로 CustomBits[1]을 WalkableBits로 사용
+		
+		pGrid->Blocks[coord] = data;
+	}
+	
+	CZone* pZone = g_ZoneManager.GetZone(bin.m_Zone.ZoneId);
+	if (pZone == nullptr)
+		return false;
+
+	pZone->SetZoneGrid(pGrid);
+
+	return true;
 }

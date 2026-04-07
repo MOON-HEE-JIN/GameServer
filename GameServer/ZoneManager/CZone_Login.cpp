@@ -1,8 +1,8 @@
 ﻿#include "CZone_Login.h"
 
 #include "../NetWork/CNetServer.h"
-CZone_Login::CZone_Login(int managerIndex, int pid, int max)
-	: CZone(managerIndex, pid, max)
+CZone_Login::CZone_Login(int managerIndex, int pid, int max, const char* name)
+	: CZone(managerIndex, pid, max, name)
 {
 	InitializeCriticalSection(&cs);
 }

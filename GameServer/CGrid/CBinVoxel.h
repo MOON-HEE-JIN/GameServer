@@ -26,6 +26,7 @@ struct BinZoneGrid
 	float GridOriginZ;
 
 	float VoxelSize;
+	int SparseBlockSize;
 
 	int GridSizeX;
 	int GridSizeY;
@@ -57,6 +58,44 @@ struct BinBuildInfo
 	bool bRequireSupportBelow;
 	bool bUseSlopFilter;
 };
+
+
+struct BinSparseBlock
+{
+	int BlockX;
+	int BlockY;
+	int BlockZ;
+
+	int VoxelCount;
+	int WordCount;
+};
+
+struct BlockBits
+{
+	std::vector<std::vector<unsigned __int64>> CustomBits; // 향후 확장용
+	int Size = 8;
+	bool GetOccupancy(int X, int Y, int Z)
+	{
+		int BitIndex = (X + (Size * Y) + (Size * Size * Z));
+		int WordIndex = BitIndex >> 6;
+		int BitOffset = BitIndex & 63;
+		return (CustomBits[0][WordIndex] & (__int64(1) << BitOffset)) != 0;
+	}
+
+	bool GetWalkable(int X, int Y, int Z)
+	{
+		int BitIndex = (X + (Size * Y) + (Size * Size * Z));
+		int WordIndex = BitIndex >> 6;
+		int BitOffset = BitIndex & 63;
+		return (CustomBits[1][WordIndex] & (__int64(1) << BitOffset)) != 0;
+	}
+};
+
+struct Block
+{
+	BinSparseBlock Info;
+	BlockBits Bits;
+};
 #pragma pack(pop)
 
 class CBinVoxel :
@@ -69,7 +108,8 @@ public:
 	
 	std::vector<unsigned __int8> m_vecOccupancyData;
 	std::vector<unsigned __int8> m_vecWalkableData;
-
+	
+	std::vector<Block> Blocks;
 public:
 	bool ChunkToData() override;
 };

@@ -7,6 +7,7 @@ CBinFile::CBinFile()
 
 CBinFile::~CBinFile()
 {
+	Close();
 }
 
 bool CBinFile::Open(const char* pszFileName)
@@ -17,7 +18,6 @@ bool CBinFile::Open(const char* pszFileName)
 		return false;
 
 	return BinChunkRead();
-
 }
 
 void CBinFile::Close()

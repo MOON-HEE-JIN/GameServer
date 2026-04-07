@@ -129,6 +129,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CEntity.cpp" />
+    <ClCompile Include="CGrid\CBinVoxel.cpp" />
+    <ClCompile Include="CGrid\CGrid.cpp" />
+    <ClCompile Include="CGrid\CZoneGrid.cpp" />
     <ClCompile Include="CPlayer.cpp" />
     <ClCompile Include="CUtill\CBinFile.cpp" />
     <ClCompile Include="CUtill\CBinFileManager.cpp" />
@@ -153,6 +156,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CEntity.h" />
+    <ClInclude Include="CGrid\CBinVoxel.h" />
+    <ClInclude Include="CGrid\CGrid.h" />
+    <ClInclude Include="CGrid\CGridDefines.h" />
+    <ClInclude Include="CGrid\CZoneGrid.h" />
     <ClInclude Include="CObject.h" />
     <ClInclude Include="CPlayer.h" />
     <ClInclude Include="CUtill\CBinFile.h" />

@@ -37,6 +37,9 @@
     <Filter Include="소스 파일\Zone">
       <UniqueIdentifier>{83ff806e-d13d-472f-94af-128cc320981b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\CGrid">
+      <UniqueIdentifier>{9aa83454-add0-4203-b5ca-fb34a04a8cb4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -87,9 +90,6 @@
     <ClCompile Include="CPlayer.cpp">
       <Filter>소스 파일\CObject</Filter>
     </ClCompile>
-    <ClCompile Include="CUtill\CUtill.cpp">
-      <Filter>소스 파일\Utill</Filter>
-    </ClCompile>
     <ClCompile Include="CEntity.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
@@ -101,6 +101,21 @@
     </ClCompile>
     <ClCompile Include="Zone\CBinZoneIdx.cpp">
       <Filter>소스 파일\Zone</Filter>
+    </ClCompile>
+    <ClCompile Include="CUtill\CUtill.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="CUtill\CBinFileManager.cpp">
+      <Filter>소스 파일\CUtill</Filter>
+    </ClCompile>
+    <ClCompile Include="CGrid\CBinVoxel.cpp">
+      <Filter>소스 파일\CGrid</Filter>
+    </ClCompile>
+    <ClCompile Include="CGrid\CGrid.cpp">
+      <Filter>소스 파일\CGrid</Filter>
+    </ClCompile>
+    <ClCompile Include="CGrid\CZoneGrid.cpp">
+      <Filter>소스 파일\CGrid</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -176,9 +191,6 @@
     <ClInclude Include="ZoneManager\CZone_Login.h">
       <Filter>소스 파일\ZoneManager</Filter>
     </ClInclude>
-    <ClInclude Include="CUtill\CUtill.h">
-      <Filter>소스 파일\Utill</Filter>
-    </ClInclude>
     <ClInclude Include="Stub\ProjectDefineStruct.h">
       <Filter>소스 파일\Stub</Filter>
     </ClInclude>
@@ -193,6 +205,27 @@
     </ClInclude>
     <ClInclude Include="Zone\CBinZoneIdx.h">
       <Filter>소스 파일\Zone</Filter>
+    </ClInclude>
+    <ClInclude Include="CUtill\CUtill.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Zone\ZoneDefines.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CUtill\CBinFileManager.h">
+      <Filter>소스 파일\CUtill</Filter>
+    </ClInclude>
+    <ClInclude Include="CGrid\CBinVoxel.h">
+      <Filter>소스 파일\CGrid</Filter>
+    </ClInclude>
+    <ClInclude Include="CGrid\CGrid.h">
+      <Filter>소스 파일\CGrid</Filter>
+    </ClInclude>
+    <ClInclude Include="CGrid\CGridDefines.h">
+      <Filter>소스 파일\CGrid</Filter>
+    </ClInclude>
+    <ClInclude Include="CGrid\CZoneGrid.h">
+      <Filter>소스 파일\CGrid</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

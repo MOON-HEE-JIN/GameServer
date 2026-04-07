@@ -3,17 +3,19 @@
 #include "CZoneManager.h"
 #include "../Stub/EnumDef.h"
 #include "../Stub/PacketEnumDef.h"
-CZone::CZone(int managerIndex, int pid, int max)
+CZone::CZone(int managerIndex, int pid, int max, const char* name)
 
-	: m_ID(managerIndex), m_ZonePid(pid), m_MaxZoneManagerCount(max)
+	: m_ID(managerIndex), m_ZonePid(pid), m_MaxZoneManagerCount(max), m_ZoneName(name)
 {
+	m_ZoneGrid = nullptr;
 	m_vecPlayer.reserve(max);
 	m_Cnt.store(0);
 }
 
 CZone::~CZone()
 {
-
+	if (m_ZoneGrid != nullptr)
+		delete m_ZoneGrid;
 }
 
 bool CZone::PushTemp(CPlayer* pPlayer)

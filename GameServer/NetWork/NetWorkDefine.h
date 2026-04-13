@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "../CUtill/CPacket.h"
 #include <atomic>
 #include <basetsd.h>

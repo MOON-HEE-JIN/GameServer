@@ -8,92 +8,58 @@
 #include <vector>
 
 #include "CSession.h"
-#include "../CPlayer.h"
 
 class CBaseNet
 {
 public:
-	CBaseNet() {};
+	CBaseNet();
 	~CBaseNet() {};
 
+protected:
+	int Init(int Port, int RunWorkerThreadCount);
+
 private:
-	void Init();
-	int OpenServer();
 	int ListenSocket(unsigned short _port, SOCKET& out);
-	unsigned short Port;
-	unsigned short GmPort;
 private:
-	SOCKET listen_sock;
-	
-	int AcceptCnt;
-
-	std::vector<CSession*> SessionManager;
-	std::vector<SESSION_HANDLE> SessionFreeKey;
-	__int64 AcceptKey;
-
-	unsigned __int64 AllocSessionID;
-
+	bool m_bRun;
+	SOCKET m_slisten;
 	HANDLE CICP;
-	HANDLE h_AceeptThread;
-	HANDLE* h_WorkerThread;
-	HANDLE h_LogThread;
+	HANDLE m_hAceeptThread;
+	HANDLE* m_hWorkerThread;
+	unsigned short m_Port;
+	int m_iRunWorkerThreadCount;
+
+	std::vector<CSession*> m_vecSessionManager;
+	std::vector<SESSION_HANDLE> m_vecSessionFreeKey;
 
 	CRITICAL_SECTION cs_SessionFreeKey;
-private:
-	std::atomic<int> ConnectSessionCount;				// 현재 연결중인 세션
-	std::atomic<int> TotalConnectSessionCount;			// 총 연결 횟수
-	std::atomic<int> ConnectPlayerCount;					// 현재 연결중인 플레이어
-	std::atomic<int> TotalConnectPlayerCount;			// 총 연결 횟수
-	std::vector<std::atomic<int>> ConnectProcCount;		// Proc 에 연결
 
-	int LogPrintTime;					// 로그 출력 시간
-	int LogPrintDelay;				// 로그 출력 딜레이 시간
+	std::atomic<int> m_iAcceptSocketCount;
+	std::atomic<int> m_iConnectSessionCount;				// 현재 연결중인 세션
+	std::atomic<int> m_iTotalConnectSessionCount;			// 총 연결 횟수
+
+protected:
+	void DisConnect(CSession* pSession);
+	void Recv(CSession* pSession, int type, CPacket& packet);
+	
+	CSession* OnSessionAccept(SOCKET sock);
+	virtual bool OnClientJoin(CSession* pSession) { return true; };
+	virtual void OnDisconnect(CSession* pSession) {};
+	virtual void OnRecv(CSession* pSession, int type, CPacket& packet);
 public:
 	void LockSessionFreeKey() { EnterCriticalSection(&cs_SessionFreeKey); };
 	void UnLockSessionFreeKey() { LeaveCriticalSection(&cs_SessionFreeKey); };
 
-	SOCKET& GetListenSocket() { return listen_sock; }
-	HANDLE GetCICP() { return CICP; }
+	bool GetRun() { return m_bRun; };
+	CSession* GetSession(const SESSION_HANDLE& key) {return m_vecSessionManager[key.Handle];}
 
-	void IncrementAcceptCnt() { AcceptCnt++; }
-	CSession* AddSession(SOCKET sock);
-	void DisConnect(CSession* pSession);
-	CSession* GetSession(int index) { return index < 0 ? nullptr : SessionManager[index]; }
-
-	void IncrementSessionCount() { ConnectSessionCount.fetch_add(1); TotalConnectSessionCount.fetch_add(1); }
-	void DecrementSessionCount() { ConnectSessionCount.fetch_sub(1); }
-	void IncrementPlayerCount() { ConnectPlayerCount.fetch_add(1); TotalConnectPlayerCount.fetch_add(1); }
-	void DecrementPlayerCount() { ConnectPlayerCount.fetch_sub(1); }
-	void IncrementProcCount(int index) { ConnectProcCount[index].fetch_add(1); }
-	void DecrementProcCount(int index) { ConnectProcCount[index].fetch_sub(1); }
-
-	void ServerLog();
-public:
-	bool g_ServerON;
-
-	void StartServer();
-	void ServerShutDown();
-	void WiatStopServer();
+private:
+	static unsigned __stdcall AceeptThread(void* arg);		// accept() Thread
+	virtual int AcceptRun();
+	static unsigned __stdcall WorkerThread(void* arg);		// recv, send Thread
+	virtual int WorkerRun();
+protected:
+	void StartServer(CBaseNet* ptr);
+	void WaitStopServer();
+	void ServerShutDown();	
 };
-
-static void OnRecv(CSession* pSession, int type, CPacket pPacket);
-static bool OnClientJoin(CSession* pSession);
-
-static unsigned __stdcall AceeptThread(void* arg);		// accept() Thread
-static unsigned __stdcall WorkerThread(void* arg);		// recv, send Thread
-static unsigned __stdcall LogThread(void* arg);			// 로그 처리 Thread
-
-static unsigned __stdcall GMAceeptThread(void* arg);
-
-bool TryChangeZone(const SESSION_HANDLE& key, int zoneID);
-bool TrySend(const SESSION_HANDLE& key, CPacket* pPacket);
-void SessionSendQEnqueue();
-
-void EnqueueDisConnectReq(CSession* pSession);
-void DequeueDisConnectReq();
-
-CPlayer* GetPlayer(int handle);
-CPlayer* AllocPlayer(int& outPlayerHandle);
-void FreePlayer(CPlayer* pPlayer);
-
-extern std::vector<CPlayer*> g_PlayerManager;

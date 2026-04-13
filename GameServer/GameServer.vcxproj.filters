@@ -87,9 +87,6 @@
     <ClCompile Include="CPlayer.cpp">
       <Filter>소스 파일\CObject</Filter>
     </ClCompile>
-    <ClCompile Include="CUtill\CUtill.cpp">
-      <Filter>소스 파일\Utill</Filter>
-    </ClCompile>
     <ClCompile Include="CEntity.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
@@ -101,6 +98,15 @@
     </ClCompile>
     <ClCompile Include="Zone\CBinZoneIdx.cpp">
       <Filter>소스 파일\Zone</Filter>
+    </ClCompile>
+    <ClCompile Include="CUtill\CBinFileManager.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="CUtill\CUtill.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="NetWork\CBaseNet.cpp">
+      <Filter>소스 파일\NetWork</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -176,9 +182,6 @@
     <ClInclude Include="ZoneManager\CZone_Login.h">
       <Filter>소스 파일\ZoneManager</Filter>
     </ClInclude>
-    <ClInclude Include="CUtill\CUtill.h">
-      <Filter>소스 파일\Utill</Filter>
-    </ClInclude>
     <ClInclude Include="Stub\ProjectDefineStruct.h">
       <Filter>소스 파일\Stub</Filter>
     </ClInclude>
@@ -193,6 +196,18 @@
     </ClInclude>
     <ClInclude Include="Zone\CBinZoneIdx.h">
       <Filter>소스 파일\Zone</Filter>
+    </ClInclude>
+    <ClInclude Include="CUtill\CBinFileManager.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CUtill\CUtill.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Zone\ZoneDefines.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="NetWork\CBaseNet.h">
+      <Filter>소스 파일\NetWork</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

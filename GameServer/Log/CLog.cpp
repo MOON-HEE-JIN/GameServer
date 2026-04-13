@@ -120,11 +120,11 @@ unsigned __stdcall LogThread(void* arg)
 {
 	
 	int ret = 0;
-	while (CNetServer::g_ServerON)
+	while (g_Net.GetRun())
 	{
 		ret = WaitForSingleObject(h_hExit, 1);
 
-		CNetServer::ServerLog();
+		//CNetServer::ServerLog();
 
 		LOG_JOB job;
 		while (g_LogJobQueue.TryDequeue(job))

@@ -51,8 +51,8 @@ bool CZoneManager::ReadZoneBinFile(const char* filepath)
 	for (int i = 0; i < Loop; i++)
 	{
 		const IDX& idx = vecZoneIdx[i];
-		m_mapZoneName[idx.ZoneId] = idx.ZoneName;
-		m_mapZoneIDtoIndex[idx.ZoneId] = i;
+		//m_mapZoneName[idx.ZoneId] = idx.ZoneName;
+		//m_mapZoneIDtoIndex[idx.ZoneId] = i;
 	}
 	m_vecTempZone.reserve(Loop);
 

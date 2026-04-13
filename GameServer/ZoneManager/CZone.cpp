@@ -32,7 +32,7 @@ bool CZone::PushTemp(CPlayer* pPlayer)
 		return false;
 
 	m_Cnt.fetch_add(1);
-	CNetServer::IncrementProcCount(m_ZonePid);
+	//CNetServer::IncrementProcCount(m_ZonePid);
 	return true;
 }
 
@@ -121,7 +121,7 @@ void CZone::ZoneMoveJobProcess()
 
 	while (m_queue.TryDequeue(job))
 	{
-		CPlayer* pPlayer = GetPlayer(job.handle);
+		CPlayer* pPlayer = g_Net.GetPlayer(job.handle);
 		if (pPlayer == nullptr)
 			continue;
 
@@ -214,13 +214,13 @@ void CZone::ZoneMoveJobProcess()
 				bool bRet = LeaveZone(pPlayer);
 				
 				// OwnerZone 에서 Player Free 처리 || 아무 Zone 에서 관리하지 않음
-				CNetServer::DecrementPlayerCount();
-				FreePlayer(pPlayer);
+				//CNetServer::DecrementPlayerCount();
+				g_Net.FreePlayer(pPlayer);
 
 				// ToZone 에서 관리 vector 전에 Release 되었을때
 				if (!bRet)
 				{
-					CNetServer::DecrementProcCount(m_ID);
+					//CNetServer::DecrementProcCount(m_ID);
 					m_Cnt.fetch_sub(1);
 				}
 			}
@@ -231,8 +231,8 @@ void CZone::ZoneMoveJobProcess()
 					bool bRet = LeaveZone(pPlayer);
 					
 					// OwnerZone 에서 Player Free 처리
-					CNetServer::DecrementPlayerCount();
-					FreePlayer(pPlayer);
+					//CNetServer::DecrementPlayerCount();
+					g_Net.FreePlayer(pPlayer);
 				}
 				else
 				{
@@ -312,8 +312,8 @@ bool CZone::LeaveZone(CPlayer* pPlayer)
 	PopMoveVector(pPlayer);
 
 	m_vecPlayer.pop_back();
-	m_mapIDtoIndex.erase(iter);
-	CNetServer::DecrementProcCount(m_ZonePid);
+	//m_mapIDtoIndex.erase(iter);
+	//CNetServer::DecrementProcCount(m_ZonePid);
 	m_Cnt.fetch_sub(1);
 
 

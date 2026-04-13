@@ -78,7 +78,7 @@ unsigned __stdcall ProcWorkerThread(void* arg)
     double accumulatedtime = 0.0f;
     double lasttime = CUtil::GetQPCNowTime();
 
-    while (CNetServer::g_ServerON)
+    while (g_Net.GetRun())
     {
         //1000 Frames 1초당 1000 처리
         ret = WaitForSingleObject(s_hExit, 1);
@@ -126,7 +126,7 @@ void CProcWorker::Proc()
     PROC_MSG job;
 	while (m_ProcJobQueue->TryDequeue(job))
     {
-        CPlayer* pPlayer = g_PlayerManager[job.PlayerHandle];
+        CPlayer* pPlayer = g_Net.GetPlayer(job.PlayerHandle);
         if (pPlayer == nullptr)
             continue;
         if (pPlayer->GetZoneStatus() != eZONESTATUS::STABLE)
@@ -159,9 +159,10 @@ void CProcWorker::DeletePlayerProcess()
 		if (pPlayer == nullptr)
             continue;
         //g_LogGame.ILog("Release Player PHandle : %d, SHandle : %d", pPlayer->GetPlayerHandle(), pPlayer->GetSessionHandle().Handle);
-        CNetServer::DecrementPlayerCount();
+        //CNetServer::DecrementPlayerCount();
+        
         g_ZoneManager.LeaveZone(pPlayer);
-		FreePlayer(pPlayer);   
+		g_Net.FreePlayer(pPlayer);   
     }
 }
 

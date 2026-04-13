@@ -1,9 +1,14 @@
-#include "./NetWork/CNetServer.h"
+﻿#include "./NetWork/CNetServer.h"
+#include "./NetWork/CBaseNet.h"
 #include "Log/CLog.h"
 
 void main()
 {
-	CNetServer::StartServer();
+	g_Net.Initializer(7799, 3);
 
-	CNetServer::WiatStopServer();
+	g_Net.Start();
+
+	g_Net.Wait();
+
+	Sleep(10 * 1000);
 }

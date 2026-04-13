@@ -34,7 +34,7 @@ bool CZone_Login::EnterZone(CPlayer* pPlayer)
 	m_mapIDtoIndex[pPlayer->GetPlayerHandle()] = static_cast<int>(m_vecPlayer.size());
 	m_vecPlayer.push_back(pPlayer);
 
-	CNetServer::IncrementProcCount(m_ZonePid);
+	//CNetServer::IncrementProcCount(m_ZonePid);
 	m_Cnt.fetch_add(1);
 	return true;
 }
@@ -70,7 +70,7 @@ bool CZone_Login::LeaveZone(CPlayer* pPlayer)
 
 	m_vecPlayer.pop_back();
 	m_mapIDtoIndex.erase(iter);
-	CNetServer::DecrementProcCount(m_ZonePid);
+	//CNetServer::DecrementProcCount(m_ZonePid);
 	m_Cnt.fetch_sub(1);
 	return true;
 }

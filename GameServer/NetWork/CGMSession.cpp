@@ -1,4 +1,4 @@
-#include "CGMSession.h"
+﻿#include "CGMSession.h"
 
 #include <sstream>
 #include <cstring>
@@ -27,7 +27,7 @@ void CGMSession::Run()
 
     SendResponse("OK GM SESSION CONNECTED\n");
 
-    while (CNetServer::g_ServerON)
+    while (g_Net.GetRun())
     {
         const int recvSize = recv(m_sock, recvBuffer, static_cast<int>(sizeof(recvBuffer)), 0);
         if (recvSize <= 0)
@@ -74,7 +74,7 @@ bool CGMSession::ProcessCommand(const std::string& commandLine)
 
     if (command == "SHUTDOWN")
     {
-        CNetServer::ServerShutDown();
+        //CNetServer::ServerShutDown();
         return true;
     }
     if (command == "QUIT")

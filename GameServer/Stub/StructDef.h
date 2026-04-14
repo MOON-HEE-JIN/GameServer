@@ -1,12 +1,7 @@
-#pragma once
+﻿#pragma once
 
 #include <string>
 #include "ProjectDefineStruct.h"
-struct st_Header
-{
-	__int32		type;
-	__int32		size;
-};
 struct st_EntityInfo
 {
 	__int32		type;

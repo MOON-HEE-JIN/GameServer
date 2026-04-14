@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "StructDef.h" 
 
@@ -9,7 +9,7 @@ int Serialization(char* buffer, st_CTS_MoveStart& _value);
 int Serialization(char* buffer, st_CTS_MoveStop& _value);
 int Serialization(char* buffer, st_ConnectInfo& _value);
 int Serialization(char* buffer, st_EntityInfo& _value);
-int Serialization(char* buffer, st_Header& _value);
+static int Serialization(char* buffer, st_Header& _value);
 int Serialization(char* buffer, st_STC_ChangeZone& _value);
 int Serialization(char* buffer, st_STC_ConnectInfo& _value);
 int Serialization(char* buffer, st_STC_CreateChar& _value);
@@ -29,7 +29,7 @@ int UnSerialization(char* buffer, st_CTS_MoveStart& _value);
 int UnSerialization(char* buffer, st_CTS_MoveStop& _value);
 int UnSerialization(char* buffer, st_ConnectInfo& _value);
 int UnSerialization(char* buffer, st_EntityInfo& _value);
-int UnSerialization(char* buffer, st_Header& _value);
+static int UnSerialization(char* buffer, st_Header& _value);
 int UnSerialization(char* buffer, st_STC_ChangeZone& _value);
 int UnSerialization(char* buffer, st_STC_ConnectInfo& _value);
 int UnSerialization(char* buffer, st_STC_CreateChar& _value);

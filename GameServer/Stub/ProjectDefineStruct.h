@@ -1,5 +1,11 @@
 ﻿#pragma once
 
+struct st_Header
+{
+	__int32		type;
+	__int32		size;
+};
+
 struct st_Vector3F
 {
 	float X;

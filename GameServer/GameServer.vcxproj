@@ -142,6 +142,10 @@
     <ClCompile Include="NetWork\CGMSession.cpp" />
     <ClCompile Include="NetWork\CNetServer.cpp" />
     <ClCompile Include="NetWork\CSession.cpp" />
+    <ClCompile Include="Observer\CObserverNet.cpp" />
+    <ClCompile Include="Observer\Observer_PacketProc.cpp" />
+    <ClCompile Include="Observer\Observer_Serialization.cpp" />
+    <ClCompile Include="Observer\Observer_SERVER_STUB.cpp" />
     <ClCompile Include="PacketProc.cpp" />
     <ClCompile Include="ProcWorkerThread.cpp" />
     <ClCompile Include="Stub\Serialization.cpp" />
@@ -172,6 +176,14 @@
     <ClInclude Include="NetWork\CNetServer.h" />
     <ClInclude Include="NetWork\CSession.h" />
     <ClInclude Include="NetWork\NetWorkDefine.h" />
+    <ClInclude Include="Observer\CObserverNet.h" />
+    <ClInclude Include="Observer\Observer_EnumDef.h" />
+    <ClInclude Include="Observer\Observer_PacketEnumDef.h" />
+    <ClInclude Include="Observer\Observer_PacketProc.h" />
+    <ClInclude Include="Observer\Observer_Serialization.h" />
+    <ClInclude Include="Observer\Observer_SERVER_STUB.h" />
+    <ClInclude Include="Observer\Observer_StructDef.h" />
+    <ClInclude Include="Observer\ProjectDefineStruct.h" />
     <ClInclude Include="PacketProc.h" />
     <ClInclude Include="ProcWorkerThread.h" />
     <ClInclude Include="Stub\EnumDef.h" />

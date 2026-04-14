@@ -1,4 +1,4 @@
-﻿#include "./NetWork/CNetServer.h"
+#include "./NetWork/CNetServer.h"
 #include "./Observer/CObserverNet.h"
 #include "Log/CLog.h"
 

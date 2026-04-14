@@ -232,9 +232,8 @@ int CBaseNet::WorkerRun()
 		ret = GetQueuedCompletionStatus(CICP, &transfrerred, &pKey, &overlapped, INFINITE);
 
 
-		// 후에 필요하면 추가
-		//if (pKey == KEY_SHUTDOWN_WAKE)
-			//continue;
+		if (pKey == KEY_SHUTDOWN_WAKE)
+			continue;
 
 		pSession = (CSession*)pKey;
 
@@ -348,8 +347,6 @@ void CBaseNet::WaitStopServer()
 {
 	WaitForSingleObject(m_hAceeptThread, INFINITE);
 	WaitForMultipleObjects(OVERALP_CREATE_THREAD, m_hWorkerThread, true, INFINITE);
-	WaitProcWorkerThread();
-	WaitLogThread();
 }
 
 void CBaseNet::ServerShutDown()
@@ -358,10 +355,6 @@ void CBaseNet::ServerShutDown()
 
 	closesocket(m_slisten);
 
-	// 후에 필요하면 추가
-	//for (int i = 0; i < OVERALP_CREATE_THREAD; i++)
-		//PostQueuedCompletionStatus(CICP, 0, KEY_SHUTDOWN_WAKE, NULL);
-
-	PostMessageProcThreadExit();
-	PostMessageLogThreadExit();
+	for (int i = 0; i < OVERALP_CREATE_THREAD; i++)
+		PostQueuedCompletionStatus(CICP, 0, KEY_SHUTDOWN_WAKE, NULL);
 }

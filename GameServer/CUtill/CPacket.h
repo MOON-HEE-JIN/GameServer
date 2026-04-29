@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "../Stub/Serialization.h"
-#include "../Observer/Observer_Serialization.h"
 
 class CPacket
 {

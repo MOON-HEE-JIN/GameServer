@@ -19,7 +19,7 @@ CRingBuffer::~CRingBuffer()
 
 int CRingBuffer::GetDirectEnqueueSize()
 {
-	if (m_iUseSize.load() == DEFAULT_BUFFER_SIZE)
+	if (m_iFreeSize.load() == 0)
 		return 0;
 
 	__int64 iDirectEnqueueSize = 0;
@@ -34,7 +34,7 @@ int CRingBuffer::GetDirectEnqueueSize()
 
 int CRingBuffer::GetDirectDequeueSize()
 {
-	if (m_iFreeSize.load() == 0)
+	if (m_iUseSize.load() == 0)
 		return 0;
 
 	__int64 iDirectDequeueSize = 0;

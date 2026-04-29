@@ -2,7 +2,7 @@
 
 #include "../GameServerDef.h"
 #include "../Log/CLog.h"
-#include "CZone_Login.h"
+#include "../Zone/CZone_Login.h"
 #include "../Stub/PacketEnumDef.h"
 #include "../Stub/EnumDef.h"
 
@@ -11,32 +11,45 @@
 #include "../Zone/CBinZoneIdx.h"
 #include "../Zone/CBinZone.h"
 
+CZoneManager g_ZoneManager;
+
 CZoneManager::CZoneManager()
 {
 	// 해당 생성자는 임시로 작성함 나중에 Zone 에 사용될 Map 완성시 수정해야함
 	
-	CZone* pZone = new CZone_Login(0, 0, 2000);
-	m_vecZone.push_back(pZone);
+	CZoneBase* pZone = new CZone_Login(0, 0, 0, 2000);
+	m_mapZones[0].push_back(pZone);
 	g_LogServer.ILog("Create Zone Index : %d, ProcQ : %d, Max : %d", m_maxZoneCnt, 0, 2000);
 
-	// ProcThreadCnt == 3 [0 ~ 2]
-	m_maxZoneCnt = ProcThreadCnt * 2;
+	// ProcThreadCnt == 4 [0 ~ 3]
+	m_maxZoneCnt = (ProcThreadCnt - 1) * 2;
+
+
 	for (int i = 1; i <= m_maxZoneCnt; i++)
 	{
-		// 1 ~ 2 까지
-		int procid = (i + 1) % (ProcThreadCnt - 1) + 1;
-		CZone* pZone = new CZone(i, procid, 2000);
-		m_vecZone.push_back(pZone);
+		// 1 ~ 3 까지
+		int procid = i % (ProcThreadCnt - 1) + 1;
+		CZone* pZone = new CZone(0, i, procid, 2000);
+		m_mapZones[i].push_back(pZone);
+	
+		CZone* pZone2 = new CZone(1, i, procid, 2000);
+		m_mapZones[i].push_back(pZone2);
+
 		g_LogServer.ILog("Create Zone Index : %d, ProcQ : %d, Max : %d", i, procid, 2000);
 	}
 }
 
 CZoneManager::~CZoneManager()
 {
+	std::unordered_map<int, std::vector<CZoneBase*>>::iterator biter = m_mapZones.begin();
 	// Zone 삭제
-	for (int i = 0; i <= m_maxZoneCnt; i++)
+	for (biter; biter != m_mapZones.end(); ++biter)
 	{
-		delete m_vecZone[i];
+		int nLoop = biter->second.size();
+		for (int i = 0; i < nLoop; i++)
+		{
+			delete biter->second[i];
+		}
 	}
 }
 
@@ -69,55 +82,95 @@ bool CZoneManager::ReadZoneBinFile(const char* filepath)
 	return false;
 }
 
-bool CZoneManager::TryEnterZone(int toZone)
+bool CZoneManager::TryEnterZone(int Channel, int toZone)
 {
-	if (!IsValidZoneID(toZone))
+	if (!IsValidChannelZone(Channel, toZone))
 		return false;
-	return m_vecZone[toZone]->TryEnterZone();
+
+	if (m_mapZones[toZone].size() <= Channel)
+		return false;
+
+	return m_mapZones[toZone][Channel]->TryEnterZone();
 }
 
-void CZoneManager::SendZone(int zone, CPacket* pPacket, CPlayer* pPlayer)
+void CZoneManager::SendZone(int Channel, int Zone, CPacket* pPacket, CPlayer* pPlayer)
 {
-	if (!IsValidZoneID(zone))
+	if (!IsValidChannelZone(Channel, Zone))
 		return;
-	m_vecZone[zone]->SendBroadCast(pPacket, pPlayer);
+
+	m_mapZones[Zone][Channel]->SendBoradCast(pPacket, pPlayer);
 }
 
-bool CZoneManager::SendZoneInfo(int zone, CPlayer* pPlayer)
+bool CZoneManager::SendZoneInfo(int Channel, int Zone, CPlayer* pPlayer)
 {
-	if (!IsValidZoneID(zone))
+	if (!IsValidChannelZone(Channel, Zone))
 		return false;
-	return m_vecZone[zone]->SendZoneInfo(pPlayer);
+
+	m_mapZones[Zone][Channel]->SendZoneInfo(pPlayer);
+	return true;
 }
 
-bool CZoneManager::ReqEnterZone(CPlayer* pPlayer, int toZone)
+bool CZoneManager::ReqEnterLoginZone(CPlayer* pPlayer)
 {
-	if (!TryEnterZone(toZone))
+	if (pPlayer->GetZoneID() != 0)
+		return false;
+
+	if (!IsValidChannelZone(pPlayer->GetChannel(), 0))
+		return false;
+
+	CZone_Login* pZone = (CZone_Login*)m_mapZones[0][pPlayer->GetChannel()];
+
+	ZONE_CHANGE_JOB job(GetTickCount(), eZONESTATUS::ENTER, pPlayer->GetPlayerHandle()
+		, pPlayer->GetChannel(), 0
+		, pPlayer->GetChannel(), 0
+		, 0, 0);
+
+	pZone->Enqueue(job);
+	pPlayer->SetZoneStatus(eZONESTATUS::LEAVE);
+
+	return true;
+}
+
+bool CZoneManager::ReqEnterZone(CPlayer* pPlayer, int Channel, int ToZone)
+{
+	if (!TryEnterZone(Channel, ToZone))
 		return false;
 
 	int preZone = pPlayer->GetZoneID();
+	int preChannel = pPlayer->GetChannel();
+	
+	if (!IsValidChannelZone(preChannel, preZone))
+		return false;
 
-	if (IsEqualProcZoneID(preZone, toZone))
+	CZoneBase* pFromZone = m_mapZones[preZone][preChannel];
+	CZoneBase* pToZone = m_mapZones[ToZone][Channel];
+
+
+	// 같은 Proc 에서 관리한다면
+	// ReqEnterZone() 은 PacketProc 에서 ZoneChangeJobProcess() 와 같은 Thread 에서 실행
+	// m_queue 에 넣는 게 아니라 여기서 처리가능 하면 바로 처리
+	if (IsEqualProcZoneID(preChannel, preZone, Channel, ToZone))
 	{
 		bool ret = 0;
 		
-		if (!m_vecZone[preZone]->LeaveZone(pPlayer))
+		if (!pFromZone->LeaveZone(pPlayer))
 			return false;
-		if (!m_vecZone[toZone]->PushTemp(pPlayer))
+
+		if (!pToZone->TryPush(pPlayer))
 		{
 			// 다시 돌아가기
-			m_vecZone[preZone]->EnterZone(pPlayer);
+			pFromZone->EnterZone(pPlayer);
 			return false;
 		}
 		
-		if (!m_vecZone[toZone]->EnterZone(pPlayer))
+		if (!pToZone->EnterZone(pPlayer))
 			return false;
 		else
 		{
 			st_STC_ChangeZone pack;
 			pack.ret = 0;
-			pack.zone = toZone;
-			
+			pack.zone = ToZone;
+			pack.channel = Channel;
 			pPlayer->SendPacket(pack);
 		}
 
@@ -125,109 +178,153 @@ bool CZoneManager::ReqEnterZone(CPlayer* pPlayer, int toZone)
 	}
 	else
 	{
-		m_vecZone[toZone]->EnqueueJob({ GetTickCount(), eZONESTATUS::ENTER, pPlayer->GetPlayerHandle()
-			,toZone, pPlayer->GetZoneID()
-			,false, false });
+		ZONE_CHANGE_JOB job(GetTickCount(), eZONESTATUS::ENTER, pPlayer->GetPlayerHandle()
+			, Channel, ToZone
+			, pPlayer->GetChannel(), pPlayer->GetZoneID()
+			, 0, 0);
+
+		pToZone->Enqueue(job);
 		pPlayer->SetZoneStatus(eZONESTATUS::LEAVE);
 		return true;
 	}
 }
 
-void CZoneManager::ReqJob(ZONE_JOB& job, int zone)
+int CZoneManager::InitProcZoneVector(int pid, std::vector<CZoneBase*>& vec)
 {
-	m_vecZone[zone]->EnqueueJob(ZONE_JOB{job});
-}
-
-int CZoneManager::InitProcZoneVector(int pid, std::vector<CZone*>& vec)
-{
-	int nLoop = m_vecZone.size();
-	int Ret = 0;
-	for (int i = 0; i < nLoop; i++)
+	int ret = 0;
+	std::unordered_map<int, std::vector<CZoneBase*>>::iterator biter = m_mapZones.begin();
+	std::unordered_map<int, std::vector<CZoneBase*>>::iterator eiter = m_mapZones.end();
+	for (biter; biter != eiter; ++biter)
 	{
-		if (m_vecZone[i]->GetPid() == pid)
+		int nLoop = biter->second.size();
+		for (int i = 0; i < nLoop; i++)
 		{
-			vec.push_back(m_vecZone[i]);
-			Ret++;
+			if (biter->second[i]->GetProcID() == pid)
+			{
+				
+				vec.push_back(biter->second[i]);
+				ret++;
+			}
 		}
 	}
-	return Ret;
+
+	return ret;
 }
 
 bool CZoneManager::IsValidZoneID(int zoneid) const
 {
-	return zoneid >= 0 && zoneid < static_cast<int>(m_vecZone.size());
+	if (m_mapZones.find(zoneid) == m_mapZones.end())
+		return false;
+	return true;
 }
 
-bool CZoneManager::IsEqualProcZoneID(int from, int to)
+bool CZoneManager::IsValidChannelZone(int Channel, int ZoneID)
 {
-	int fromprocid = GetProcID(from);
-	int toprocid = GetProcID(to);
+	if (!IsValidZoneID(ZoneID))
+		return false;
+
+	if (m_mapZones[ZoneID].size() <= Channel)
+		return false;
+
+	return true;
+}
+
+bool CZoneManager::IsEqualProcZoneID(int fromChannel, int from, int toChannel, int to)
+{
+	int fromprocid = GetProcID(fromChannel, from);
+	int toprocid = GetProcID(toChannel, to);
+
 	return fromprocid == toprocid;
 }
 
-int CZoneManager::GetProcID(int zone)
+int CZoneManager::GetProcID(int Channel, int Zone)
 {
-	if (!IsValidZoneID(zone))
-		return 0;
+	if (!IsValidChannelZone(Channel, Zone))
+		return -1;
 
-	return m_vecZone[zone]->GetPid();
-}
-
-bool CZoneManager::EnterZone(CPlayer* pPlayer, int zoneid)
-{
-	if (pPlayer == nullptr || !IsValidZoneID(zoneid))
-		return false;
-
-	return m_vecZone[zoneid]->EnterZone(pPlayer);
+	return m_mapZones[Zone][Channel]->GetProcID();
 }
 
 bool CZoneManager::LeaveZone(CPlayer* pPlayer)
 {
 	if (pPlayer == nullptr)
 		return false;
-
+	
+	int channel = pPlayer->GetChannel();
 	int zoneID = pPlayer->GetZoneID();
-	if (!IsValidZoneID(zoneID))
+	if (!IsValidChannelZone(channel, zoneID))
 		return false;
 
-	return m_vecZone[zoneID]->LeaveZone(pPlayer);
+	return m_mapZones[zoneID][channel]->LeaveZone(pPlayer);
 }
 
 void CZoneManager::PushZoneMoveVector(CEntity* pEntity)
 {
-	if (!IsValidZoneID(pEntity->GetZoneID()))
-		return ;
+	int channel = pEntity->GetChannel();
+	int zone = pEntity->GetZoneID();
 
-	m_vecZone[pEntity->GetZoneID()]->PushMoveVector(pEntity);
+	if (!IsValidChannelZone(channel, zone))
+		return;
+
+	CZone* pZone = (CZone*)m_mapZones[zone][channel];
+	pZone->PushMoveVector(pEntity);
 }
 
 void CZoneManager::PopZoneMoveVector(CEntity* pEntity)
 {
-	if (!IsValidZoneID(pEntity->GetZoneID()))
-		return ;
+	int channel = pEntity->GetChannel();
+	int zone = pEntity->GetZoneID();
 
-	m_vecZone[pEntity->GetZoneID()]->PopMoveVector(pEntity);
+	if (!IsValidChannelZone(channel, zone))
+		return;
+
+	CZone* pZone = (CZone*)m_mapZones[zone][channel];
+	pZone->PopMoveVector(pEntity);
+}
+
+CZoneBase* CZoneManager::GetZone(int ID, int ZoneID)
+{
+	if (m_mapZones.find(ZoneID) == m_mapZones.end())
+		return nullptr;
+
+	if (m_mapZones[ZoneID].size() <= ID)
+		return nullptr;
+
+	return m_mapZones[ZoneID][ID];
 }
 
 void CZoneManager::Log()
 {
-	std::string buf;
-	buf.reserve(m_maxZoneCnt * 16);
-	int Total = 0;
-	for (int i = 0; i <= m_maxZoneCnt; i++)
+	if (m_iLogTime + m_iLogDelayTime > GetTickCount())
+		return;
+
+	m_iLogTime = GetTickCount();
+
+	std::unordered_map<int, std::vector<CZoneBase*>>::iterator biter = m_mapZones.begin();
+	std::unordered_map<int, std::vector<CZoneBase*>>::iterator eiter = m_mapZones.end();
+	g_LogServer.ILog("===================================================");
+	for (biter; biter != eiter; ++biter)
 	{
-		const int zoneCount = m_vecZone[i]->m_Cnt.load();
+		int nLoop = biter->second.size();
+		std::string  buffer;
 		std::ostringstream stream;
-		stream << "Zone[" << i << "][" << zoneCount << "] ";
-		buf.append(stream.str());
-		Total += zoneCount;
+		stream << "ZoneID[" << biter->first << "]";
+		for (int i = 0; i < nLoop; i++)
+		{
+			stream << "Channel[" << i << "]\t";
+			stream << "Count [ " << biter->second[i]->GetCurCnt() << " ]";
+		}
+		buffer.append(stream.str());
+		g_LogServer.ILog(buffer.c_str());
 	}
-
-	std::ostringstream stream;
-	stream << "Total : " << Total;
-	buf.append(stream.str());
-
-	g_LogServer.ILog(buf.c_str());
+	g_LogServer.ILog("===================================================");
 }
 
-CZoneManager g_ZoneManager;
+bool EnqueueChangeJob(int id, int zone, ZONE_CHANGE_JOB& job)
+{
+	CZoneBase* pZone = g_ZoneManager.GetZone(id, zone);
+	if (pZone == nullptr)
+		return false;
+	
+	return pZone->Enqueue(job);
+}

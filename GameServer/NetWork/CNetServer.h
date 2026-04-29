@@ -41,7 +41,7 @@ public:
 
 };
 
-bool TryChangeZone(const SESSION_HANDLE& key, int zoneID);
+bool TryChangeZone(const SESSION_HANDLE& key, int ProcID);
 bool TrySend(const SESSION_HANDLE& key, CPacket* pPacket);
 
 

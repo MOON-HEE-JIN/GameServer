@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "CZone.h"
+#include "../Zone/CZoneBase.h"
 
 // windows.h 가 winsock.h 를 포함 하여 h 오류 발생
 #define WIN32_LEAN_AND_MEAN
@@ -14,16 +14,13 @@ public:
 };
 
 // 초기 GameServer 접속하고 Packet 을 처리 해주는 Login Zone
-// Packet 처리를 위해서 Lock 을 걸고 넣어 준다
-class CZone_Login : public CZone
+class CZone_Login : public CZoneBase
 {
 public:
-	CZone_Login(int managerIndex, int pid, int max);
+	CZone_Login(int ID, int ZoneID, int ProcID, int Maximum);
 	~CZone_Login();
+public:
+	virtual void Process() override {};
 private:
 	CRITICAL_SECTION cs;
-
-public:
-	virtual bool EnterZone(CPlayer* pPlayer);
-	virtual bool LeaveZone(CPlayer* pPlayer);
 };

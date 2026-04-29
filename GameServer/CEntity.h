@@ -8,6 +8,7 @@ class CEntity
 protected:
 	int m_nEntityType = 0;
 
+	int m_iChannel;
 	std::atomic<int> m_OwnerZone;						// 처리 Zone 에 대한 id
 	eZONESTATUS m_eZoneStatus;							// 현재 Zone 에 서 의 상태
 
@@ -22,6 +23,7 @@ public:
 	bool MoveUpdate();
 
 public:
+	int GetChannel() { return m_iChannel; }
 	int GetZoneID() { return m_OwnerZone.load(); }
 	eZONESTATUS GetZoneStatus() { return m_eZoneStatus; }
 	int GetMoveIndex() { return m_nMoveIndex; }
@@ -30,7 +32,7 @@ public:
 	st_Vector3F GetDirVector() { return m_stDirVector; }
 	float GetMoveSpeed() { return m_fMoveSpeed; }
 
-	void SetZoneID(int zone) { m_OwnerZone.store(zone); };
+	void SetZoneID(int channel, int zone) { m_iChannel = channel;  m_OwnerZone.store(zone); };
 	void SetZoneStatus(eZONESTATUS type) { m_eZoneStatus = type; }
 	void SetMoveIndex(int index) { m_nMoveIndex = index; }
 	int MoveStart(st_Vector3F goal, st_Vector3F dir);

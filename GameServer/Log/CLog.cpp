@@ -2,6 +2,7 @@
 
 #include "../MemoryManager/MemoryManager.h"
 #include "../NetWork/CNetServer.h"
+#include "../ZoneManager/CZoneManager.h"
 
 #include <chrono>
 #include <sstream>
@@ -124,7 +125,7 @@ unsigned __stdcall LogThread(void* arg)
 	{
 		ret = WaitForSingleObject(h_hExit, 1);
 
-		//CNetServer::ServerLog();
+		g_ZoneManager.Log();
 
 		LOG_JOB job;
 		while (g_LogJobQueue.TryDequeue(job))

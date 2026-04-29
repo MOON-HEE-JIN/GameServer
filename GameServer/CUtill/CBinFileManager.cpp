@@ -44,7 +44,7 @@ bool CBinFileManager::ReadBinZoneFile(const char* filepath)
 	static int Index = 1;
 
 	int procid = (Index + 1) % (ProcThreadCnt - 1) + 1;	// 1 ~ 2 까지
-	CZone* pZone = new CZone(Index, procid, 2000);
+	CZone* pZone = new CZone(0,Index, procid, 2000);
 
 	std::vector<BinZoneBounds> vecZoneBounds = bin.GetZoneBoundsVector();
 	{

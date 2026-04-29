@@ -136,5 +136,11 @@ public:
     {
         m_pool.ForceReclaimCurrentThread();
     }
+
+    void Clear()
+    {
+        T out;
+        while (TryDequeue(out)) {}
+    }
 };
 

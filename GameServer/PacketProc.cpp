@@ -15,15 +15,9 @@ int PacketProc::DO_GAME_LOOPBACK(CPlayer* pTarget, CPacket& pReqPacket)
     st_CTS_LoopBack data;
     pReqPacket >> data;
     
-    if (pTarget->GetZoneID() != data.zone && pTarget->GetZoneID() != 0)
-    {
-        g_LogGame.ELog("Not Equal Zone Client[%d] - Server[%d]", data.zone, pTarget->GetZoneID());
-    }
-
     st_STC_LoopBack pack;
     pack.ret = 0;
     pack.data = data.data;
-    pack.zone = pTarget->GetZoneID();
     
     pTarget->SendPacket(pack);
 
@@ -78,8 +72,8 @@ int PacketProc::DO_GAME_CHANGEZONE(CPlayer* pTarget, CPacket& pReqPacket)
 
     st_CTS_ChangeZone data;
     pReqPacket >> data;
-
-    if (!g_ZoneManager.IsValidZoneID(data.zone))
+    
+    if (!g_ZoneManager.IsValidChannelZone(data.channel, data.zone))
         return ERROR_CODE::NOT_FIND_PID;
 
     const int prevZoneID = pTarget->GetZoneID();
@@ -92,7 +86,7 @@ int PacketProc::DO_GAME_CHANGEZONE(CPlayer* pTarget, CPacket& pReqPacket)
     // 기존 직접 Enter -> 요청 Job 을 주는쪽으로 수정
 
     //  이동 실패
-    if (!g_ZoneManager.ReqEnterZone(pTarget, data.zone))
+    if (!g_ZoneManager.ReqEnterZone(pTarget, data.channel, data.zone))
         return ERROR_CODE::NOT_FIND_PID;
 
     // 이동 성공 패킷은 이동이 완료되고 보낸다
@@ -108,8 +102,11 @@ int PacketProc::DO_GAME_ENTERZONE(CPlayer* pTarget, CPacket& pReqPacket)
     if (pTarget->GetZoneID() != data.zone)
         return ERROR_CODE::ZONE_ID;
 
+    if (pTarget->GetChannel() != data.channel)
+        return ERROR_CODE::ZONE_ID;
+
     // Zone 에 대한 주위 정보 보내기 (본인 제외)
-    if (!g_ZoneManager.SendZoneInfo(pTarget->GetZoneID(), pTarget))
+    if (!g_ZoneManager.SendZoneInfo(pTarget->GetChannel(), pTarget->GetZoneID(), pTarget))
         return ERROR_CODE::ZONE_ID;
 
     // Zone 에서 의 본인 정보 보내기
@@ -119,7 +116,7 @@ int PacketProc::DO_GAME_ENTERZONE(CPlayer* pTarget, CPacket& pReqPacket)
 	pack.pos.Y = 0;
     pack.pos.Z = 0;
     pack.speed = pTarget->GetMoveSpeed();
-    pTarget->SendPacket(pack);
+    //pTarget->SendPacket(pack);
 
     return 0;
 }
@@ -157,7 +154,7 @@ int PacketProc::DO_GAME_MOVESTART(CPlayer* pTarget, CPacket& pReqPacket)
 	// Zone 에 있는 다른 Player 들에게 이동 시작 패킷 보내기
 	CPacket pack;
     pack << res;
-	g_ZoneManager.SendZone(pTarget->GetZoneID(), &pack, pTarget);
+	g_ZoneManager.SendZone(pTarget->GetChannel(), pTarget->GetZoneID(), &pack, pTarget);
 
     return 0;
 }
@@ -179,6 +176,11 @@ int PacketProc::DO_GAME_MOVESTOP(CPlayer* pTarget, CPacket& pReqPacket)
     res.ret = 0;
     res.pos = pTarget->GetPosition();
     pTarget->SendPacket(res);
+    return 0;
+}
+
+int PacketProc::DO_OBSERVER_CONNET_OBSERVER(CPlayer* pTarget, CPacket& pReqPacket)
+{
     return 0;
 }
 

@@ -66,7 +66,7 @@ void CEntity::MoveComplete()
     pack << res;
 
 	// Zone Broadcast
-    g_ZoneManager.SendZone(GetZoneID(), &pack);
+    g_ZoneManager.SendZone(GetChannel(), GetZoneID(), &pack);
 }
 
 int CEntity::MoveStop(st_Vector3F pos)

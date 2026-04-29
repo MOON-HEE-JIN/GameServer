@@ -2,21 +2,21 @@
 #pragma comment(lib, "ws2_32")
 
 #include <WinSock2.h>
-#include "../CUtill/RingQueue.h"
+#include "../CUtill/CRingBuffer.h"
 #include "../CUtill/CPacket.h"
 #include "NetWorkDefine.h"
 #include <atomic>
+#include <vector>
 class CSession
 {
 public:
 	CSession();
 	~CSession();
-
 private:
 	SOCKET sock;
 
-	RingQueue* SendQ;
-	RingQueue* RecvQ;
+	CRingBuffer* SendQ;
+	CRingBuffer* RecvQ;
 
 	DWORD IOCnt;
 	std::atomic<bool> bSendFlag;
@@ -37,7 +37,6 @@ private:
 private:
 	std::atomic<SESSION_HANDLE> m_ConnectKey;
 	int m_ConnectPlayerHandle;	// 접속한 플레이어 ID
-	std::atomic<int> m_ZoneID;			// 처리 스레드 ID
 	std::atomic<int> m_ProcId;
 public:
 	int IncrementIOCnt() { return InterlockedIncrement(&IOCnt); }
@@ -50,8 +49,8 @@ public:
 	void LockSendQ() { EnterCriticalSection(&m_csSendQ); }
 	void UnLockSendQ() { LeaveCriticalSection(&m_csSendQ); }
 public:
-	RingQueue* GetSendBuffer() { return SendQ; }
-	RingQueue* GetRecvBuffer() { return RecvQ; }
+	CRingBuffer* GetSendBuffer() { return SendQ; }
+	CRingBuffer* GetRecvBuffer() { return RecvQ; }
 
 	OVERLAPPED* GetSendOverlapPointer() { return &SendOverlap; }
 	OVERLAPPED* GetRecvOverlapPointer() { return &RecvOverlap; }
@@ -62,14 +61,13 @@ public:
 	int GetConnectPlayerHandle() { return m_ConnectPlayerHandle; }
 	int GetIOCnt() { return IOCnt; }
 	int GetRefCnt() { return RefCnt.load(); }
-	int GetZoneID() { return m_ZoneID.load(); }
 	int GetProcID() { return m_ProcId.load(); }
 
 	bool GetBoolbCloseing() { return bCloseing; }
 	bool GetBoolConnect() { return bConnect; }
 
 	void SetConnectPlayerHandle(int playerID) { m_ConnectPlayerHandle = playerID; }
-	bool SetZoneID(int zoneID);
+	bool SetProcID(int ProcID);
 public:
 	void OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key);
 	

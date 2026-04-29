@@ -10,8 +10,8 @@ CSession::CSession()
 	InitializeCriticalSection(&cs);
 	InitializeCriticalSection(&m_csSendQ);
 
-	RecvQ = new RingQueue;
-	SendQ = new RingQueue;
+	RecvQ = new CRingBuffer;
+	SendQ = new CRingBuffer;
 
 	RecvOverlap = { 0 };
 	SendOverlap = { 0 };
@@ -26,7 +26,6 @@ CSession::CSession()
 	m_ConnectKey.store(SESSION_HANDLE(-1, 0));
 
 	m_ConnectPlayerHandle = -1;
-	m_ZoneID = 0;
 	m_ProcId = 0;
 }
 
@@ -40,13 +39,14 @@ CSession::~CSession()
 	DeleteCriticalSection(&m_csSendQ);
 }
 
-bool CSession::SetZoneID(int zoneID)
+bool CSession::SetProcID(int ProcID)
 {
+	/*
 	if (!g_ZoneManager.IsValidZoneID(zoneID))
 		return false;
+	*/
 
-	m_ZoneID.store(zoneID);
-	m_ProcId.store(g_ZoneManager.GetProcID(zoneID));
+	m_ProcId.store(ProcID);
 	
 	return true;
 }
@@ -66,7 +66,6 @@ void CSession::OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key)
 
 	m_ConnectKey = std::move(key);
 	m_ConnectPlayerHandle = -1;
-	m_ZoneID = 0;
 	m_ProcId = 0;
 	bCloseing = false;
 	bDisconnecting = false;
@@ -89,7 +88,6 @@ void CSession::OnDisconnect()
 	RecvQ->Clear();
 	SendQ->Clear();
 	m_ConnectPlayerHandle = -1;
-	m_ZoneID = 0;
 	m_ProcId = 0;
 	CloseSocket();
 }
@@ -130,7 +128,6 @@ void CSession::CloseSocket()
 void CSession::SendPacket(CPacket* _packet)
 {
 	EnterCriticalSection(&m_csSendQ);
-	
 	int ret = SendQ->Enqueue(_packet->GetReadBuffPtr(), _packet->GetDataSize());
 	LeaveCriticalSection(&m_csSendQ);
 
@@ -162,22 +159,26 @@ void CSession::SendPost()
 	InterlockedIncrement(&IOCnt);
 
 	ZeroMemory(&SendOverlap, sizeof(OVERLAPPED));
+	
 	if (SendQ->GetDirectDequeueSize() < SendQ->GetUseSize())
 	{
 		WSABUF wsabuf[2];
-		wsabuf[0].buf = SendQ->GetReadPointer();
+		wsabuf[0].buf = (char*)SendQ->GetReadPointer();
 		wsabuf[0].len = SendQ->GetDirectDequeueSize();
-		wsabuf[1].buf = SendQ->GetFirstPointer();
+		wsabuf[1].buf = (char*)SendQ->GetBuffer();
 		wsabuf[1].len = SendQ->GetUseSize() - SendQ->GetDirectDequeueSize();
+
 		ret = WSASend(sock, wsabuf, 2, 0, 0, &SendOverlap, NULL);
 	}
 	else
 	{
 		WSABUF wsabuf;
-		wsabuf.buf = SendQ->GetReadPointer();
+		wsabuf.buf = (char*)SendQ->GetReadPointer();
 		wsabuf.len = SendQ->GetDirectDequeueSize();
+
 		ret = WSASend(sock, &wsabuf, 1, 0, 0, &SendOverlap, NULL);
 	}
+	
 	LeaveCriticalSection(&m_csSendQ);
 
 	if (ret == SOCKET_ERROR)
@@ -217,9 +218,9 @@ bool CSession::RecvPost()
 	if (RecvQ->GetDirectEnqueueSize() < RecvQ->GetFreeSize())
 	{
 		WSABUF wsabuf[2];
-		wsabuf[0].buf = RecvQ->GetWritePointer();
+		wsabuf[0].buf = (char*)RecvQ->GetWritePointer();
 		wsabuf[0].len = RecvQ->GetDirectEnqueueSize();
-		wsabuf[1].buf = RecvQ->GetFirstPointer();
+		wsabuf[1].buf = (char*)RecvQ->GetBuffer();
 		wsabuf[1].len = RecvQ->GetFreeSize() - wsabuf[0].len;
 
 		ret = WSARecv(sock, wsabuf, 2, NULL, &flags, &RecvOverlap, NULL);
@@ -228,7 +229,7 @@ bool CSession::RecvPost()
 	else
 	{
 		WSABUF wsabuf;
-		wsabuf.buf = RecvQ->GetWritePointer();
+		wsabuf.buf = (char*)RecvQ->GetWritePointer();
 		wsabuf.len = RecvQ->GetDirectEnqueueSize();
 
 		ret = WSARecv(sock, &wsabuf, 1, NULL, &flags, &RecvOverlap, NULL);

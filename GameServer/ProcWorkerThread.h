@@ -3,7 +3,7 @@
 #include "CPlayer.h"
 #include "PacketProc.h"
 #include <vector>
-#include "ZoneManager/CZone.h"
+#include "Zone/CZoneBase.h"
 
 void CreateProcWorkerThread();
 void WaitProcWorkerThread();
@@ -36,13 +36,12 @@ public:
 	void DeletePlayerProcess();
 
 	void InitZoneVector();
-	void PushZone(CZone* pZone) { m_vecZone.push_back(pZone); }
 private:
 	int m_ProcID;
 	CLockFreeQueue_MPSC<PROC_MSG>* m_ProcJobQueue;
 	CLockFreeQueue_MPSC<CPlayer*> m_PlayerDeleteQueue;
 	PacketProc* m_pPacketProc;
-	std::vector<CZone*> m_vecZone;
+	std::vector<CZoneBase*> m_vecZone;
 	int m_ZoneCnt;
 };
 

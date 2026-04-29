@@ -12,6 +12,15 @@ namespace GAME
 		CREATECHAR,					//5
 		MOVESTART,					//6
 		MOVESTOP,					//7
+		CHANGEINGZONE,					//8
+	};
+};
+
+namespace OBSERVER 
+ {
+	enum OBSERVER
+	{
+		CONNET_OBSERVER,					//100001
 	};
 };
 

@@ -7,6 +7,7 @@
 #include <Windows.h>
 #include <process.h>
 #include "CUtill/CUtill.h"
+#include "Stub/EnumDef.h"
 
 static std::vector<HANDLE> s_ProcWorkerThreadHandles;
 static std::vector<int> s_ProcWorkerThreadIDs;
@@ -130,7 +131,14 @@ void CProcWorker::Proc()
         if (pPlayer == nullptr)
             continue;
         if (pPlayer->GetZoneStatus() != eZONESTATUS::STABLE)
+        {
+            st_STC_ChangeingZone res;
+            res.ret = ERROR_CODE::ZONE_CHANEING;
+            res.type = job.type;
+
+            pPlayer->SendPacket(res);
             continue;
+        }
         m_pPacketProc->DO_GAME_Proc(job.type, pPlayer, job.packet);
     }
 }
@@ -139,7 +147,7 @@ void CProcWorker::ZoneProc()
 {
     for (int i = 0; i < m_ZoneCnt; i++)
     {
-        m_vecZone[i]->ZoneMoveJobProcess();
+        m_vecZone[i]->ZoneChangeJobProcess();
     }
 }
 
@@ -147,7 +155,7 @@ void CProcWorker::ZoneUpdateByFrame()
 {
     for (int i = 0; i < m_ZoneCnt; i++)
     {
-        m_vecZone[i]->ZoneEntityMoveProcess();
+        m_vecZone[i]->Process();
     }
 }
 
@@ -170,6 +178,13 @@ void CProcWorker::InitZoneVector()
 {
     g_ZoneManager.InitProcZoneVector(m_ProcID, m_vecZone);
     m_ZoneCnt = m_vecZone.size();
+
+    for (int i = 0; i < m_ZoneCnt; i++)
+    {
+        g_LogTemp.ILog("Proc[%d] Management ID[%d] Zone[%d] Proc[%d]"
+            , m_ProcID
+            , m_vecZone[i]->GetChannel(), m_vecZone[i]->GetZoneID(), m_vecZone[i]->GetProcID());
+    }
 }
 
 void DeleteProcWorker()

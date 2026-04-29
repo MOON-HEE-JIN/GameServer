@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <string>
 
-#define ProcThreadCnt 3
+#define ProcThreadCnt 4
 #define POSITION_TOLERANCE 5
 #define FIXED_DELTA 0.01667f
 #define MAX_FRAME_LOOP_COUNT 6
@@ -43,28 +43,32 @@ typedef struct st_Log
 	}
 }LOG_JOB;
 
-typedef struct st_ZoneJob
+typedef struct st_ChangeZoneJob
 {
 	unsigned int time;			// Job 입력 시간
 	eZONESTATUS type;			// Job Type
 	int handle;					// Player Handle
+	int toID;					// 목표 ID
 	int toZone;					// 목표 Zone
+	int fromID;					// 시작 ID
 	int fromZone;				// 시작 Zone
 	bool ack;					// ack 신호
 	bool ret;					// ack 에 대한 성공 여부
-	st_ZoneJob() : time(0), type(eZONESTATUS::NONE), handle(0), toZone(0), fromZone(0), ack(false), ret(false) {};
-	st_ZoneJob(unsigned int _time, eZONESTATUS _type, int _handle, int _to, int _from, bool _ack, bool _ret)
-		: time(_time), type(_type), handle(_handle), toZone(_to), fromZone(_from), ack(_ack), ret(_ret) { }
+	st_ChangeZoneJob() : time(0), type(eZONESTATUS::NONE), handle(0), toID(0), toZone(0), fromID(0), fromZone(0), ack(false), ret(false) {};
+	st_ChangeZoneJob(unsigned int _time, eZONESTATUS _type, int _handle, int _toID, int _to, int _fromID, int _from, bool _ack, bool _ret)
+		: time(_time), type(_type), handle(_handle), toID(_toID), toZone(_to), fromID(_fromID), fromZone(_from), ack(_ack), ret(_ret) { }
 
-	st_ZoneJob(const st_ZoneJob&) = default;
-	void operator()(unsigned int _time, eZONESTATUS _type, int _handle, int _to, int _from, bool _ack, bool _ret)
+	st_ChangeZoneJob(const st_ChangeZoneJob&) = default;
+	void operator()(unsigned int _time, eZONESTATUS _type, int _handle, int _toID, int _to, int _fromID, int _from, bool _ack, bool _ret)
 	{
 		time = _time;
 		type = _type;
 		handle = _handle;
+		toID = _toID;
 		toZone = _to;
+		fromID = _fromID;
 		fromZone = _from;
 		ack = _ack;
 		ret = _ret;
 	}
-}ZONE_JOB;
+}ZONE_CHANGE_JOB;

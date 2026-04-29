@@ -153,6 +153,13 @@ void CBaseNet::Recv(CSession* pSession, int type, CPacket& packet)
 	OnRecv(pSession, type, packet);
 }
 
+CSession* CBaseNet::GetSession(const SESSION_HANDLE& key)
+{
+	if (key.Handle < 0 || key.Handle >= m_vecSessionManager.size())
+		return nullptr;
+	return m_vecSessionManager[key.Handle];
+}
+
 unsigned __stdcall CBaseNet::AceeptThread(void* arg)
 {
 	CBaseNet* pThis = static_cast<CBaseNet*>(arg);

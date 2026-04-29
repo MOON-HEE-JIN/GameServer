@@ -26,12 +26,12 @@ bool CNetServer::OnClientJoin(CSession* pSession)
 
 	m_iPlayerConnectCount.fetch_add(1);
 
-	pPlayer->Init(pSession->GetConnectKey(), PlayerHandle, pSession->GetZoneID());
+	pPlayer->Init(pSession->GetConnectKey(), PlayerHandle, 0, 0);
 	pSession->SetConnectPlayerHandle(PlayerHandle);
 
 	//g_LogServer.ILog("OnClientJoin SessionHandle : %d, PlayerHandle : %d" , pSession->GetConnectHandle(), PlayerHandle);
-
-	if (!g_ZoneManager.EnterZone(pPlayer, 0))
+	
+	if (!g_ZoneManager.ReqEnterLoginZone(pPlayer))
 	{
 		pSession->SetConnectPlayerHandle(-1);
 		FreePlayer(pPlayer);
@@ -40,7 +40,8 @@ bool CNetServer::OnClientJoin(CSession* pSession)
 
 		return false;
 	}
-	pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+	
+	//pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
 
 	st_STC_ConnectInfo pack;
 	pack.info.ID = PlayerHandle;
@@ -56,8 +57,12 @@ void CNetServer::OnDisconnect(CSession* pSession)
 	{
 		pPlayer->SetRelease();
 
-		ZONE_JOB z(GetTickCount(), eZONESTATUS::RELEASE, pPlayer->GetPlayerHandle(), 0, 0, 0, 0);
-		g_ZoneManager.ReqJob(z, pPlayer->GetZoneID());
+		ZONE_CHANGE_JOB z(GetTickCount(), eZONESTATUS::RELEASE, pPlayer->GetPlayerHandle()
+			, pPlayer->GetChannel(), pPlayer->GetZoneID()
+			, pPlayer->GetChannel(), pPlayer->GetZoneID()
+			, 0, 0);
+
+		EnqueueChangeJob(pPlayer->GetChannel(), pPlayer->GetZoneID(), z);
 	}
 }
 
@@ -78,7 +83,6 @@ void CNetServer::OnRecv(CSession* pSession, int type, CPacket& packet)
 		return;
 	}
 
-	g_LogServer.DLog("Enqueue Job pid : %d type : %d, size : %d", pid, type, packet.GetDataSize());
 	g_ProcJobQueue[pid].Enqueue({ pSession->GetConnectPlayerHandle(),type, packet });
 }
 
@@ -130,7 +134,7 @@ int CNetServer::ShutDown()
 	return 0;
 }
 
-bool TryChangeZone(const SESSION_HANDLE& key, int zoneID)
+bool TryChangeZone(const SESSION_HANDLE& key, int ProcID)
 {
 	CSession* pSession = g_Net.GetSession(key);
 	if (pSession == nullptr)
@@ -148,7 +152,7 @@ bool TryChangeZone(const SESSION_HANDLE& key, int zoneID)
 		return false;
 	}
 
-	bool bRet = pSession->SetZoneID(zoneID);
+	bool bRet = pSession->SetProcID(ProcID);
 	pSession->SubRef();
 	return bRet;
 }
@@ -156,10 +160,10 @@ bool TryChangeZone(const SESSION_HANDLE& key, int zoneID)
 bool TrySend(const SESSION_HANDLE& key, CPacket* pPacket)
 {
 	CSession* pSession = g_Net.GetSession(key);
-	SESSION_HANDLE CurKey = pSession->GetConnectKey();
-	
 	if (pSession == nullptr)
 		return false;
+
+	SESSION_HANDLE CurKey = pSession->GetConnectKey();
 	
 	// 연결 및 재사용 횟수 체크
 	if (!pSession->GetBoolConnect()) return false;

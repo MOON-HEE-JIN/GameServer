@@ -1,6 +1,8 @@
 ﻿#pragma once
 
-#include "CZone.h"
+#include "../Zone/CZone.h"
+#include "../Zone/CZoneBase.h"
+
 #include <vector>
 #include <unordered_map>
 #include "../Zone/ZoneDefines.h"
@@ -15,40 +17,46 @@ public:
 	bool ReadZoneBinFile(const char* filepath);
 
 private:
-	std::vector<CZone*> m_vecZone;
 	std::unordered_map<int, st_IDX> m_mapZoneIDX;
 	std::vector<CZone*> m_vecTempZone;// BinFile 에서 Zone 정보를 읽어올 때 임시로 저장하는 벡터 이후 m_vecZone 대체
 	std::unordered_map<int, int> m_mapZoneIDtoIndex; // <ZoneID, m_vecZone Index>
 	int m_maxZoneCnt;
-
+	
+	std::unordered_map<int, std::vector<CZoneBase*>> m_mapZones; // [ZoneID][Channel,CZone]
 private:
-	bool TryEnterZone(int toZone);
+	bool TryEnterZone(int Channel, int toZone);
 
 public :
 	void InsertZoneIDX(const st_IDX& idx) { m_mapZoneIDX[idx.ZoneId] = idx; }
+
 public:
-	int GetProcID(int zone);
+	int GetProcID(int Channel, int Zone);
 	int GetMaxZoneCnt(){ return m_maxZoneCnt; }
 	
-	bool ReqEnterZone(CPlayer* pPlayer, int toZone);
-	void ReqJob(ZONE_JOB& job, int zone);
-	int InitProcZoneVector(int pid, std::vector<CZone*>& vec);
+	bool ReqEnterLoginZone(CPlayer* pPlayer);
+	bool ReqEnterZone(CPlayer* pPlayer, int Channel, int ToZone);
+	//void ReqJob(ZONE_CHANGE_JOB& job, int zone);
+	int InitProcZoneVector(int pid, std::vector<CZoneBase*>& vec);
 
 	bool IsValidZoneID(int zoneid) const;
-	bool IsEqualProcZoneID(int from, int to);
+	bool IsValidChannelZone(int Channel, int ZoneID);
+	bool IsEqualProcZoneID(int fromChannel, int from, int toChannel, int to);
 
-	bool EnterZone(CPlayer* pPlayer, int zoneid);
 	bool LeaveZone(CPlayer* pPlayer);
 
 	void PushZoneMoveVector(CEntity* pEntity);
 	void PopZoneMoveVector(CEntity* pEntity);
 
+	CZoneBase* GetZone(int ID, int ZoneID);
 public:
-	void SendZone(int zone, CPacket* pPacket, CPlayer* pPlayer = nullptr);
-	bool SendZoneInfo(int zone, CPlayer* pPlayer);
+	void SendZone(int Channel, int Zone, CPacket* pPacket, CPlayer* pPlayer = nullptr);
+	bool SendZoneInfo(int Channel, int Zone, CPlayer* pPlayer);
 public:
+	int m_iLogDelayTime = 1 * 1000;
+	int m_iLogTime = 0;
 	void Log();
 
 };
 
+bool EnqueueChangeJob(int id, int zone, ZONE_CHANGE_JOB& job);
 extern CZoneManager g_ZoneManager;

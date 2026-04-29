@@ -48,9 +48,6 @@
     <ClCompile Include="CUtill\CPacket.cpp">
       <Filter>소스 파일\CUtill</Filter>
     </ClCompile>
-    <ClCompile Include="CUtill\RingQueue.cpp">
-      <Filter>소스 파일\CUtill</Filter>
-    </ClCompile>
     <ClCompile Include="Stub\Serialization.cpp">
       <Filter>소스 파일\Stub</Filter>
     </ClCompile>
@@ -75,13 +72,7 @@
     <ClCompile Include="NetWork\CGMSession.cpp">
       <Filter>소스 파일\NetWork</Filter>
     </ClCompile>
-    <ClCompile Include="ZoneManager\CZone.cpp">
-      <Filter>소스 파일\ZoneManager</Filter>
-    </ClCompile>
     <ClCompile Include="ZoneManager\CZoneManager.cpp">
-      <Filter>소스 파일\ZoneManager</Filter>
-    </ClCompile>
-    <ClCompile Include="ZoneManager\CZone_Login.cpp">
       <Filter>소스 파일\ZoneManager</Filter>
     </ClCompile>
     <ClCompile Include="CPlayer.cpp">
@@ -108,15 +99,27 @@
     <ClCompile Include="NetWork\CBaseNet.cpp">
       <Filter>소스 파일\NetWork</Filter>
     </ClCompile>
+    <ClCompile Include="Observer\CObserverNet.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Zone\CZone.cpp">
+      <Filter>소스 파일\Zone</Filter>
+    </ClCompile>
+    <ClCompile Include="Zone\CZone_Login.cpp">
+      <Filter>소스 파일\Zone</Filter>
+    </ClCompile>
+    <ClCompile Include="Zone\CZoneBase.cpp">
+      <Filter>소스 파일\Zone</Filter>
+    </ClCompile>
+    <ClCompile Include="CUtill\CRingBuffer.cpp">
+      <Filter>소스 파일\CUtill</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PacketProc.h">
       <Filter>소스 파일</Filter>
     </ClInclude>
     <ClInclude Include="CUtill\CPacket.h">
-      <Filter>소스 파일\CUtill</Filter>
-    </ClInclude>
-    <ClInclude Include="CUtill\RingQueue.h">
       <Filter>소스 파일\CUtill</Filter>
     </ClInclude>
     <ClInclude Include="Stub\EnumDef.h">
@@ -173,13 +176,7 @@
     <ClInclude Include="NetWork\CGMSession.h">
       <Filter>소스 파일\NetWork</Filter>
     </ClInclude>
-    <ClInclude Include="ZoneManager\CZone.h">
-      <Filter>소스 파일\ZoneManager</Filter>
-    </ClInclude>
     <ClInclude Include="ZoneManager\CZoneManager.h">
-      <Filter>소스 파일\ZoneManager</Filter>
-    </ClInclude>
-    <ClInclude Include="ZoneManager\CZone_Login.h">
       <Filter>소스 파일\ZoneManager</Filter>
     </ClInclude>
     <ClInclude Include="Stub\ProjectDefineStruct.h">
@@ -208,6 +205,24 @@
     </ClInclude>
     <ClInclude Include="NetWork\CBaseNet.h">
       <Filter>소스 파일\NetWork</Filter>
+    </ClInclude>
+    <ClInclude Include="Observer\CObserverNet.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Observer\ProjectDefineStruct.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Zone\CZone.h">
+      <Filter>소스 파일\Zone</Filter>
+    </ClInclude>
+    <ClInclude Include="Zone\CZone_Login.h">
+      <Filter>소스 파일\Zone</Filter>
+    </ClInclude>
+    <ClInclude Include="Zone\CZoneBase.h">
+      <Filter>소스 파일\Zone</Filter>
+    </ClInclude>
+    <ClInclude Include="CUtill\CRingBuffer.h">
+      <Filter>소스 파일\CUtill</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

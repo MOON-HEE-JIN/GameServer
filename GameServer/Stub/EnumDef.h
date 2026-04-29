@@ -10,6 +10,7 @@ namespace ERROR_CODE
 		PLAYER_ID,					//플레이어 아이디 오류
 		ZONE_ID,					//존 아이디 오류
 		NOT_EQUAL_POSITION,					//위치 가 다르다
+		ZONE_CHANEING,					//
 	};
 };
 

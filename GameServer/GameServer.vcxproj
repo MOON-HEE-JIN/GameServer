@@ -133,8 +133,8 @@
     <ClCompile Include="CUtill\CBinFile.cpp" />
     <ClCompile Include="CUtill\CBinFileManager.cpp" />
     <ClCompile Include="CUtill\CPacket.cpp" />
+    <ClCompile Include="CUtill\CRingBuffer.cpp" />
     <ClCompile Include="CUtill\CUtill.cpp" />
-    <ClCompile Include="CUtill\RingQueue.cpp" />
     <ClCompile Include="Log\CLog.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MemoryManager\MemoryManager.cpp" />
@@ -143,18 +143,16 @@
     <ClCompile Include="NetWork\CNetServer.cpp" />
     <ClCompile Include="NetWork\CSession.cpp" />
     <ClCompile Include="Observer\CObserverNet.cpp" />
-    <ClCompile Include="Observer\Observer_PacketProc.cpp" />
-    <ClCompile Include="Observer\Observer_Serialization.cpp" />
-    <ClCompile Include="Observer\Observer_SERVER_STUB.cpp" />
     <ClCompile Include="PacketProc.cpp" />
     <ClCompile Include="ProcWorkerThread.cpp" />
     <ClCompile Include="Stub\Serialization.cpp" />
     <ClCompile Include="Stub\SERVER_STUB.cpp" />
-    <ClCompile Include="ZoneManager\CZone.cpp" />
     <ClCompile Include="ZoneManager\CZoneManager.cpp" />
-    <ClCompile Include="ZoneManager\CZone_Login.cpp" />
     <ClCompile Include="Zone\CBinZone.cpp" />
     <ClCompile Include="Zone\CBinZoneIdx.cpp" />
+    <ClCompile Include="Zone\CZone.cpp" />
+    <ClCompile Include="Zone\CZoneBase.cpp" />
+    <ClCompile Include="Zone\CZone_Login.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CEntity.h" />
@@ -164,8 +162,8 @@
     <ClInclude Include="CUtill\CBinFileDefine.h" />
     <ClInclude Include="CUtill\CBinFileManager.h" />
     <ClInclude Include="CUtill\CPacket.h" />
+    <ClInclude Include="CUtill\CRingBuffer.h" />
     <ClInclude Include="CUtill\CUtill.h" />
-    <ClInclude Include="CUtill\RingQueue.h" />
     <ClInclude Include="GameServerDef.h" />
     <ClInclude Include="Log\CLog.h" />
     <ClInclude Include="MemoryManager\CHazardMemoryPool_FromGPT.h" />
@@ -177,12 +175,6 @@
     <ClInclude Include="NetWork\CSession.h" />
     <ClInclude Include="NetWork\NetWorkDefine.h" />
     <ClInclude Include="Observer\CObserverNet.h" />
-    <ClInclude Include="Observer\Observer_EnumDef.h" />
-    <ClInclude Include="Observer\Observer_PacketEnumDef.h" />
-    <ClInclude Include="Observer\Observer_PacketProc.h" />
-    <ClInclude Include="Observer\Observer_Serialization.h" />
-    <ClInclude Include="Observer\Observer_SERVER_STUB.h" />
-    <ClInclude Include="Observer\Observer_StructDef.h" />
     <ClInclude Include="Observer\ProjectDefineStruct.h" />
     <ClInclude Include="PacketProc.h" />
     <ClInclude Include="ProcWorkerThread.h" />
@@ -192,11 +184,12 @@
     <ClInclude Include="Stub\Serialization.h" />
     <ClInclude Include="Stub\SERVER_STUB.h" />
     <ClInclude Include="Stub\StructDef.h" />
-    <ClInclude Include="ZoneManager\CZone.h" />
     <ClInclude Include="ZoneManager\CZoneManager.h" />
-    <ClInclude Include="ZoneManager\CZone_Login.h" />
     <ClInclude Include="Zone\CBinZone.h" />
     <ClInclude Include="Zone\CBinZoneIdx.h" />
+    <ClInclude Include="Zone\CZone.h" />
+    <ClInclude Include="Zone\CZoneBase.h" />
+    <ClInclude Include="Zone\CZone_Login.h" />
     <ClInclude Include="Zone\ZoneDefines.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

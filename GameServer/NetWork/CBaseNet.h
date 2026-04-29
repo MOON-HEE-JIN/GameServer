@@ -51,7 +51,7 @@ public:
 	void UnLockSessionFreeKey() { LeaveCriticalSection(&cs_SessionFreeKey); };
 
 	bool GetRun() { return m_bRun; };
-	CSession* GetSession(const SESSION_HANDLE& key) {return m_vecSessionManager[key.Handle];}
+	CSession* GetSession(const SESSION_HANDLE& key);
 
 private:
 	static unsigned __stdcall AceeptThread(void* arg);		// accept() Thread

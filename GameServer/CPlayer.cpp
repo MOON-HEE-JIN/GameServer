@@ -12,6 +12,18 @@ void CPlayer::Init(SESSION_HANDLE sessionID, int handle, int Channel, int Zone)
 	m_bRelease.store(false);
 }
 
+void CPlayer::Clear()
+{
+	Reset();
+
+	m_SessionHandle = { -1, 0 };
+	m_PlayerHandle = -1;
+	m_iChannel = 0;
+	m_OwnerZone = 0;
+
+	m_bRelease.store(false);
+}
+
 
 void CPlayer::SetRelease()
 {

@@ -18,6 +18,9 @@ CBaseNet::CBaseNet()
 	m_iTotalConnectSessionCount = 0;
 
 	m_iAcceptSocketCount = 0;
+
+	m_iRecvOverlappedCount.store(0);
+	m_iSendOverlapeedCount.store(0);
 }
 
 int CBaseNet::Init(int Port, int RunWorkerThreadCount)
@@ -267,6 +270,8 @@ int CBaseNet::WorkerRun()
 			}
 			else
 			{
+				m_iRecvOverlappedCount.fetch_add(1);
+
 				pSession->GetRecvBuffer()->MoveWritePointer(transfrerred);
 
 				st_Header header;
@@ -298,6 +303,8 @@ int CBaseNet::WorkerRun()
 		}
 		else if (overlapped == pSession->GetSendOverlapPointer())
 		{
+			m_iSendOverlapeedCount.fetch_add(1);
+
 			pSession->LockSendQ();
 			{
 				pSession->GetSendBuffer()->MoveReadPointer(transfrerred);

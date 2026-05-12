@@ -38,6 +38,9 @@ private:
 	std::atomic<int> m_iConnectSessionCount;				// 현재 연결중인 세션
 	std::atomic<int> m_iTotalConnectSessionCount;			// 총 연결 횟수
 
+	
+	std::atomic<int> m_iRecvOverlappedCount;
+	std::atomic<int> m_iSendOverlapeedCount;
 protected:
 	void DisConnect(CSession* pSession);
 	void Recv(CSession* pSession, int type, CPacket& packet);
@@ -59,6 +62,11 @@ private:
 	static unsigned __stdcall WorkerThread(void* arg);		// recv, send Thread
 	virtual int WorkerRun();
 protected:
+	int GetRecvOverlappedCount() { return m_iRecvOverlappedCount.load(); };
+	int GetSendOverlappedCount() { return m_iSendOverlapeedCount.load(); };
+	void ResetRecvOverlappedCount() { m_iRecvOverlappedCount.store(0); };
+	void ResetSendOverlappedCount() { m_iSendOverlapeedCount.store(0); };
+
 	void StartServer(CBaseNet* ptr);
 	void WaitStopServer();
 	void ServerShutDown();	

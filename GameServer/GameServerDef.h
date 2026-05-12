@@ -3,7 +3,7 @@
 
 #define ProcThreadCnt 4
 #define POSITION_TOLERANCE 5
-#define FIXED_DELTA 0.01667f
+#define FIXED_DELTA 0.01667f		// fps 60
 #define MAX_FRAME_LOOP_COUNT 6
 
 

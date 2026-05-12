@@ -66,4 +66,11 @@ struct st_Vector3F
 		}
 		return st_Vector3F(0, 0, 0);
 	}
+
+	void Zero()
+	{
+		X = 0;
+		Y = 0;
+		Z = 0;
+	}
 };

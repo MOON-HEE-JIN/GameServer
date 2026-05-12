@@ -103,6 +103,9 @@ int CNetServer::Initializer(int Port, int RunWorkerThreadCount)
 		g_PlayerHandleManager.push_back(MAX_CONNECT_COUNT - 1 - i);
 	}
 
+	m_iLogDelayTime = 1 * 1000;
+	m_iLogTime = 0;
+
 	return 0;
 }
 
@@ -233,4 +236,16 @@ void CNetServer::FreePlayer(CPlayer* pPlayer)
 		g_PlayerHandleManager.push_back(key);
 	}
 	LeaveCriticalSection(&g_csPlayerManager);
+}
+
+void CNetServer::NetLog()
+{
+	if (m_iLogTime + m_iLogDelayTime < GetTickCount())
+	{
+		g_LogServer.ILog("=== IO Count  Recv : %d, Send : %d ===", GetRecvOverlappedCount(), GetSendOverlappedCount());
+		ResetRecvOverlappedCount();
+		ResetSendOverlappedCount();
+
+		m_iLogTime = GetTickCount();
+	}
 }

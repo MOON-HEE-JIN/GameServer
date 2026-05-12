@@ -132,13 +132,12 @@ int PacketProc::DO_GAME_MOVESTART(CPlayer* pTarget, CPacket& pReqPacket)
     
 #ifdef __DEBUG__
 	st_Vector3F dir = pTarget->GetPosition().Direction(req.goal);
-    if (dir.X != req.dir.X || dir.Y != req.dir.Y)
+    if (dir.DistanceToSquared(req.dir) > 1)
     {
         g_LogGame.DLog("NOT EQUAL DIRECTION CLIENT[%.2f, %.2f] - SERVER[%.2f, %.2f]",
             req.dir.X, req.dir.Y, dir.X, dir.Y);
     }
 #endif // __DEBUG__
-
     int ret = pTarget->MoveStart(req.goal, req.dir);
     if (ret != 0)
         return ret;
@@ -154,7 +153,7 @@ int PacketProc::DO_GAME_MOVESTART(CPlayer* pTarget, CPacket& pReqPacket)
 	// Zone 에 있는 다른 Player 들에게 이동 시작 패킷 보내기
 	CPacket pack;
     pack << res;
-	g_ZoneManager.SendZone(pTarget->GetChannel(), pTarget->GetZoneID(), &pack, pTarget);
+	//g_ZoneManager.SendZone(pTarget->GetChannel(), pTarget->GetZoneID(), &pack, pTarget);
 
     return 0;
 }

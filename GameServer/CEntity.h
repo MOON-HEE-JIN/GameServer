@@ -19,6 +19,9 @@ protected:
 	st_Vector3F m_stDirVector;
 	eMOVESTATE m_eMoveState;
 
+protected:
+	void Reset();
+
 public:
 	bool MoveUpdate();
 

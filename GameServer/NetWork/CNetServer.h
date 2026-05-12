@@ -22,6 +22,8 @@ private:
 
 	std::atomic<int> m_iPlayerConnectCount;
 
+	int m_iLogDelayTime;
+	int m_iLogTime;
 protected:
 	bool OnClientJoin(CSession* pSession) override;
 	void OnDisconnect(CSession* pSession) override;
@@ -39,6 +41,8 @@ public:
 	CPlayer* AllocPlayer(int& outPlayerHandle);
 	void FreePlayer(CPlayer* pPlayer);
 
+public:
+	void NetLog();
 };
 
 bool TryChangeZone(const SESSION_HANDLE& key, int ProcID);

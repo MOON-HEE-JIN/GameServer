@@ -3,13 +3,33 @@
 #include "./CUtill/CUtill.h"
 #include "Stub/StructDef.h"
 
+void CEntity::Reset()
+{
+    m_nEntityType = 0;
+
+    m_iChannel = 0;
+    m_OwnerZone.store(0);			                			// 처리 Zone 에 대한 id
+    m_eZoneStatus = eZONESTATUS::NONE;							// 현재 Zone 에 서 의 상태
+
+    m_nMoveIndex = -1;
+    m_fMoveSpeed = 5.0f;
+    m_stPosition.Zero();
+    m_stGoalPosition.Zero();
+    m_stDirVector.Zero();
+    m_eMoveState = eMOVESTATE::STOPPED;
+}
+
 bool CEntity::MoveUpdate()
 {
-    float speedDx = m_stDirVector.X * m_fMoveSpeed * FIXED_DELTA;
-	float speedDy = m_stDirVector.Y * m_fMoveSpeed * FIXED_DELTA;
-    float speedDz = m_stDirVector.Z * m_fMoveSpeed * FIXED_DELTA;
+    float speed = m_fMoveSpeed * FIXED_DELTA;
 
-    float speeddist = m_fMoveSpeed * FIXED_DELTA * m_fMoveSpeed * FIXED_DELTA;
+    m_stDirVector = m_stPosition.Direction(m_stGoalPosition);
+
+    float speedDx = m_stDirVector.X * speed;
+	float speedDy = m_stDirVector.Y * speed;
+    float speedDz = m_stDirVector.Z * speed;
+
+    float speeddist = speed * speed;
     float remaindist = m_stPosition.DistanceToNSquared(m_stGoalPosition);
 	
     if (remaindist <= speeddist)
@@ -23,9 +43,54 @@ bool CEntity::MoveUpdate()
 		m_stPosition += st_Vector3F(speedDx, speedDy, speedDz);
     }
 
-#ifdef __DEBUG__
-
-#endif // __DEBUG__
+    if (m_stDirVector.X > 0)
+    {
+        if (m_stPosition.X > m_stGoalPosition.X)
+        {
+            int a = 100;
+            a++;
+        }
+    }
+    else
+    {
+        if (m_stPosition.X < m_stGoalPosition.X)
+        {
+            int a = 100;
+            a++;
+        }
+    }
+    if (m_stDirVector.Y > 0)
+    {
+        if (m_stPosition.Y > m_stGoalPosition.Y)
+        {
+            int a = 100;
+            a++;
+        }
+    }
+    else
+    {
+        if (m_stPosition.Y < m_stGoalPosition.Y)
+        {
+            int a = 100;
+            a++;
+        }
+    }
+    if (m_stDirVector.Z > 0)
+    {
+        if (m_stPosition.Z > m_stGoalPosition.Z)
+        {
+            int a = 100;
+            a++;
+        }
+    }
+    else
+    {
+        if (m_stPosition.Z < m_stGoalPosition.Z)
+        {
+            int a = 100;
+            a++;
+        }
+    }
 
     return false;
 }
@@ -64,7 +129,7 @@ void CEntity::MoveComplete()
     }
     CPacket pack;
     pack << res;
-
+    
 	// Zone Broadcast
     g_ZoneManager.SendZone(GetChannel(), GetZoneID(), &pack);
 }

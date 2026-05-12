@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#define DEFAULT_BUFFER_SIZE 5000
+#define DEFAULT_BUFFER_SIZE 10000
 
 #include <atomic>
 

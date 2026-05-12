@@ -12,7 +12,7 @@ public:
 
 	void Init(SESSION_HANDLE sessionID, int handle, int Channel, int Zone);
 
-	void Clear() {};
+	void Clear();
 private:
 	SESSION_HANDLE m_SessionHandle;
 	int m_PlayerHandle;									// Player 전체 에 대한 handle

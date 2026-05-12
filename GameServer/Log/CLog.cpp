@@ -125,7 +125,10 @@ unsigned __stdcall LogThread(void* arg)
 	{
 		ret = WaitForSingleObject(h_hExit, 1);
 
-		g_ZoneManager.Log();
+		// Zone 에 대한 인원수 를 찍는 로그 에 대해서는 좀더 고민해보기
+		// 일단 ChagneZone 에 대한 로그가 필요할때만 활성화 하기
+		//g_ZoneManager.Log();
+		g_Net.NetLog();
 
 		LOG_JOB job;
 		while (g_LogJobQueue.TryDequeue(job))

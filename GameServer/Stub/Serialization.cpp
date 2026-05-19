@@ -92,6 +92,19 @@ int Serialization (char* buffer, st_CTS_ObserverConnect& value)
 	return iSize;
 }
 
+int Serialization (char* buffer, st_CTS_Teleport& value)
+{
+	int hSize = 0;
+	st_Header header;
+	int iSize = sizeof(st_Header);
+	iSize += Serialization(buffer + iSize, value.pos);
+
+	header.type = GAME::TELEPORT;
+	header.size = iSize - sizeof(st_Header);
+	Serialization(buffer, header);
+	return iSize;
+}
+
 int Serialization (char* buffer, st_ConnectInfo& value)
 {
 	int iSize = 0;
@@ -296,6 +309,20 @@ int Serialization (char* buffer, st_STC_ObserverConnect& value)
 	return iSize;
 }
 
+int Serialization (char* buffer, st_STC_Teleport& value)
+{
+	int hSize = 0;
+	st_Header header;
+	int iSize = sizeof(st_Header);
+	memcpy(buffer + iSize, &value.ret, sizeof(value.ret));
+	iSize += sizeof(value.ret);
+
+	header.type = GAME::TELEPORT;
+	header.size = iSize - sizeof(st_Header);
+	Serialization(buffer, header);
+	return iSize;
+}
+
 int Serialization (char* buffer, st_String& value)
 {
 	int iSize = 0;
@@ -307,6 +334,18 @@ int Serialization (char* buffer, st_String& value)
 }
 
 int Serialization (char* buffer, st_Vector3F& value)
+{
+	int iSize = 0;
+	memcpy(buffer + iSize, &value.X, sizeof(value.X));
+	iSize += sizeof(value.X);
+	memcpy(buffer + iSize, &value.Y, sizeof(value.Y));
+	iSize += sizeof(value.Y);
+	memcpy(buffer + iSize, &value.Z, sizeof(value.Z));
+	iSize += sizeof(value.Z);
+	return iSize;
+}
+
+int Serialization (char* buffer, st_Vector3L& value)
 {
 	int iSize = 0;
 	memcpy(buffer + iSize, &value.X, sizeof(value.X));
@@ -369,6 +408,13 @@ int UnSerialization (char* buffer, st_CTS_ObserverConnect& value)
 	iSize += sizeof(value.ID);
 	memcpy(&value.zone, buffer + iSize, sizeof(value.zone));
 	iSize += sizeof(value.zone);
+	return iSize;
+}
+
+int UnSerialization (char* buffer, st_CTS_Teleport& value)
+{
+	int iSize = 0;
+	iSize += UnSerialization(buffer + iSize, value.pos);
 	return iSize;
 }
 
@@ -516,6 +562,14 @@ int UnSerialization (char* buffer, st_STC_ObserverConnect& value)
 	return iSize;
 }
 
+int UnSerialization (char* buffer, st_STC_Teleport& value)
+{
+	int iSize = 0;
+	memcpy(&value.ret, buffer + iSize, sizeof(value.ret));
+	iSize += sizeof(value.ret);
+	return iSize;
+}
+
 int UnSerialization (char* buffer, st_String& value)
 {
 	int iSize = 0;
@@ -527,6 +581,18 @@ int UnSerialization (char* buffer, st_String& value)
 }
 
 int UnSerialization (char* buffer, st_Vector3F& value)
+{
+	int iSize = 0;
+	memcpy(&value.X, buffer + iSize, sizeof(value.X));
+	iSize += sizeof(value.X);
+	memcpy(&value.Y, buffer + iSize, sizeof(value.Y));
+	iSize += sizeof(value.Y);
+	memcpy(&value.Z, buffer + iSize, sizeof(value.Z));
+	iSize += sizeof(value.Z);
+	return iSize;
+}
+
+int UnSerialization (char* buffer, st_Vector3L& value)
 {
 	int iSize = 0;
 	memcpy(&value.X, buffer + iSize, sizeof(value.X));

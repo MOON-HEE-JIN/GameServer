@@ -11,6 +11,7 @@ void PostMessageProcThreadExit();
 void DeleteProcWorker();
 
 static unsigned __stdcall ProcWorkerThread(void* arg);
+static unsigned __stdcall ProcMainWorldWorkerThread(void* arg);
 
 class CProcWorker
 {
@@ -26,6 +27,7 @@ public:
 	}
 	
 	void Proc();
+	void ProxyProc();
 	void ZoneProc();
 	void ZoneUpdateByFrame();			// 서버 프레임에 영향을 받는 Zone Update 
 
@@ -38,11 +40,17 @@ public:
 	void InitZoneVector();
 private:
 	int m_ProcID;
+	bool m_bMain = false;
 	CLockFreeQueue_MPSC<PROC_MSG>* m_ProcJobQueue;
 	CLockFreeQueue_MPSC<CPlayer*> m_PlayerDeleteQueue;
 	PacketProc* m_pPacketProc;
 	std::vector<CZoneBase*> m_vecZone;
 	int m_ZoneCnt;
+public:
+	void SetMain() { m_bMain = true; }
+	bool GetMain() { return m_bMain; }
+	CZoneBase* GetMainWorld();
 };
 
 extern std::vector<CProcWorker*> s_ProcWorker;
+extern CProcWorker g_MainProcWorker;

@@ -37,6 +37,12 @@
     <Filter Include="소스 파일\Zone">
       <UniqueIdentifier>{83ff806e-d13d-472f-94af-128cc320981b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\MainWorld">
+      <UniqueIdentifier>{f355a6db-3c18-400a-8991-5f21fccd8a04}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Grid">
+      <UniqueIdentifier>{2742c28e-bd6c-4de1-838d-cebe610def9f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -113,6 +119,15 @@
     </ClCompile>
     <ClCompile Include="CUtill\CRingBuffer.cpp">
       <Filter>소스 파일\CUtill</Filter>
+    </ClCompile>
+    <ClCompile Include="MainWorld\CMainWorld.cpp">
+      <Filter>소스 파일\MainWorld</Filter>
+    </ClCompile>
+    <ClCompile Include="CGrid\CGrid.cpp">
+      <Filter>소스 파일\Grid</Filter>
+    </ClCompile>
+    <ClCompile Include="CGrid\CTile.cpp">
+      <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -222,6 +237,30 @@
       <Filter>소스 파일\Zone</Filter>
     </ClInclude>
     <ClInclude Include="CUtill\CRingBuffer.h">
+      <Filter>소스 파일\CUtill</Filter>
+    </ClInclude>
+    <ClInclude Include="MainWorld\CMainWorld.h">
+      <Filter>소스 파일\MainWorld</Filter>
+    </ClInclude>
+    <ClInclude Include="CGrid\CGrid.h">
+      <Filter>소스 파일\Grid</Filter>
+    </ClInclude>
+    <ClInclude Include="CGrid\CTile.h">
+      <Filter>소스 파일\Grid</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryManager\CLockFreeQueue_SPSC.h">
+      <Filter>소스 파일\MemoryManager</Filter>
+    </ClInclude>
+    <ClInclude Include="CUtill\CCellContainer.h">
+      <Filter>소스 파일\CUtill</Filter>
+    </ClInclude>
+    <ClInclude Include="CUtill\CLockQueueh.h">
+      <Filter>소스 파일\CUtill</Filter>
+    </ClInclude>
+    <ClInclude Include="GameServerEnumDef.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CUtill\CEntityManagmentVector.h">
       <Filter>소스 파일\CUtill</Filter>
     </ClInclude>
   </ItemGroup>

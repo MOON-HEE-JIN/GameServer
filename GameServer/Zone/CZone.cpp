@@ -4,8 +4,8 @@
 #include "../Stub/EnumDef.h"
 #include "../Stub/PacketEnumDef.h"
 
-CZone::CZone(int ID, int ZoneID, int ProcID, int Maximum)
-	: CZoneBase(ID, ZoneID, ProcID, Maximum)
+CZone::CZone(int channel, int ZoneID, int ProcID, int Maximum)
+	: CZoneBase(channel, ZoneID, ProcID, Maximum)
 {
 }
 
@@ -66,7 +66,7 @@ bool CZone::SendZoneInfo(CPlayer* pPlayer)
 			continue;
 
 		info.info[info.Loop1].type = 0;
-		info.info[info.Loop1].ID = pPlayer->GetPlayerHandle();
+		info.info[info.Loop1].ID = pPlayer->GetID();
 		info.info[info.Loop1].pos = pPlayer->GetPosition();
 		info.Loop1++;
 		if (info.Loop1 >= 48)

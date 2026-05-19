@@ -183,3 +183,23 @@ int PacketProc::DO_OBSERVER_CONNET_OBSERVER(CPlayer* pTarget, CPacket& pReqPacke
     return 0;
 }
 
+int PacketProc::DO_GAME_TELEPORT(CPlayer* pTarget, CPacket& pReqPacket)
+{
+    st_CTS_Teleport req;
+    pReqPacket >> req;
+
+    req.pos;
+
+    // 이후 에러코드 수정 해야함
+    CZoneBase* pZone = g_ZoneManager.GetZone(pTarget->GetChannel(), pTarget->GetZoneID());
+    if (pZone == nullptr)
+        return -1;
+    
+    if (!pZone->CheckPos(req.pos))
+        return -1;
+
+
+
+    return 0;
+}
+

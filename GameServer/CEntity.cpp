@@ -11,7 +11,7 @@ void CEntity::Reset()
     m_OwnerZone.store(0);			                			// 처리 Zone 에 대한 id
     m_eZoneStatus = eZONESTATUS::NONE;							// 현재 Zone 에 서 의 상태
 
-    m_nMoveIndex = -1;
+    m_iMoveIndex = -1;
     m_fMoveSpeed = 5.0f;
     m_stPosition.Zero();
     m_stGoalPosition.Zero();
@@ -122,7 +122,7 @@ void CEntity::MoveComplete()
     switch (m_nEntityType)
     {
     case 0:
-        res.ID = ((CPlayer*)this)->GetPlayerHandle();
+        res.ID = ((CPlayer*)this)->GetID();
         break;
     default:
         break;

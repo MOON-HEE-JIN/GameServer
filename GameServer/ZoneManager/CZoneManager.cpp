@@ -17,26 +17,36 @@ CZoneManager::CZoneManager()
 {
 	// 해당 생성자는 임시로 작성함 나중에 Zone 에 사용될 Map 완성시 수정해야함
 	
-	CZoneBase* pZone = new CZone_Login(0, 0, 0, 2000);
+	CZoneBase* pZone = new CZone_Login(0, 0, 0, 8000);
 	m_mapZones[0].push_back(pZone);
-	g_LogServer.ILog("Create Zone Index : %d, ProcQ : %d, Max : %d", m_maxZoneCnt, 0, 2000);
+	g_LogServer.ILog("Create Zone Index : %d, ProcQ : %d, Max : %d", m_maxZoneCnt, 0, 8000);
 
+	//m_vecMainWorld.resize(MAX_MAIN_WORLD_COUNT);
+	for (int i = 0; i < ProcMainThreadCnt; i++)
+	{
+		CZoneBase* pMainWorld = new CMainWorld(i, 1, i+1, 10000);
+		m_mapZones[1].push_back(pMainWorld);
+		g_LogServer.ILog("Create MainZone channel : %d, ProcQ : %d, Max : %d", i, i + 1, 10000);
+	}
+	
 	// ProcThreadCnt == 4 [0 ~ 3]
 	m_maxZoneCnt = (ProcThreadCnt - 1) * 2;
 
-
-	for (int i = 1; i <= m_maxZoneCnt; i++)
+	for (int i = 0; i < ProcSubThreadCnt; i++)
 	{
-		// 1 ~ 3 까지
-		int procid = i % (ProcThreadCnt - 1) + 1;
-		CZone* pZone = new CZone(0, i, procid, 2000);
-		m_mapZones[i].push_back(pZone);
-	
-		CZone* pZone2 = new CZone(1, i, procid, 2000);
-		m_mapZones[i].push_back(pZone2);
-
-		g_LogServer.ILog("Create Zone Index : %d, ProcQ : %d, Max : %d", i, procid, 2000);
+		// MainWorld 는 proc[ProcMainThreadCnt] 까지 차지
+		for (int channel = 0; channel < 2; channel++)
+		{
+			for (int zone = 2; zone < 7; zone++)
+			{
+				CZoneBase* pZone = new CZone(channel, zone, (ProcMainThreadCnt + 1) + i, 2000);
+				m_mapZones[zone].push_back(pZone);
+				g_LogServer.ILog("Create Zone channel : %d, ProcQ : %d, Max : %d", channel, (ProcMainThreadCnt + 1) + i, 100);
+			}
+		}
 	}
+
+	StartMainWorld();
 }
 
 CZoneManager::~CZoneManager()
@@ -50,6 +60,11 @@ CZoneManager::~CZoneManager()
 		{
 			delete biter->second[i];
 		}
+	}
+
+	for (int i = 0; i < MAX_MAIN_WORLD_COUNT; i++)
+	{
+		//delete m_vecMainWorld[i];
 	}
 }
 
@@ -93,6 +108,20 @@ bool CZoneManager::TryEnterZone(int Channel, int toZone)
 	return m_mapZones[toZone][Channel]->TryEnterZone();
 }
 
+void CZoneManager::StartMainWorld()
+{
+	std::vector<CZoneBase*> vec = m_mapZones[1];
+	
+	if (vec.size() != ProcMainThreadCnt)
+		exit(1);
+
+	for (int i = 0; i < ProcMainThreadCnt; i++)
+	{
+		CMainWorld* pMain = (CMainWorld*)vec[i];
+		pMain->Start();
+	}
+}
+
 void CZoneManager::SendZone(int Channel, int Zone, CPacket* pPacket, CPlayer* pPlayer)
 {
 	if (!IsValidChannelZone(Channel, Zone))
@@ -120,7 +149,7 @@ bool CZoneManager::ReqEnterLoginZone(CPlayer* pPlayer)
 
 	CZone_Login* pZone = (CZone_Login*)m_mapZones[0][pPlayer->GetChannel()];
 
-	ZONE_CHANGE_JOB job(GetTickCount(), eZONESTATUS::ENTER, pPlayer->GetPlayerHandle()
+	ZONE_CHANGE_JOB job(GetTickCount(), eZONESTATUS::ENTER, pPlayer->GetID()
 		, pPlayer->GetChannel(), 0
 		, pPlayer->GetChannel(), 0
 		, 0, 0);
@@ -178,7 +207,7 @@ bool CZoneManager::ReqEnterZone(CPlayer* pPlayer, int Channel, int ToZone)
 	}
 	else
 	{
-		ZONE_CHANGE_JOB job(GetTickCount(), eZONESTATUS::ENTER, pPlayer->GetPlayerHandle()
+		ZONE_CHANGE_JOB job(GetTickCount(), eZONESTATUS::ENTER, pPlayer->GetID()
 			, Channel, ToZone
 			, pPlayer->GetChannel(), pPlayer->GetZoneID()
 			, 0, 0);
@@ -266,8 +295,7 @@ void CZoneManager::PushZoneMoveVector(CEntity* pEntity)
 	if (!IsValidChannelZone(channel, zone))
 		return;
 
-	CZone* pZone = (CZone*)m_mapZones[zone][channel];
-	pZone->PushMoveVector(pEntity);
+	m_mapZones[zone][channel]->PushMoveVector(pEntity);
 }
 
 void CZoneManager::PopZoneMoveVector(CEntity* pEntity)
@@ -282,15 +310,15 @@ void CZoneManager::PopZoneMoveVector(CEntity* pEntity)
 	pZone->PopMoveVector(pEntity);
 }
 
-CZoneBase* CZoneManager::GetZone(int ID, int ZoneID)
+CZoneBase* CZoneManager::GetZone(int Channel, int ZoneID)
 {
 	if (m_mapZones.find(ZoneID) == m_mapZones.end())
 		return nullptr;
 
-	if (m_mapZones[ZoneID].size() <= ID)
+	if (m_mapZones[ZoneID].size() <= Channel)
 		return nullptr;
 
-	return m_mapZones[ZoneID][ID];
+	return m_mapZones[ZoneID][Channel];
 }
 
 void CZoneManager::Log()

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <string>
 #include "ProjectDefineStruct.h"
@@ -51,6 +51,10 @@ struct st_CTS_ObserverConnect
 	__int32		ID;
 	__int32		zone;
 };
+struct st_CTS_Teleport
+{
+	st_Vector3F		pos;
+};
 struct st_STC_ChangeZone
 {
 	__int32		ret;
@@ -102,6 +106,10 @@ struct st_STC_MoveStop
 	st_Vector3F		pos;
 };
 struct st_STC_ObserverConnect
+{
+	__int32		ret;
+};
+struct st_STC_Teleport
 {
 	__int32		ret;
 };

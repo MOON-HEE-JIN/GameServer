@@ -52,7 +52,7 @@ void CRingBuffer::PrivateMoveReadPointer(int size)
 	m_pReadPointer += size;
 	if (m_pReadPointer >= m_pEndPointer)
 	{
-		int iOverPointer = m_pReadPointer - m_pEndPointer;
+		__int64 iOverPointer = m_pReadPointer - m_pEndPointer;
 		m_pReadPointer = m_pBuffer + iOverPointer;
 	}
 }
@@ -62,7 +62,7 @@ void CRingBuffer::PrivateMoveWritePointer(int size)
 	m_pWritePointer += size;
 	if (m_pWritePointer >= m_pEndPointer)
 	{
-		int iOverPointer = m_pWritePointer - m_pEndPointer;
+		__int64 iOverPointer = m_pWritePointer - m_pEndPointer;
 		m_pWritePointer = m_pBuffer + iOverPointer;
 	}
 }
@@ -72,7 +72,7 @@ void CRingBuffer::MoveReadPointer(int size)
 	m_pReadPointer += size;
 	if (m_pReadPointer >= m_pEndPointer)
 	{
-		int iOverPointer = m_pReadPointer - m_pEndPointer;
+		__int64 iOverPointer = m_pReadPointer - m_pEndPointer;
 		m_pReadPointer = m_pBuffer + iOverPointer;
 	}
 	m_iUseSize.fetch_sub(size);
@@ -84,7 +84,7 @@ void CRingBuffer::MoveWritePointer(int size)
 	m_pWritePointer += size;
 	if (m_pWritePointer >= m_pEndPointer)
 	{
-		int iOverPointer = m_pWritePointer - m_pEndPointer;
+		__int64 iOverPointer = m_pWritePointer - m_pEndPointer;
 		m_pWritePointer = m_pBuffer + iOverPointer;
 	}
 	m_iUseSize.fetch_add(size);

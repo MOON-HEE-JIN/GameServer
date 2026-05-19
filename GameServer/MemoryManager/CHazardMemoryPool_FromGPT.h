@@ -23,7 +23,7 @@
 //    따라서 ClearAfterAllThreadsJoined()는 "모든 작업 스레드가 종료(join)"된 뒤에만 호출해야 합니다.
 // 3) 동일 T에 대해 여러 CHMemoryPool<T> 인스턴스를 운영하는 경우 retire TLS가 풀별 분리되지 않으므로 비권장.
 
-template <typename T, int MAX_THREADS = 16, std::size_t RETIRE_THRESHOLD = 512>
+template <typename T, int MAX_THREADS = 64, std::size_t RETIRE_THRESHOLD = 512>
 class CHMemoryPool
 {
     static_assert(MAX_THREADS > 0, "MAX_THREADS must be positive.");

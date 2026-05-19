@@ -5,9 +5,9 @@
 #include "../ZoneManager/CZoneManager.h"
 #include "../Log/CLog.h"
 
-CZoneBase::CZoneBase(int ID, int ZoneID, int ProcID, int Maximum)
+CZoneBase::CZoneBase(int channel, int ZoneID, int ProcID, int Maximum)
 {
-	m_iChannel = ID;
+	m_iChannel = channel;
 	m_iZoneID = ZoneID;
 	m_iProcID = ProcID;
 	m_iMaximumUser = Maximum;
@@ -149,7 +149,7 @@ void CZoneBase::ZoneChangeJobProcess()
 				if (bRet)
 				{
 					//CNetServer::DecrementProcCount(m_ID);
-					m_iCurCnt.fetch_sub(1);
+					m_iCount.fetch_sub(1);
 				}
 				else
 				{
@@ -196,13 +196,13 @@ bool CZoneBase::TryPush(CPlayer* pPlayer)
 		return false;
 	}
 
-	if (m_iCurCnt.load() + 1 >= m_iMaximumUser)
+	if (m_iCount.load() + 1 >= m_iMaximumUser)
 	{
-		g_LogGame.ELog("ERROR MaximumUser %d == m_iCurCnt %d  CZoneBase::TryPush", m_iMaximumUser, m_iCurCnt.load());
+		g_LogGame.ELog("ERROR MaximumUser %d == m_iCurCnt %d  CZoneBase::TryPush", m_iMaximumUser, m_iCount.load());
 		return false;
 	}
 
-	m_iCurCnt.fetch_add(1);
+	m_iCount.fetch_add(1);
 	return true;
 }
 
@@ -211,8 +211,12 @@ bool CZoneBase::EnterZone(CPlayer* pPlayer)
 	pPlayer->SetZoneID(GetChannel(),  GetZoneID());
 	TryChangeZone(pPlayer->GetSessionHandle(), GetProcID());
 
-	m_mapIDtoIndex[pPlayer->GetPlayerHandle()] = static_cast<int>(m_vecPlayers.size());
+	m_mapIDtoIndex[pPlayer->GetID()] = static_cast<int>(m_vecPlayers.size());
 	m_vecPlayers.push_back(pPlayer);
+
+	pPlayer->SetZone(this);
+
+	OnEnterZone(pPlayer);
 	return true;
 }
 
@@ -221,7 +225,7 @@ bool CZoneBase::LeaveZone(CPlayer* pPlayer)
 	if (pPlayer == nullptr || m_vecPlayers.empty())
 		return false;
 
-	std::unordered_map<int, int>::iterator iter = m_mapIDtoIndex.find(pPlayer->GetPlayerHandle());
+	std::unordered_map<int, int>::iterator iter = m_mapIDtoIndex.find(pPlayer->GetID());
 
 	// 해당 플레이어 없으며 나가기
 	if (iter == m_mapIDtoIndex.end())
@@ -240,13 +244,13 @@ bool CZoneBase::LeaveZone(CPlayer* pPlayer)
 	{
 		// 교체
 		m_vecPlayers[leaveIndex] = ePlayer;
-		m_mapIDtoIndex[ePlayer->GetPlayerHandle()] = leaveIndex;
+		m_mapIDtoIndex[ePlayer->GetID()] = leaveIndex;
 	}
 
 	m_vecPlayers.pop_back();
 	m_mapIDtoIndex.erase(iter);
 	
-	m_iCurCnt.fetch_sub(1);
+	m_iCount.fetch_sub(1);
 
 	// 존 떠날때 이벤트
 	OnLeaveZone(pPlayer);
@@ -255,7 +259,7 @@ bool CZoneBase::LeaveZone(CPlayer* pPlayer)
 
 bool CZoneBase::TryEnterZone()
 {
-	return m_iCurCnt.load() < m_iMaximumUser;
+	return m_iCount.load() < m_iMaximumUser;
 }
 
 void CZoneBase::SendBoradCast(CPacket* pPacket, CPlayer* pPlayer)
@@ -268,4 +272,9 @@ void CZoneBase::SendBoradCast(CPacket* pPacket, CPlayer* pPlayer)
 
 		m_vecPlayers[i]->SendPacket(pPacket);
 	}
+}
+
+bool CZoneBase::CheckPos(st_Vector3F pos)
+{
+	return (0 < pos.X && pos.X < m_iWidth && 0 < pos.Z && pos.Z < m_iHeight);
 }

@@ -40,7 +40,7 @@ public:
 	CPlayer* GetPlayer(int handle);
 	CPlayer* AllocPlayer(int& outPlayerHandle);
 	void FreePlayer(CPlayer* pPlayer);
-
+	void PlayerDisConnect(const SESSION_HANDLE& key);
 public:
 	void NetLog();
 };

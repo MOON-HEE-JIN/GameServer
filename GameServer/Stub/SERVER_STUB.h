@@ -19,6 +19,7 @@ private:
 	virtual int DO_GAME_LOOPBACK(Object* pTarget, Packet& pReqPacket) = 0;
 	virtual int DO_GAME_MOVESTART(Object* pTarget, Packet& pReqPacket) = 0;
 	virtual int DO_GAME_MOVESTOP(Object* pTarget, Packet& pReqPacket) = 0;
+	virtual int DO_GAME_TELEPORT(Object* pTarget, Packet& pReqPacket) = 0;
 	virtual int DO_OBSERVER_CONNET_OBSERVER(Object* pTarget, Packet& pReqPacket) = 0;
 	virtual int DO_ERROR_PACKET(Object* pTarget, Packet& pReqPacket) = 0;
 	virtual int DO_ERROR_RESULT(Object* pTarget, int ret, int type) = 0;

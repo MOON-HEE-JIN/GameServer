@@ -10,7 +10,7 @@
 class CZone : public CZoneBase
 {
 public:
-	CZone(int ID, int ZoneID, int ProcID, int Maximum);
+	CZone(int channel, int ZoneID, int ProcID, int Maximum);
 	~CZone();
 	
 protected:

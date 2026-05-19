@@ -13,6 +13,7 @@ namespace GAME
 		MOVESTART,					//6
 		MOVESTOP,					//7
 		CHANGEINGZONE,					//8
+		TELEPORT,					//9
 	};
 };
 

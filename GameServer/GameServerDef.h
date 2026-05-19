@@ -1,27 +1,15 @@
 ﻿#pragma once
+#include "GameServerEnumDef.h"
 #include <string>
 
-#define ProcThreadCnt 4
+#define ProcLoginThreadCnt 1
+#define ProcMainThreadCnt 1
+#define ProcSubThreadCnt 2
+#define ProcThreadCnt ProcLoginThreadCnt + ProcMainThreadCnt + ProcSubThreadCnt
+
 #define POSITION_TOLERANCE 5
 #define FIXED_DELTA 0.01667f		// fps 60
 #define MAX_FRAME_LOOP_COUNT 6
-
-
-enum eMOVESTATE
-{
-	STOPPED,
-	MOVEING,
-	RUNNING,
-};
-
-enum eZONESTATUS
-{
-	NONE,
-	STABLE,		// 완료
-	ENTER,		// 들어가는 중
-	LEAVE,		// 나가는 중
-	RELEASE,	// 삭제
-};
 
 typedef struct st_Log
 {
@@ -72,3 +60,17 @@ typedef struct st_ChangeZoneJob
 		ret = _ret;
 	}
 }ZONE_CHANGE_JOB;
+
+typedef struct st_GridPos
+{
+	int X;
+	int Z;
+
+	st_GridPos() = default;
+	st_GridPos(int _X, int _Z) : X(_X), Z(_Z) {};
+
+	bool operator==(const st_GridPos& other)
+	{
+		return (X == other.X && Z == other.Z);
+	}
+}COORDINATE;

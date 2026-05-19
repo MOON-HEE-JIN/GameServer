@@ -7,7 +7,7 @@
 
 #include "../MemoryManager/CLockFreeQueue_FromGPT.h"
 #include "../NetWork/NetWorkDefine.h"
-#include "../Zone/CZoneBase.h"
+#include "../Zone/CZoneBasic.h"
 
 #define MAX_MAINWORLD_THREAD_COUNT 4
 
@@ -17,7 +17,7 @@ struct st_ThreadParam
 	void* ptr;
 };
 
-class CMainWorld : public CZoneBase
+class CMainWorld : public CZoneBasic
 {
 public:
 	CMainWorld(int channel, int zoneid, int procid, int maxnum);

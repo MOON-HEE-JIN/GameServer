@@ -46,7 +46,7 @@ bool CPlayer::Teleport(st_Vector3F pos)
 	st_Vector3F originPos = m_stPosition;
 
 	m_stPosition = pos;
-	if (!m_pZone->Teleport(this, pos))
+	if (!((CZoneBasic*)m_pZone)->Teleport(this, pos))
 	{
 		m_stPosition = originPos;
 		return false;

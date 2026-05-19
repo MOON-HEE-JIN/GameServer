@@ -111,7 +111,7 @@ int PacketProc::DO_GAME_ENTERZONE(CPlayer* pTarget, CPacket& pReqPacket)
 
     // Zone 에서 의 본인 정보 보내기
     st_STC_CreateChar pack;
-    pack.ID = pTarget->GetPlayerHandle();
+    pack.ID = pTarget->GetID();
     pack.pos.X = 0;
 	pack.pos.Y = 0;
     pack.pos.Z = 0;
@@ -188,8 +188,7 @@ int PacketProc::DO_GAME_TELEPORT(CPlayer* pTarget, CPacket& pReqPacket)
     st_CTS_Teleport req;
     pReqPacket >> req;
 
-    req.pos;
-
+    
     // 이후 에러코드 수정 해야함
     CZoneBase* pZone = g_ZoneManager.GetZone(pTarget->GetChannel(), pTarget->GetZoneID());
     if (pZone == nullptr)
@@ -198,7 +197,9 @@ int PacketProc::DO_GAME_TELEPORT(CPlayer* pTarget, CPacket& pReqPacket)
     if (!pZone->CheckPos(req.pos))
         return -1;
 
+    pTarget->Teleport(req.pos);
 
+    g_LogGame.DLog("TelePort");
 
     return 0;
 }

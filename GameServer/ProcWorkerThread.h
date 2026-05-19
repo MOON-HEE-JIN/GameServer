@@ -3,7 +3,7 @@
 #include "CPlayer.h"
 #include "PacketProc.h"
 #include <vector>
-#include "Zone/CZoneBase.h"
+#include "Zone/CZoneBasic.h"
 
 void CreateProcWorkerThread();
 void WaitProcWorkerThread();
@@ -44,12 +44,12 @@ private:
 	CLockFreeQueue_MPSC<PROC_MSG>* m_ProcJobQueue;
 	CLockFreeQueue_MPSC<CPlayer*> m_PlayerDeleteQueue;
 	PacketProc* m_pPacketProc;
-	std::vector<CZoneBase*> m_vecZone;
+	std::vector<CZoneBasic*> m_vecZone;
 	int m_ZoneCnt;
 public:
 	void SetMain() { m_bMain = true; }
 	bool GetMain() { return m_bMain; }
-	CZoneBase* GetMainWorld();
+	CZoneBasic* GetMainWorld();
 };
 
 extern std::vector<CProcWorker*> s_ProcWorker;

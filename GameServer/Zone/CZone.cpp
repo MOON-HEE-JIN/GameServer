@@ -5,7 +5,7 @@
 #include "../Stub/PacketEnumDef.h"
 
 CZone::CZone(int channel, int ZoneID, int ProcID, int Maximum)
-	: CZoneBase(channel, ZoneID, ProcID, Maximum)
+	: CZoneBasic(channel, ZoneID, ProcID, Maximum)
 {
 }
 
@@ -20,7 +20,7 @@ void CZone::PushMoveVector(CEntity* pEntity)
 	if (pEntity->GetMoveIndex() != -1)
 		return;
 	
-	int index = m_vecEntityMoveVector.size();
+	int index = static_cast<int>(m_vecEntityMoveVector.size());
 	m_vecEntityMoveVector.push_back(pEntity);
 	pEntity->SetMoveIndex(index);
 }
@@ -32,7 +32,7 @@ void CZone::PopMoveVector(CEntity* pEntity)
 	if (index == -1)
 		return;
 
-	int lastindex = m_vecEntityMoveVector.size() - 1;
+	int lastindex = static_cast<int>(m_vecEntityMoveVector.size()) - 1;
 	pEntity->SetMoveIndex(-1);
 	if (lastindex < 0)
 		return;
@@ -52,7 +52,7 @@ bool CZone::SendZoneInfo(CPlayer* pPlayer)
 	if (pPlayer->GetZoneID() != GetZoneID())
 		return false;
 
-	int nLoop = m_vecPlayers.size();
+	int nLoop = static_cast<int>(m_vecPlayers.size());
 	int index = 0;
 
 	st_STC_EnterZone info = { 0, };
@@ -95,7 +95,7 @@ void CZone::Process()
 
 void CZone::ZoneEntityMoveProcess()
 {
-	int nLoop = m_vecEntityMoveVector.size();
+	int nLoop = static_cast<int>(m_vecEntityMoveVector.size());
 	std::vector<CEntity*> vec;
 	int eraseCnt = 0;
 	for (int i = 0; i < nLoop; i++)

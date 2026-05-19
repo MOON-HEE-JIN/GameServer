@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "../Zone/CZoneBase.h"
+#include "../Zone/CZoneBasic.h"
 
 // windows.h 가 winsock.h 를 포함 하여 h 오류 발생
 #define WIN32_LEAN_AND_MEAN
@@ -14,7 +14,7 @@ public:
 };
 
 // 초기 GameServer 접속하고 Packet 을 처리 해주는 Login Zone
-class CZone_Login : public CZoneBase
+class CZone_Login : public CZoneBasic
 {
 public:
 	CZone_Login(int ID, int ZoneID, int ProcID, int Maximum);

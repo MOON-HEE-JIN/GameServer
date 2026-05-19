@@ -17,14 +17,14 @@ public:
 
 	void AddEntity(CEntity* pEntity)
 	{
-		pEntity->SetMoveIndex(m_vec.size());
+		pEntity->SetMoveIndex(static_cast<int>(m_vec.size()));
 		m_vec.push_back(pEntity);
 	}
 	void RemoveEntity(CEntity* pEntity)
 	{
 		int index = pEntity->GetMoveIndex();
 
-		int lastIndex = m_vec.size() - 1;
+		int lastIndex = static_cast<int>(m_vec.size()) - 1;
 
 		if (index != lastIndex)
 		{

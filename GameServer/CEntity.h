@@ -15,7 +15,9 @@ protected:
 	std::atomic<int> m_OwnerZone;						// 처리 Zone 에 대한 id
 	eZONESTATUS m_eZoneStatus;							// 현재 Zone 에 서 의 상태
 
+	int m_iZoneVectorIndex = -1;
 	int m_iMoveIndex = -1;
+
 	float m_fMoveSpeed = 5.0f;
 	COORDINATE m_stGridPos;
 	st_Vector3F m_stPosition;
@@ -34,6 +36,7 @@ public:
 	int GetZoneID() { return m_OwnerZone.load(); }
 	virtual int GetID() = 0;
 	eZONESTATUS GetZoneStatus() { return m_eZoneStatus; }
+	int GetZoneVectorIndex() { return m_iZoneVectorIndex; }
 	int GetMoveIndex() { return m_iMoveIndex; }
 	const COORDINATE& GetGridPos() { return m_stGridPos; }
 	st_Vector3F GetPosition() { return m_stPosition; }
@@ -43,7 +46,9 @@ public:
 
 	void SetZoneID(int channel, int zone) { m_iChannel = channel;  m_OwnerZone.store(zone); };
 	void SetZoneStatus(eZONESTATUS type) { m_eZoneStatus = type; }
+	void SetZoneVectorIndex(int index) { m_iZoneVectorIndex = index; }
 	void SetMoveIndex(int index) { m_iMoveIndex = index; }
+	void SetGridPos(COORDINATE& coord) { m_stGridPos = coord; }
 	int MoveStart(st_Vector3F goal, st_Vector3F dir);
 	void MoveComplete();
 	int MoveStop(st_Vector3F pos);

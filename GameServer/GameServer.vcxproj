@@ -181,6 +181,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <Optimization>Disabled</Optimization>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -215,6 +216,7 @@
     <ClCompile Include="Zone\CBinZoneIdx.cpp" />
     <ClCompile Include="Zone\CZone.cpp" />
     <ClCompile Include="Zone\CZoneBase.cpp" />
+    <ClCompile Include="Zone\CZoneBasic.cpp" />
     <ClCompile Include="Zone\CZone_Login.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -260,6 +262,7 @@
     <ClInclude Include="Zone\CBinZoneIdx.h" />
     <ClInclude Include="Zone\CZone.h" />
     <ClInclude Include="Zone\CZoneBase.h" />
+    <ClInclude Include="Zone\CZoneBasic.h" />
     <ClInclude Include="Zone\CZone_Login.h" />
     <ClInclude Include="Zone\ZoneDefines.h" />
   </ItemGroup>

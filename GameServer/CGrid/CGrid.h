@@ -30,6 +30,9 @@ private:
 	int m_iGridSizeW;
 	int m_iGridSizeH;
 
+	int m_iTileSizeW;
+	int m_iTileSizeH;
+
 	st_Vector3F m_stOrigin;
 
 	CLQueue<st_AddMsg> m_AddQueue;

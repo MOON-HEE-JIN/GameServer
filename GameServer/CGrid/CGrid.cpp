@@ -33,15 +33,15 @@ void CGrid::Init(int width, int height, int gridsizeW, int gridsizeH, st_Vector3
 
 	m_iTileCount = 4 * 4;
 
-	int tilesizew = m_iGridSizeW / m_iTileCountW;
-	int tilesizeh = m_iGridSizeH / m_iTileCountH;
+	m_iTileSizeW = m_iGridSizeW / m_iTileCountW;
+	m_iTileSizeH = m_iGridSizeH / m_iTileCountH;
 
 	m_Tiles = new CTile[m_iTileCountH * m_iTileCountW];
 
 	COORDINATE coord = {0,0};
 	for (int i = 0; i < m_iTileCount; i++)
 	{
-		m_Tiles[i].Init(coord.X, coord.Z, tilesizew, tilesizeh);
+		m_Tiles[i].Init(coord.X, coord.Z, m_iTileSizeW, m_iTileSizeH);
 		if (++coord.X >= 4)
 		{
 			coord.X = 0;
@@ -85,7 +85,7 @@ void CGrid::MoveUpdate()
 {
 	const std::vector<CEntity*> mvec = m_MoveVector.GetVector();
 	std::vector<CEntity*> movecomplete;
-	int Loop = mvec.size();
+	int Loop = static_cast<int>(mvec.size());
 	for (int i = 0; i < Loop; i++)
 	{
 		if (mvec[i]->MoveUpdate())
@@ -93,7 +93,7 @@ void CGrid::MoveUpdate()
 			movecomplete.push_back(mvec[i]);
 		}
 	}
-	Loop = movecomplete.size();
+	Loop = static_cast<int>(movecomplete.size());
 	for (int i = 0; i < Loop; i++)
 	{
 		m_MoveVector.RemoveEntity(movecomplete[i]);
@@ -135,12 +135,16 @@ void CGrid::Update(void* pMainWorld)
 bool CGrid::AddPlayer(CEntity* pEntity)
 {
 	CPlayer* pPlayer = (CPlayer*)pEntity;
+	
 	st_Vector3F pos = pEntity->GetPosition();
+	COORDINATE NewGridPos = {static_cast<int>(pos.X) / m_iGridSizeW, static_cast<int>(pos.Y) / m_iGridSizeH};
+	if (pPlayer->GetGridPos() != NewGridPos)
+		pPlayer->SetGridPos(NewGridPos);
 
 	st_Vector3F localPos = pos - m_stOrigin;
 
-	int tileX = static_cast<int>(localPos.X) / m_iTileCountW;
-	int tileZ = static_cast<int>(localPos.Z) / m_iTileCountH;
+	int tileX = static_cast<int>(localPos.X) / m_iTileSizeW;
+	int tileZ = static_cast<int>(localPos.Z) / m_iTileSizeH;
 
 	if (!m_Tiles[tileZ * m_iTileCountW + tileX].AddPlayer(pPlayer->GetID(), pPlayer))
 		return false;
@@ -167,8 +171,8 @@ bool CGrid::RemovePlayer(CEntity* pEntity)
 
 	st_Vector3F localPos = pos - m_stOrigin;
 
-	int tileX = static_cast<int>(localPos.X) / m_iTileCountW;
-	int tileZ = static_cast<int>(localPos.Z) / m_iTileCountH;
+	int tileX = static_cast<int>(localPos.X) / m_iTileSizeW;
+	int tileZ = static_cast<int>(localPos.Z) / m_iTileSizeH;
 
 	if (!m_Tiles[tileZ * m_iTileCountW + tileX].RemovePlayer(pPlayer->GetID(), pPlayer))
 		return false;

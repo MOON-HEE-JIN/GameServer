@@ -213,7 +213,7 @@ void CProcWorker::ZoneProc()
 {
     for (int i = 0; i < m_ZoneCnt; i++)
     {
-        m_vecZone[i]->ZoneChangeJobProcess();
+        m_vecZone[i]->ChangeZoneProcess();
     }
 }
 
@@ -253,7 +253,7 @@ void CProcWorker::InitZoneVector()
     }
 }
 
-CZoneBase* CProcWorker::GetMainWorld()
+CZoneBasic* CProcWorker::GetMainWorld()
 {
     if(!GetMain())
         return nullptr;

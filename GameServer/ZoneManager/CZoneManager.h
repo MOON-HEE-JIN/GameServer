@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "../Zone/CZone.h"
-#include "../Zone/CZoneBase.h"
+#include "../Zone/CZoneBasic.h"
 
 #include <vector>
 #include <unordered_map>
@@ -24,7 +24,7 @@ private:
 	std::unordered_map<int, int> m_mapZoneIDtoIndex; // <ZoneID, m_vecZone Index>
 	int m_maxZoneCnt;
 	
-	std::unordered_map<int, std::vector<CZoneBase*>> m_mapZones; // [ZoneID][Channel,CZone]
+	std::unordered_map<int, std::vector<CZoneBasic*>> m_mapZones; // [ZoneID][Channel,CZone]
 private:
 	bool TryEnterZone(int Channel, int toZone);
 	void StartMainWorld();
@@ -38,7 +38,7 @@ public:
 	bool ReqEnterLoginZone(CPlayer* pPlayer);
 	bool ReqEnterZone(CPlayer* pPlayer, int Channel, int ToZone);
 	//void ReqJob(ZONE_CHANGE_JOB& job, int zone);
-	int InitProcZoneVector(int pid, std::vector<CZoneBase*>& vec);
+	int InitProcZoneVector(int pid, std::vector<CZoneBasic*>& vec);
 
 	bool IsValidZoneID(int zoneid) const;
 	bool IsValidChannelZone(int Channel, int ZoneID);
@@ -49,7 +49,7 @@ public:
 	void PushZoneMoveVector(CEntity* pEntity);
 	void PopZoneMoveVector(CEntity* pEntity);
 
-	CZoneBase* GetZone(int Channel, int ZoneID);
+	CZoneBasic* GetZone(int Channel, int ZoneID);
 public:
 	void SendZone(int Channel, int Zone, CPacket* pPacket, CPlayer* pPlayer = nullptr);
 	bool SendZoneInfo(int Channel, int Zone, CPlayer* pPlayer);

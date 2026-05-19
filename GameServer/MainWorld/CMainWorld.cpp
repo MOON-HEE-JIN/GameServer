@@ -5,7 +5,7 @@
 #include "../Log/CLog.h"
 
 CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
-	:CZoneBase(channel, zoneid, procid, maxnum)
+	:CZoneBasic(channel, zoneid, procid, maxnum)
 {
 	m_bMainWorld = true;
 
@@ -111,7 +111,7 @@ void CMainWorld::OnLeaveZone(CPlayer* pPlayer)
 
 void CMainWorld::MessageRouting(std::vector<PROC_MSG>& vec)
 {	
-	int Loop = vec.size();
+	int Loop = static_cast<int>(vec.size());
 	for (int i = 0; i < Loop; i++)
 	{
 		CPlayer* pPlayer = g_Net.GetPlayer(vec[i].PlayerHandle);
@@ -176,7 +176,7 @@ void CMainWorld::PushMoveVector(CEntity* pEntity)
 void CMainWorld::Run(int id)
 {
 	std::vector<CGrid*> vec = m_vecThreadGrids[id];
-	int Loop = vec.size();
+	int Loop = static_cast<int>(vec.size());
 	int ret = 0;
 	while (m_bActive)
 	{
@@ -227,7 +227,7 @@ bool CMainWorld::IsValid(int x, int y)
 
 COORDINATE CMainWorld::CalCoord(st_Vector3F pos)
 {
-	return COORDINATE(pos.X / m_iGridWidth, pos.Z / m_iGridHeight);
+	return COORDINATE(static_cast<int>(pos.X / m_iGridWidth), static_cast<int>(pos.Z / m_iGridHeight));
 }
 
 CGrid* CMainWorld::GetGrid(int x, int y)

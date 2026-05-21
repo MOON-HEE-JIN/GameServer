@@ -1,9 +1,12 @@
 ﻿#include "CPlayer.h"
 #include "NetWork/CNetServer.h"
 #include "ZoneManager/CZoneManager.h"
+#include "Log/CLog.h"
 
 void CPlayer::Init(SESSION_HANDLE sessionID, int handle, int Channel, int Zone)
 {
+	m_iRef.store(1);
+
 	m_SessionHandle = sessionID;
 	m_PlayerHandle = handle;
 	m_iChannel = Channel;
@@ -30,6 +33,20 @@ void CPlayer::Clear()
 	m_bRelease.store(false);
 }
 
+void CPlayer::ReleaseRef()
+{
+	m_iRef.fetch_sub(1);
+
+	if (m_iRef.load() > 0)
+		return;
+
+	int key = GetID();
+	Clear();
+	g_Net.AddPlayerHandle(key);
+	
+	g_LogGame.DLog("Player Handle %d ReleaseRef", key);
+}
+
 void CPlayer::SetRelease()
 {
 	m_bRelease.store(true);
@@ -45,7 +62,6 @@ bool CPlayer::Teleport(st_Vector3F pos)
 {
 	st_Vector3F originPos = m_stPosition;
 
-	m_stPosition = pos;
 	if (!((CZoneBasic*)m_pZone)->Teleport(this, pos))
 	{
 		m_stPosition = originPos;

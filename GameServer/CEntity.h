@@ -19,7 +19,10 @@ protected:
 	int m_iMoveIndex = -1;
 
 	float m_fMoveSpeed = 5.0f;
+	
 	COORDINATE m_stGridPos;
+	COORDINATE m_stTilePos;
+
 	st_Vector3F m_stPosition;
 	st_Vector3F m_stGoalPosition;
 	st_Vector3F m_stDirVector;
@@ -39,6 +42,7 @@ public:
 	int GetZoneVectorIndex() { return m_iZoneVectorIndex; }
 	int GetMoveIndex() { return m_iMoveIndex; }
 	const COORDINATE& GetGridPos() { return m_stGridPos; }
+	const COORDINATE& GetTilePos() { return m_stTilePos; }
 	st_Vector3F GetPosition() { return m_stPosition; }
 	st_Vector3F GetGoalPosition() { return m_stGoalPosition; }
 	st_Vector3F GetDirVector() { return m_stDirVector; }
@@ -49,6 +53,8 @@ public:
 	void SetZoneVectorIndex(int index) { m_iZoneVectorIndex = index; }
 	void SetMoveIndex(int index) { m_iMoveIndex = index; }
 	void SetGridPos(COORDINATE& coord) { m_stGridPos = coord; }
+	void SetTilePos(COORDINATE& coord) { m_stTilePos = coord; }
+	void SetPosition(st_Vector3F pos) { m_stPosition = pos; }
 	int MoveStart(st_Vector3F goal, st_Vector3F dir);
 	void MoveComplete();
 	int MoveStop(st_Vector3F pos);

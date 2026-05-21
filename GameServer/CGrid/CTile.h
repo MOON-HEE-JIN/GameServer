@@ -17,6 +17,8 @@ private:
 	CTContainer<CEntity> m_Players;
 	CTContainer<CEntity> m_Monsters;
 
+	int m_iDebugLogTime;
+	int m_iDebugLogDelayTime = 2 * 1000;
 public:
 	int GetActiveCount() { return m_iActive.load(); }
 
@@ -26,5 +28,5 @@ public:
 	bool AddPlayer(int key, CEntity* pEntity);
 	bool RemovePlayer(int key, CEntity* pEntity);
 
-	void Update() {};
+	void Update();
 };

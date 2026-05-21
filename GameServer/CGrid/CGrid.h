@@ -13,6 +13,7 @@
 struct st_AddMsg
 {
 	int type;
+	int key;
 	CEntity* pEntity;
 };
 
@@ -34,11 +35,13 @@ private:
 	int m_iTileSizeH;
 
 	st_Vector3F m_stOrigin;
+	st_Vector3F m_stGridEndPos;
 
 	CLQueue<st_AddMsg> m_AddQueue;
 	CLockFreeQueue_SPSC<PROC_MSG> m_queue;
 
-	CEntityManagementVector m_MoveVector;
+	CEntityManagementVector m_vecEntityMove;
+
 private:
 	int m_iTileCountW;
 	int m_iTileCountH;
@@ -51,12 +54,14 @@ public:
 	void Update(void* pMainWorld);
 	void Push(PROC_MSG& msg) { m_queue.Enqueue(msg); }
 	
-	bool AddPlayer(CEntity* pEntity);
-	bool EnqueueAddPlayer(int type, CEntity* pEntity);
-	bool RemovePlayer(CEntity* pEntity);
-	bool EnqueueRemovePlayer(int type, CEntity* pEntity);
+	bool AddPlayer(int key, CEntity* pEntity);
+	bool EnqueueAddPlayer(int type, int key, CEntity* pEntity);
+	bool RemovePlayer(int key, CEntity* pEntity);
+	bool EnqueueRemovePlayer(int type, int key, CEntity* pEntity);
 
 	void AddMove(CEntity* pEntity);
 	void RemoveMove(CEntity* pEntity);
+
+	CTile* GetTile(st_Vector3F localPos);
 	st_Vector3F GetCenter();
 };

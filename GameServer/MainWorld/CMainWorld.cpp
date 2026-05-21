@@ -24,7 +24,15 @@ CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
 	// 
 	// 다시 Grid 는 임시(4 * 4) 만큼의 Tile 을 보유
 	// 1:MainWolrd(1024, 1024) -> 16:Grid(256, 256) -> 16:Tile(64, 64)
+	//
 	// 
+	// 다른 방법 생각
+	// MainWorld 를 Grid 로 나누는것이 아닌 Tile 로 나눈다
+	// 그후 Grid 에 관리 Tile 을 넣어 준다
+	// 기존 에는 MainWorld -> Grid -> Tile 을 나눴지만
+	// MainWorld->Tile , Grid 에 Tile 등록 으로 바꾼다면?
+	// 기존 방식은 이동식 tile 이동 에 있어 계산을 할려면 Grid 를 먼저 계산해야한다
+	// 그렇다면 아예 최소단위는 통으로 가지고 있고 관리를 Grid 로 한다면??
 	//
 
 	m_Grids = new CGrid[MAX_MAINWORLD_THREAD_COUNT * MAX_MAINWORLD_THREAD_COUNT];
@@ -82,7 +90,7 @@ void CMainWorld::OnEnterZone(CPlayer* pPlayer)
 		return;
 	}
 
-	if (!pCGrid->EnqueueAddPlayer(EGRID_ADD_TYPE::GRID_ENTER, pPlayer))
+	if (!pCGrid->EnqueueAddPlayer(EGRID_ADD_TYPE::GRID_ENTER, pPlayer->GetID(), pPlayer))
 	{
 		g_LogGame.ELog("ERROR AddPlayer Tile  Pos: [%d,%d]", pPlayer->GetGridPos().X, pPlayer->GetGridPos().Z);
 		return;
@@ -100,7 +108,7 @@ void CMainWorld::OnLeaveZone(CPlayer* pPlayer)
 		return;
 	}
 
-	if (!pCGrid->EnqueueRemovePlayer(EGRID_ADD_TYPE::GRID_LEAVE, pPlayer))
+	if (!pCGrid->EnqueueRemovePlayer(EGRID_ADD_TYPE::GRID_LEAVE, pPlayer->GetID(), pPlayer))
 	{
 		g_LogGame.ELog("ERROR SubPlayer Tile  Pos: [%d,%d]", pPlayer->GetGridPos().X, pPlayer->GetGridPos().Z);
 		return;
@@ -141,11 +149,13 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 	CGrid* pCurGrid = GetGrid(curCoord.X, curCoord.Z);
 	CGrid* pNewGrid = GetGrid(newCoord.X, newCoord.Z);
 
+	// 같은 Thread 작업
+	pCurGrid->RemovePlayer(pPlayer->GetID(), pPlayer);
+	pPlayer->SetPosition(pos);
+
 	if (curCoord.Z == newCoord.Z)
 	{
-		// 같은 Thread 작업
-		pCurGrid->RemovePlayer(pPlayer);
-		pNewGrid->AddPlayer(pPlayer);
+		pNewGrid->AddPlayer(pPlayer->GetID(), pPlayer);
 
 		st_STC_Teleport res;
 		res.ret = 0;
@@ -154,10 +164,9 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 	}
 	else
 	{
-		pCurGrid->RemovePlayer(pPlayer);		// 같은 thread 작업
-		// 다른 Thread 작업
-		pNewGrid->EnqueueAddPlayer(EGRID_ADD_TYPE::ADD_TELEPORT, pPlayer);
+		pNewGrid->EnqueueAddPlayer(EGRID_ADD_TYPE::ADD_TELEPORT, pPlayer->GetID(), pPlayer);
 	}
+	
 	return true;
 }
 

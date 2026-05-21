@@ -172,6 +172,7 @@ bool CZoneBasic::EnterZone(CPlayer* pPlayer)
 
 	pPlayer->SetZone(this);
 
+	pPlayer->AddRef();
 	OnEnterZone(pPlayer);
 	return true;
 }
@@ -199,6 +200,7 @@ bool CZoneBasic::LeaveZone(CPlayer* pPlayer)
 
 	m_vecPlayers.pop_back();
 
+	pPlayer->ReleaseRef();
 	// 존 떠날때 이벤트
 	OnLeaveZone(pPlayer);
 	return true;

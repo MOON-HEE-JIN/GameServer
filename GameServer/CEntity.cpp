@@ -3,6 +3,11 @@
 #include "./CUtill/CUtill.h"
 #include "Stub/StructDef.h"
 
+CEntity::CEntity()
+{
+    m_vecIndex.resize(EVECTOR_INDEX_TYPE::END);
+}
+
 void CEntity::Reset()
 {
     m_nEntityType = 0;
@@ -11,7 +16,10 @@ void CEntity::Reset()
     m_OwnerZone.store(0);			                			// 처리 Zone 에 대한 id
     m_eZoneStatus = eZONESTATUS::NONE;							// 현재 Zone 에 서 의 상태
 
-    m_iMoveIndex = -1;
+    for (int i = 0; i < EVECTOR_INDEX_TYPE::END; i++)
+    {
+        m_vecIndex[i] = -1;
+    }
     m_fMoveSpeed = 5.0f;
     m_stPosition.Zero();
     m_stGoalPosition.Zero();
@@ -93,6 +101,22 @@ bool CEntity::MoveUpdate()
     }
 
     return false;
+}
+
+int CEntity::GetVectorIndex(int type)
+{
+    if (type >= EVECTOR_INDEX_TYPE::END)
+        return -1;
+    return m_vecIndex[type];
+}
+
+bool CEntity::SetVectorIndex(int type, int value)
+{
+    if (type >= EVECTOR_INDEX_TYPE::END)
+        return false;
+    
+    m_vecIndex[type] = value;
+    return true;
 }
 
 int CEntity::MoveStart(st_Vector3F goal, st_Vector3F dir)

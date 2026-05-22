@@ -1,6 +1,8 @@
 ﻿#pragma once
 
 #include "../CGrid/CGrid.h"
+#include "../CGrid/CTile.h"
+
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <vector>
@@ -10,6 +12,8 @@
 #include "../Zone/CZoneBasic.h"
 
 #define MAX_MAINWORLD_THREAD_COUNT 4
+#define MAX_MANAGENTMENT_GRID_COUNT 4
+#define DEFAULT_TILE_SIZE 64
 
 struct st_ThreadParam
 {
@@ -28,13 +32,16 @@ private:
 	
 	st_ThreadParam params[MAX_MAINWORLD_THREAD_COUNT];
 	HANDLE m_vecThreads[MAX_MAINWORLD_THREAD_COUNT];
-	std::vector<CGrid*> m_vecThreadGrids;
+	std::vector<std::vector<CGrid*>> m_vecThreadRunGrids;
 	HANDLE m_hExit;
 
 	//CLockFreeQueue_MPSC<PROC_MSG> m_ProcJobQueue[MAX_MAINWORLD_THREAD_COUNT];
 private:
-	int m_iGridWidth;
-	int m_iGridHeight;
+	int m_iTileCountW;
+	int m_iTileCountH;
+	int m_iAllTileCount;
+
+	CTile* m_Tiles;
 	CGrid* m_Grids;
 
 	static unsigned __stdcall WorkerThread(void* arg);
@@ -55,6 +62,7 @@ public:
 	bool IsValid(int x, int y);
 	COORDINATE CalCoord(st_Vector3F pos);
 public:
-	CGrid* GetGrid(int x, int y);
+	CTile* GetTile(st_Vector3F pos);
+	CGrid* GetGrid(int id);
 };
 

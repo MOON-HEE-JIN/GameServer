@@ -2,11 +2,10 @@
 #include "../Stub/ProjectDefineStruct.h"
 #include "../MemoryManager/CLockFreeQueue_SPSC.h"
 #include "../NetWork/NetWorkDefine.h"
-#include "../CEntity.h"
-#include "CTile.h"
 #include "../CUtill/CLockQueueh.h"
 #include "../GameServerEnumDef.h"
 #include "../CUtill/CEntityManagmentVector.h"
+#include "CTile.h"
 
 #include <unordered_map>
 
@@ -23,45 +22,29 @@ public:
 	CGrid();
 	~CGrid();
 
-	void Init(int width, int height, int gridsizeW, int gridsizeH, st_Vector3F origin);
 private:
-	int m_iWidth;
-	int m_iHeight;
+	int m_iID;
+	CLockFreeQueue_SPSC<PROC_MSG> m_queueProc;
+	CLQueue<st_AddMsg> m_queueEntity;
 
-	int m_iGridSizeW;
-	int m_iGridSizeH;
-
-	int m_iTileSizeW;
-	int m_iTileSizeH;
-
-	st_Vector3F m_stOrigin;
-	st_Vector3F m_stGridEndPos;
-
-	CLQueue<st_AddMsg> m_AddQueue;
-	CLockFreeQueue_SPSC<PROC_MSG> m_queue;
-
-	CEntityManagementVector m_vecEntityMove;
-
-private:
-	int m_iTileCountW;
-	int m_iTileCountH;
+	std::vector<CTile*> m_vecTiles;
 	int m_iTileCount;
-	CTile* m_Tiles;
-private:
-	void AddMsgProc();
-	void MoveUpdate();
+
+	CEntityVector m_vecPlayer{ EVECTOR_INDEX_TYPE::GRID };
+	CEntityVector m_vecMove{ EVECTOR_INDEX_TYPE::MOVE };
+
+	void EntityJobRun();
+
+	bool AddPlayer(CEntity* pEntity);
+	bool RemovePlayer(CEntity* pEntity);
 public:
-	void Update(void* pMainWorld);
-	void Push(PROC_MSG& msg) { m_queue.Enqueue(msg); }
-	
-	bool AddPlayer(int key, CEntity* pEntity);
-	bool EnqueueAddPlayer(int type, int key, CEntity* pEntity);
-	bool RemovePlayer(int key, CEntity* pEntity);
-	bool EnqueueRemovePlayer(int type, int key, CEntity* pEntity);
+	void OnRegisterTile(CTile* pTile);
 
-	void AddMove(CEntity* pEntity);
-	void RemoveMove(CEntity* pEntity);
+	void EnqueueProcJob(PROC_MSG& msg);
+	void EnqueueEntityJob(int type, int key, CEntity* pEntity);
 
-	CTile* GetTile(st_Vector3F localPos);
-	st_Vector3F GetCenter();
+	void AddMoveVector(CEntity* pEntity);
+	void RemoveMoveVector(CEntity* pEntity);
+
+	void Update();
 };

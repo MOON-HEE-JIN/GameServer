@@ -1,12 +1,13 @@
 ﻿#pragma once
 #include "Stub/StructDef.h"
 #include "GameServerDef.h"
+#include <vector>
 #include <atomic>
 
 class CEntity
 {
 public:
-	CEntity() {}
+	CEntity();
 	~CEntity() {}
 protected:
 	int m_nEntityType = 0;
@@ -15,12 +16,11 @@ protected:
 	std::atomic<int> m_OwnerZone;						// 처리 Zone 에 대한 id
 	eZONESTATUS m_eZoneStatus;							// 현재 Zone 에 서 의 상태
 
-	int m_iZoneVectorIndex = -1;
-	int m_iMoveIndex = -1;
+	std::vector<int> m_vecIndex;
 
 	float m_fMoveSpeed = 5.0f;
 	
-	COORDINATE m_stGridPos;
+	int m_iGridID;
 	COORDINATE m_stTilePos;
 
 	st_Vector3F m_stPosition;
@@ -35,13 +35,23 @@ public:
 	bool MoveUpdate();
 
 public:
+	int GetVectorIndex(int type);
+	int GetZoneVectorIndex() { return m_vecIndex[EVECTOR_INDEX_TYPE::ZONE]; };
+	int GetGridVectorIndex() { return m_vecIndex[EVECTOR_INDEX_TYPE::GRID]; };
+	int GetTileVectorIndex() { return m_vecIndex[EVECTOR_INDEX_TYPE::TILE]; };
+	int GetMoveVectorIndex() { return m_vecIndex[EVECTOR_INDEX_TYPE::MOVE]; };
+
+	bool SetVectorIndex(int type, int value);
+	void SetZoneVectorIndex(int value) { m_vecIndex[EVECTOR_INDEX_TYPE::ZONE] = value; };
+	void SetGridVectorIndex(int value) { m_vecIndex[EVECTOR_INDEX_TYPE::GRID] = value; };
+	void SetTileVectorIndex(int value) { m_vecIndex[EVECTOR_INDEX_TYPE::TILE] = value; };
+	void SetMoveVectorIndex(int value) { m_vecIndex[EVECTOR_INDEX_TYPE::MOVE] = value; };
+public:
 	int GetChannel() { return m_iChannel; }
 	int GetZoneID() { return m_OwnerZone.load(); }
 	virtual int GetID() = 0;
 	eZONESTATUS GetZoneStatus() { return m_eZoneStatus; }
-	int GetZoneVectorIndex() { return m_iZoneVectorIndex; }
-	int GetMoveIndex() { return m_iMoveIndex; }
-	const COORDINATE& GetGridPos() { return m_stGridPos; }
+	const int& GetGridID() { return m_iGridID; }
 	const COORDINATE& GetTilePos() { return m_stTilePos; }
 	st_Vector3F GetPosition() { return m_stPosition; }
 	st_Vector3F GetGoalPosition() { return m_stGoalPosition; }
@@ -50,9 +60,7 @@ public:
 
 	void SetZoneID(int channel, int zone) { m_iChannel = channel;  m_OwnerZone.store(zone); };
 	void SetZoneStatus(eZONESTATUS type) { m_eZoneStatus = type; }
-	void SetZoneVectorIndex(int index) { m_iZoneVectorIndex = index; }
-	void SetMoveIndex(int index) { m_iMoveIndex = index; }
-	void SetGridPos(COORDINATE& coord) { m_stGridPos = coord; }
+	void SetGridPos(int& id) { m_iGridID = id; }
 	void SetTilePos(COORDINATE& coord) { m_stTilePos = coord; }
 	void SetPosition(st_Vector3F pos) { m_stPosition = pos; }
 	int MoveStart(st_Vector3F goal, st_Vector3F dir);

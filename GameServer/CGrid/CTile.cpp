@@ -2,12 +2,13 @@
 
 #include <Windows.h>
 #include "../Log/CLog.h"
-void CTile::Init(int coordX, int coordZ, int tilew, int tileh)
+
+void CTile::Init(COORDINATE coord, st_Vector3F start, st_Vector3F end)
 {
-	m_Coord = { coordX, coordZ };
-	
-	m_iTileSizeW = tilew;
-	m_iTileSizeH = tileh;
+	m_Coord = coord;
+
+	m_StartPos = start;
+	m_EndPos = end;
 
 	//g_LogGame.DLog("Create Tile[%d,%d] size[%d,%d]", coordX, coordZ, tilew, tileh);
 }

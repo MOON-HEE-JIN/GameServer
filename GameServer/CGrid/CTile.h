@@ -10,9 +10,12 @@ public:
 	~CTile() {};
 private:
 	std::atomic<int> m_iActive;
+	int m_iManagementID;
 	COORDINATE m_Coord;
-	int m_iTileSizeW;
-	int m_iTileSizeH;
+	int m_iTileSize;
+
+	st_Vector3F m_StartPos;
+	st_Vector3F m_EndPos;
 
 	CTContainer<CEntity> m_Players;
 	CTContainer<CEntity> m_Monsters;
@@ -23,10 +26,15 @@ public:
 	int GetActiveCount() { return m_iActive.load(); }
 
 public:
-	void Init(int coordX, int coordZ, int tilew, int tileh);
+	void Init(COORDINATE coord, st_Vector3F start, st_Vector3F end);
 
 	bool AddPlayer(int key, CEntity* pEntity);
 	bool RemovePlayer(int key, CEntity* pEntity);
+
+	void OnReigsterGrid(int Id) { m_iManagementID = Id; }
+
+	int GetManagementGrid() { return m_iManagementID; }
+	COORDINATE GetCoord() { return m_Coord; }
 
 	void Update();
 };

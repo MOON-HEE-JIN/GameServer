@@ -17,34 +17,34 @@ CZone::~CZone()
 
 void CZone::PushMoveVector(CEntity* pEntity)
 {
-	if (pEntity->GetMoveIndex() != -1)
+	if (pEntity->GetMoveVectorIndex() != -1)
 		return;
 	
 	int index = static_cast<int>(m_vecEntityMoveVector.size());
 	m_vecEntityMoveVector.push_back(pEntity);
-	pEntity->SetMoveIndex(index);
+	pEntity->SetMoveVectorIndex(index);
 }
 
 void CZone::PopMoveVector(CEntity* pEntity)
 {
-	int index = pEntity->GetMoveIndex();
+	int index = pEntity->GetMoveVectorIndex();
 	
 	if (index == -1)
 		return;
 
 	int lastindex = static_cast<int>(m_vecEntityMoveVector.size()) - 1;
-	pEntity->SetMoveIndex(-1);
+	pEntity->SetMoveVectorIndex(-1);
 	if (lastindex < 0)
 		return;
 	if (index != lastindex)
 	{
 		CEntity* pLast = m_vecEntityMoveVector[lastindex];
 		m_vecEntityMoveVector[index] = pLast;
-		pLast->SetMoveIndex(index);
+		pLast->SetMoveVectorIndex(index);
 	}
 
 	m_vecEntityMoveVector.pop_back();
-	pEntity->SetMoveIndex(-1);
+	pEntity->SetMoveVectorIndex(-1);
 }
 
 bool CZone::SendZoneInfo(CPlayer* pPlayer)

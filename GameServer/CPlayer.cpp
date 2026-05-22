@@ -14,8 +14,7 @@ void CPlayer::Init(SESSION_HANDLE sessionID, int handle, int Channel, int Zone)
 
 	m_bRelease.store(false);
 
-	m_stGridPos.X = 0;
-	m_stGridPos.Z = 0;
+	m_iGridID = -1;
 }
 
 void CPlayer::Clear()
@@ -27,8 +26,7 @@ void CPlayer::Clear()
 	m_iChannel = 0;
 	m_OwnerZone = 0;
 
-	m_stGridPos.X = 0;
-	m_stGridPos.Z = 0;
+	m_iGridID = -1;
 
 	m_bRelease.store(false);
 }

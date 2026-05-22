@@ -20,6 +20,7 @@ private:
 	/*
 	* m_iRef 사용처
 	* - OnClientJoin 에서 1 로 시작 FreePlayer 에서 -1
+	* - ReqEnterLoginZone +1 이유 순서 Leave -> Enter +1 을 하지 않으면 바로 종료
 	* - EnterZone 에서 +1, LeaveZone 에서 -1
 	* - Grid AddPlayer +1, RemovePlayer -1
 	*/

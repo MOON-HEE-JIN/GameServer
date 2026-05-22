@@ -8,7 +8,7 @@
 class CEntityVector
 {
 public:
-	CEntityVector(EVECTOR_INDEX_TYPE::EIndexType type) { m_iKeyType = (int)type; };
+	CEntityVector(EIndexType type) { m_iKeyType = (int)type; };
 	~CEntityVector() {};
 
 private:
@@ -29,9 +29,17 @@ public:
 	}
 	bool RemoveEntity(CEntity* pEntity)
 	{
+		if (m_vec.empty())
+			return false;
+
 		int index = pEntity->GetVectorIndex(m_iKeyType);
+		
 		if (index == -1)
 			return false;
+
+		if (m_vec[index] != pEntity)
+			return false;
+
 		pEntity->SetVectorIndex(m_iKeyType, -1);
 		int lastIndex = static_cast<int>(m_vec.size()) - 1;
 

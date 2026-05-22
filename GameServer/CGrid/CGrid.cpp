@@ -34,9 +34,7 @@ void CGrid::EntityJobRun()
 		case EGRID_ADD_TYPE::ADD_TELEPORT:
 		{
 			AddPlayer(msg.pEntity);
-			st_STC_Teleport res;
-			res.ret = 0;
-			((CPlayer*)msg.pEntity)->SendPacket(res);
+			OnTeleport(msg.pEntity);
 		}
 		break;
 		case EGRID_ADD_TYPE::SUB:
@@ -47,6 +45,13 @@ void CGrid::EntityJobRun()
 			break;
 		}
 	}
+}
+
+void CGrid::OnTeleport(CEntity* pEntity)
+{
+	st_STC_Teleport res;
+	res.ret = 0;
+	((CPlayer*)pEntity)->SendPacket(res);
 }
 
 void CGrid::OnRegisterTile(CTile* pTile)
@@ -107,10 +112,14 @@ void CGrid::Update()
 
 bool CGrid::AddPlayer(CEntity* pEntity)
 {
+	pEntity->SetGridID(m_iID);
+	
 	return m_vecPlayer.AddEntity(pEntity);
 }
 
 bool CGrid::RemovePlayer(CEntity* pEntity)
 {
+	m_vecMove.RemoveEntity(pEntity);
+	pEntity->SetGridID(-1);
 	return m_vecPlayer.RemoveEntity(pEntity);
 }

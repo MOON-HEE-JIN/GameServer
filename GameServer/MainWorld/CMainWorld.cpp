@@ -96,7 +96,7 @@ void CMainWorld::OnEnterZone(CPlayer* pPlayer)
 	}
 	
 	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::GRID_ENTER, pPlayer->GetID(), pPlayer);
-	
+	pTile->AddPlayer(pPlayer->GetID(), pPlayer);
 	//g_LogGame.ILog("Enter %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
 
@@ -112,7 +112,7 @@ void CMainWorld::OnLeaveZone(CPlayer* pPlayer)
 	}
 
 	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::GRID_LEAVE, pPlayer->GetID(), pPlayer);
-
+	pTile->RemovePlayer(pPlayer->GetID(), pPlayer);
 	//g_LogGame.ILog("Leave %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
 
@@ -138,35 +138,36 @@ void CMainWorld::MessageRouting(std::vector<PROC_MSG>& vec)
 
 bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 {
-	/*
-	COORDINATE curCoord = pPlayer->GetGridPos();
-	COORDINATE newCoord = CalCoord(pos);
+	CTile* pNewTile = GetTile(pos);
+	
+	g_LogGame.DLog("REQ Teleport Pos [%f, %f, %f]  NewTile [%d, %d]", pos.X, pos.Y, pos.Z, pNewTile->GetCoord().X, pNewTile->GetCoord().Z);
 
-	if (!IsValidCoord(newCoord))
+	if (pNewTile == nullptr)
 		return false;
 
-	CGrid* pCurGrid = GetGrid(curCoord.X, curCoord.Z);
-	CGrid* pNewGrid = GetGrid(newCoord.X, newCoord.Z);
+	CGrid* pCurGrid = GetGrid(pPlayer->GetGridID());
+	CGrid* pNewGrid = GetGrid(pNewTile->GetManagementGrid());
 
 	// 같은 Thread 작업
-	pCurGrid->RemovePlayer(pPlayer->GetID(), pPlayer);
-	pPlayer->SetPosition(pos);
-
-	if (curCoord.Z == newCoord.Z)
+	CTile* pCurTile = GetTile(pPlayer->GetPosition());
+	pCurTile->RemovePlayer(pPlayer->GetID(), pPlayer);
+	
+	if (pCurGrid->GetRunID() == pNewGrid->GetRunID())
 	{
-		pNewGrid->AddPlayer(pPlayer->GetID(), pPlayer);
+		pPlayer->SetPosition(pos);
+		
+		pCurGrid->DirectRemovePlayer(pPlayer);
 
-		st_STC_Teleport res;
-		res.ret = 0;
-
-		pPlayer->SendPacket(res);
-	}
-	else
-	{
-		pNewGrid->EnqueueAddPlayer(EGRID_ADD_TYPE::ADD_TELEPORT, pPlayer->GetID(), pPlayer);
+		pNewGrid->DirectAddPlayer(pPlayer);
+		pNewTile->AddPlayer(pPlayer->GetID(), pPlayer);
+		return true;
 	}
 	
-	*/
+	pCurGrid->EnqueueEntityJob(EGRID_ADD_TYPE::GRID_LEAVE, pPlayer->GetID(), pPlayer);
+	
+	pPlayer->SetPosition(pos);
+	pNewGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ADD_TELEPORT, pPlayer->GetID(), pPlayer);
+	
 	return true;
 }
 
@@ -201,6 +202,7 @@ void CMainWorld::Start()
 	int runid = 0;
 	for (int i = 0; i < MAX_MANAGENTMENT_GRID_COUNT; i++)
 	{
+		m_Grids[i].SetRunID(runid);
 		m_vecThreadRunGrids[runid++].push_back(&m_Grids[i]);
 		if (runid >= MAX_MAINWORLD_THREAD_COUNT)
 			runid = 0;

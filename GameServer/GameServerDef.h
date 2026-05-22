@@ -11,17 +11,14 @@
 #define FIXED_DELTA 0.01667f		// fps 60
 #define MAX_FRAME_LOOP_COUNT 6
 
-namespace EVECTOR_INDEX_TYPE
+enum EIndexType
 {
-	enum EIndexType
-	{
-		ZONE,
-		GRID,
-		TILE,
-		MOVE,
-		END
-	};
-}
+	VECTOR_INDEX_ZONE,
+	VECTOR_INDEX_GRID,
+	VECTOR_INDEX_TILE,
+	VECTOR_INDEX_MOVE,
+	VECTOR_INDEX_END
+};
 
 typedef struct st_Log
 {

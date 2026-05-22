@@ -155,6 +155,7 @@ bool CZoneManager::ReqEnterLoginZone(CPlayer* pPlayer)
 		, pPlayer->GetChannel(), 0
 		, 0, 0);
 
+	pPlayer->AddRef();
 	pZone->Enqueue(job);
 	pPlayer->SetZoneStatus(eZONESTATUS::LEAVE);
 

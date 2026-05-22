@@ -28,7 +28,7 @@ private:
 	
 	st_ThreadParam params[MAX_MAINWORLD_THREAD_COUNT];
 	HANDLE m_vecThreads[MAX_MAINWORLD_THREAD_COUNT];
-	std::vector<std::vector<CGrid*>> m_vecThreadGrids;
+	std::vector<CGrid*> m_vecThreadGrids;
 	HANDLE m_hExit;
 
 	//CLockFreeQueue_MPSC<PROC_MSG> m_ProcJobQueue[MAX_MAINWORLD_THREAD_COUNT];

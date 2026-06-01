@@ -148,24 +148,27 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 	CGrid* pCurGrid = GetGrid(pPlayer->GetGridID());
 	CGrid* pNewGrid = GetGrid(pNewTile->GetManagementGrid());
 
-	// 같은 Thread 작업
 	CTile* pCurTile = GetTile(pPlayer->GetPosition());
-	pCurTile->RemovePlayer(pPlayer->GetID(), pPlayer);
 	
-	if (pCurGrid->GetRunID() == pNewGrid->GetRunID())
-	{
-		pPlayer->SetPosition(pos);
-		
-		pCurGrid->DirectRemovePlayer(pPlayer);
+	pCurGrid->DirectRemovePlayer(pPlayer);
+	pCurTile->RemovePlayer(pPlayer->GetID(), pPlayer);
 
+	// 추후 Teleport 시 이동 계산이 필요하다면 이 부분에서 계산 후 이동 처리
+	if (0)
+	{
+		g_LogGame.ELog("ERROR Teleport");
+		return false;
+	}
+
+	pPlayer->SetPosition(pos);
+
+	if (pCurGrid->GetRunID() == pNewGrid->GetRunID())
+	{		
 		pNewGrid->DirectAddPlayer(pPlayer);
 		pNewTile->AddPlayer(pPlayer->GetID(), pPlayer);
 		return true;
 	}
 	
-	pCurGrid->EnqueueEntityJob(EGRID_ADD_TYPE::GRID_LEAVE, pPlayer->GetID(), pPlayer);
-	
-	pPlayer->SetPosition(pos);
 	pNewGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ADD_TELEPORT, pPlayer->GetID(), pPlayer);
 	
 	return true;

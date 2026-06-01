@@ -33,7 +33,6 @@ void CGrid::EntityJobRun()
 			break;
 		case EGRID_ADD_TYPE::ADD_TELEPORT:
 		{
-			AddPlayer(msg.pEntity);
 			OnTeleport(msg.pEntity);
 		}
 		break;
@@ -49,6 +48,8 @@ void CGrid::EntityJobRun()
 
 void CGrid::OnTeleport(CEntity* pEntity)
 {
+	AddPlayer(pEntity);
+
 	st_STC_Teleport res;
 	res.ret = 0;
 	((CPlayer*)pEntity)->SendPacket(res);

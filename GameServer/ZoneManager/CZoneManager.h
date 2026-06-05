@@ -16,8 +16,6 @@ public:
 
 public:
 	bool ReadZoneBinFile(const char* filepath);
-	std::map<int, int> m_mapDebug;
-	std::map<int, int> m_mapDebug2;
 private:
 	const int MAX_MAIN_WORLD_COUNT = 1;
 	std::unordered_map<int, st_IDX> m_mapZoneIDX;

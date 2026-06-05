@@ -204,11 +204,6 @@ bool CZoneManager::ReqEnterZone(CPlayer* pPlayer, int Channel, int ToZone)
 			, pPlayer->GetChannel(), pPlayer->GetZoneID()
 			, 0, 0);
 
-		if (m_mapDebug.find(pPlayer->GetID()) == m_mapDebug.end())
-		{
-			m_mapDebug[pPlayer->GetID()] = 1;
-		}
-		
 		pPlayer->SetZoneStatus(eZONESTATUS::LEAVE);
 
 		pToZone->Enqueue(job);
@@ -353,12 +348,6 @@ bool EnqueueChangeJob(int id, int zone, ZONE_CHANGE_JOB& job)
 		CPlayer* pPlayer = g_Net.GetPlayer(job.handle);
 		if (pPlayer == nullptr)
 			return false;
-		
-		if (job.ack == false && pPlayer->m_iDebugCoutn == 1)
-		{
-			int a = 100;
-			a++;
-		}
 		
 	}
 	CZoneBasic* pZone = g_ZoneManager.GetZone(id, zone);

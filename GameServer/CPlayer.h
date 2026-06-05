@@ -36,13 +36,9 @@ private:
 	void Clear();
 
 public:
-	std::vector<int> m_iRefReason;
-	std::vector<int> m_iRefReasonCount;
-	int m_iDebugCoutn = 0;
-
 	int GetRef() { return m_iRef.load(); }
-	void AddRef(int reason);
-	void ReleaseRef(int reason);
+	void AddRef();
+	void ReleaseRef();
 
 	SESSION_HANDLE GetSessionHandle() { return m_SessionHandle; }
 	virtual int GetID() { return m_PlayerHandle; }

@@ -295,7 +295,7 @@ bool CGrid::AddPlayer(CEntity* pEntity)
 	if (!m_vecPlayer.AddEntity(pEntity))
 		return false;
 
-	((CPlayer*)pEntity)->AddRef(88);
+	((CPlayer*)pEntity)->AddRef();
 	return true;
 }
 
@@ -305,7 +305,7 @@ bool CGrid::RemovePlayer(CEntity* pEntity)
 		return false;
 	
 	m_vecMove.RemoveEntity(pEntity);
-	((CPlayer*)pEntity)->ReleaseRef(88);
+	((CPlayer*)pEntity)->ReleaseRef();
 
 	return true;
 }

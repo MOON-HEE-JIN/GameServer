@@ -14,9 +14,9 @@
 
 CBaseNet::CBaseNet()
 {
-	m_iConnectSessionCount = 0;
+	m_iConnectSessionCount.store(0);
+	
 	m_iTotalConnectSessionCount = 0;
-
 	m_iAcceptSocketCount = 0;
 
 	m_iRecvOverlappedCount.store(0);
@@ -126,7 +126,7 @@ CSession* CBaseNet::OnSessionAccept(SOCKET sock)
 	}
 
 	pSession->OnAcceptJoin(sock, SESSION_HANDLE(key.Handle, key.Gen));
-
+	m_iConnectSessionCount.fetch_add(1);
 	return pSession;
 }
 
@@ -148,6 +148,7 @@ void CBaseNet::DisConnect(CSession* pSession)
 		m_vecSessionFreeKey.push_back(SESSION_HANDLE(pSession->GetConnectHandle(), pSession->GetConnectGen()));
 	}
 	UnLockSessionFreeKey();
+	m_iConnectSessionCount.fetch_sub(1);
 }
 
 void CBaseNet::Recv(CSession* pSession, int type, CPacket& packet)

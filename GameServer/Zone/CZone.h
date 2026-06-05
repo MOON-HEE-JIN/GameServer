@@ -4,10 +4,10 @@
 #include <unordered_map>
 #include <atomic>
 
-#include "../Zone/CZoneBase.h"
+#include "../Zone/CZoneBasic.h"
 #include "../Zone/ZoneDefines.h"
 
-class CZone : public CZoneBase
+class CZone : public CZoneBasic
 {
 public:
 	CZone(int channel, int ZoneID, int ProcID, int Maximum);
@@ -37,6 +37,5 @@ public:
 	void PushMoveVector(CEntity* pEntity);
 	void PopMoveVector(CEntity* pEntity);
 
-	bool SendZoneInfo(CPlayer* pPlayer);
 	virtual void OnLeaveZone(CPlayer* pPlayer) override;
 };

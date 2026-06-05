@@ -68,7 +68,8 @@ protected:
 	int GetSendOverlappedCount() { return m_iSendOverlapeedCount.load(); };
 	int GetRecvOverlappedSize() { return m_iRecvOverlappedSize.load(); }
 	int GetSendOverlappedSize() { return m_iSendOverlappedSize.load(); }
-	
+	int GetConnectionSessionCount() { return m_iConnectSessionCount.load(); }
+
 	void ResetRecvOverlappedLog() { m_iRecvOverlappedCount.store(0); m_iRecvOverlappedSize.store(0); }
 	void ResetSendOverlappedLog() { m_iSendOverlapeedCount.store(0); m_iSendOverlappedSize.store(0); };
 

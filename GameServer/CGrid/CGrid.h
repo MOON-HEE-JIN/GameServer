@@ -2,15 +2,17 @@
 #include "../Stub/ProjectDefineStruct.h"
 #include "../MemoryManager/CLockFreeQueue_SPSC.h"
 #include "../NetWork/NetWorkDefine.h"
-#include "../CEntity.h"
-#include "CTile.h"
 #include "../CUtill/CLockQueueh.h"
 #include "../GameServerEnumDef.h"
 #include "../CUtill/CEntityManagmentVector.h"
 
 #include <unordered_map>
+#include <set>
 
-struct st_AddMsg
+class CMainWorld;
+class CTile;
+
+struct st_GridJob
 {
 	int type;
 	CEntity* pEntity;
@@ -22,38 +24,50 @@ public:
 	CGrid();
 	~CGrid();
 
-	void Init(int width, int height, int gridsizeW, int gridsizeH, st_Vector3F origin);
 private:
-	int m_iWidth;
-	int m_iHeight;
+	CMainWorld* m_parent;
 
-	int m_iGridSizeW;
-	int m_iGridSizeH;
-
-	st_Vector3F m_stOrigin;
-
-	CLQueue<st_AddMsg> m_AddQueue;
-	CLockFreeQueue_SPSC<PROC_MSG> m_queue;
-
-	CEntityManagementVector m_MoveVector;
-private:
-	int m_iTileCountW;
-	int m_iTileCountH;
-	int m_iTileCount;
-	CTile* m_Tiles;
-private:
-	void AddMsgProc();
-	void MoveUpdate();
-public:
-	void Update(void* pMainWorld);
-	void Push(PROC_MSG& msg) { m_queue.Enqueue(msg); }
+	int m_iID;
+	int m_iRunID;
+	CLockFreeQueue_SPSC<PROC_MSG> m_queueProc;
+	CLQueue<st_GridJob> m_queueEntity;
 	
-	bool AddPlayer(CEntity* pEntity);
-	bool EnqueueAddPlayer(int type, CEntity* pEntity);
-	bool RemovePlayer(CEntity* pEntity);
-	bool EnqueueRemovePlayer(int type, CEntity* pEntity);
+	std::vector<CTile*> m_vecTiles;
+	int m_iTileCount;
 
-	void AddMove(CEntity* pEntity);
-	void RemoveMove(CEntity* pEntity);
-	st_Vector3F GetCenter();
+	// Grid 가 Player 을 관리할 필요가 있나??
+	// 필요 없을거 같은데
+	// 추후 확인후 삭제 해야함
+	CEntityVector m_vecPlayer{ EIndexType::VECTOR_INDEX_GRID };
+	CEntityVector m_vecMove{ EIndexType::VECTOR_INDEX_MOVE };
+
+	void EntityMoveRun();
+	void EntityJobRun();
+
+	void OnEnterZone(CEntity* pEntity);
+	void OnLeaveZone(CEntity* pEntity);
+	void OnTeleport(CEntity* pEntity);
+
+	bool AddPlayer(CEntity* pEntity);
+	bool RemovePlayer(CEntity* pEntity);
+
+	void SendInitAOITile(COORDINATE& pivot, CEntity* pEntity);
+	void SendRemoveAOITile(COORDINATE& pivot, CEntity* pEntity);
+public:
+	void Init(int id, CMainWorld* pParent);
+	void OnRegisterTile(CTile* pTile);
+
+	int GetRunID() { return m_iRunID; }
+	void SetRunID(int value) { m_iRunID = value; };
+
+	bool DirectAddPlayer(CEntity* pEntity) { return AddPlayer(pEntity); }
+	bool DirectRemovePlayer(CEntity* pEntity) { return RemovePlayer(pEntity); }
+
+	void EnqueueProcJob(PROC_MSG& msg);
+	void EnqueueEntityJob(int type, CEntity* pEntity);
+
+	void AddMoveVector(CEntity* pEntity);
+	void RemoveMoveVector(CEntity* pEntity);
+
+	void Update();
 };

@@ -56,7 +56,7 @@ void CNetServer::OnDisconnect(CSession* pSession)
 	if (pPlayer != nullptr)
 	{
 		pPlayer->SetRelease();
-
+		pPlayer->ReleaseRef();
 		ZONE_CHANGE_JOB z(GetTickCount(), eZONESTATUS::RELEASE, pPlayer->GetID()
 			, pPlayer->GetChannel(), pPlayer->GetZoneID()
 			, pPlayer->GetChannel(), pPlayer->GetZoneID()
@@ -229,21 +229,29 @@ CPlayer* CNetServer::AllocPlayer(int& outPlayerHandle)
 
 void CNetServer::FreePlayer(CPlayer* pPlayer)
 {
-	int key = pPlayer->GetID();
-	pPlayer->Clear();
+	pPlayer->ReleaseRef();
+}
+
+void CNetServer::AddPlayerHandle(int handle)
+{
 	EnterCriticalSection(&g_csPlayerManager);
 	{
-		g_PlayerHandleManager.push_back(key);
+		g_PlayerHandleManager.push_back(handle);
 	}
 	LeaveCriticalSection(&g_csPlayerManager);
+	m_iPlayerConnectCount.fetch_sub(1);
 }
 
 void CNetServer::NetLog()
 {
 	if (m_iLogTime + m_iLogDelayTime < GetTickCount())
 	{
-		g_LogServer.ILog("=== IO Count  Recv : %d[%d], Send : %d[%d] ==="
-			, GetRecvOverlappedCount(), GetRecvOverlappedSize(), GetSendOverlappedCount(), GetSendOverlappedSize());
+		g_LogServer.ILog("================\n \
+			IO Count  Recv : %d[%d], Send : %d[%d]\n \
+			SessionCount : %d, PlayerCount : %d\n \
+			================"
+			, GetRecvOverlappedCount(), GetRecvOverlappedSize(), GetSendOverlappedCount(), GetSendOverlappedSize()
+			, GetConnectionSessionCount(), GetPlayerCount());
 		ResetRecvOverlappedLog();
 		ResetSendOverlappedLog();
 

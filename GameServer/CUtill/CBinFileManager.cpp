@@ -20,7 +20,7 @@ bool CBinFileManager::ReadBinZoneIdxFile(const char* filepath)
 		return false;
 	
 	const std::vector<IDX> vecZoneIdx = bin.GetZoneIdxVector();
-	int Loop = vecZoneIdx.size();
+	int Loop = static_cast<int>(vecZoneIdx.size());
 	for (int i = 0; i < Loop; i++)
 	{
 		const IDX& data = vecZoneIdx[i];
@@ -61,7 +61,7 @@ bool CBinFileManager::ReadBinZoneFile(const char* filepath)
 	
 	std::vector<BinPortal> vecPortal = bin.GetPortalVector();
 	{
-		int Loop = vecPortal.size();
+		int Loop = static_cast<int>(vecPortal.size());
 		for (int i = 0; i < Loop; i++)
 		{
 			st_Portal portal;
@@ -82,7 +82,7 @@ bool CBinFileManager::ReadBinZoneFile(const char* filepath)
 
 	std::vector<BinSpawnPoint> vecSpawnPoint = bin.GetSpawnPointVector();
 	{
-		int Loop = vecSpawnPoint.size();
+		int Loop = static_cast<int>(vecSpawnPoint.size());
 		for (int i = 0; i < Loop; i++)
 		{
 			st_SpawnPoint spawn;
@@ -102,7 +102,7 @@ bool CBinFileManager::ReadBinZoneFile(const char* filepath)
 
 	std::vector<BinTriggerVolume> vecTriggerVolume = bin.GetTriggerVolumeVector();
 	{
-		int Loop = vecTriggerVolume.size();
+		int Loop = static_cast<int>(vecTriggerVolume.size());
 		for (int i = 0; i < Loop; i++)
 		{
 			st_TriggerVolume trigger;
@@ -126,7 +126,7 @@ bool CBinFileManager::ReadBinZoneFile(const char* filepath)
 			int triggerId = iter->first;
 			std::vector<BinTriggerVolumeParam> vecParam = iter->second;
 			std::vector<st_TriggerVolumeParam> vecStParam;
-			int Loop = vecParam.size();
+			int Loop = static_cast<int>(vecParam.size());
 			for (int i = 0; i < Loop; i++)
 			{
 				st_TriggerVolumeParam stParam;

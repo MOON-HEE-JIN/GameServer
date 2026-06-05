@@ -9,8 +9,8 @@ template <class T>
 class CTContainer
 {
 public:
-	CTContainer() = default;
-	~CTContainer() = default;
+	CTContainer() {};
+	~CTContainer() {};
 
 private:
 	std::vector<T*> vec;

@@ -2,77 +2,177 @@
 
 #include "../PacketProc.h"
 #include "../NetWork/CNetServer.h"
+#include "../Stub/StructDef.h"
 #include "../Stub/EnumDef.h"
 #include "../CPlayer.h"
 #include "../Log/CLog.h"
+#include "../MainWorld/CMainWorld.h"
 
 static PacketProc proc;
 
 CGrid::CGrid()
 {
+	m_iTileCount = 0;
 }
 
 CGrid::~CGrid()
 {
-	delete[] m_Tiles;
+
 }
 
-void CGrid::Init(int width, int height, int gridsizeW, int gridsizeH, st_Vector3F origin)
+void CGrid::EntityMoveRun()
 {
-	// 전체 크기
-	m_iWidth = width;
-	m_iHeight = height;
-	// 관장 하는 크기
-	m_iGridSizeW = gridsizeW;
-	m_iGridSizeH = gridsizeH;
+	const std::vector<CEntity*>& vec = m_vecMove.GetVector();
+	int Loop = static_cast<int>(vec.size());
 
-	m_stOrigin = origin;
-
-	m_iTileCountW = 4;
-	m_iTileCountH = 4;
-
-	m_iTileCount = 4 * 4;
-
-	int tilesizew = m_iGridSizeW / m_iTileCountW;
-	int tilesizeh = m_iGridSizeH / m_iTileCountH;
-
-	m_Tiles = new CTile[m_iTileCountH * m_iTileCountW];
-
-	COORDINATE coord = {0,0};
-	for (int i = 0; i < m_iTileCount; i++)
+	std::vector<CEntity*> vecCompleteMove;
+	for (int i = 0; i < Loop; i++)
 	{
-		m_Tiles[i].Init(coord.X, coord.Z, tilesizew, tilesizeh);
-		if (++coord.X >= 4)
+		bool ret = vec[i]->MoveUpdate();
+		
+		// true. 이동이 완료된 상태
+		vecCompleteMove.push_back(vec[i]);
+
+		// 여기서 Tile 을 바꿔줘야하나 아니면 CEntity::MoveComplete 에서 Tile 의 위치를 바꿔줘야하나?
+		// 중요한건 Tile 을 바꿀려면 Tile 을 알고 있는 CMainWorld 을 알고 있어야함
+		COORDINATE curTilePos = vec[i]->GetTilePos();
+		COORDINATE newTilePos = m_parent->CalCoord(vec[i]->GetPosition());
+
+		if (curTilePos != newTilePos)
 		{
-			coord.X = 0;
-			coord.Z++;
+			// Tile 변경
+			CTile* pCurTile = m_parent->GetTile(curTilePos);
+			CTile* pNewTile = m_parent->GetTile(newTilePos);
+
+			COORDINATE diff = newTilePos - curTilePos;
+
+#ifdef __DEBUG__
+			// 이동 으로 인한 tile 변경은 1 로 제한 된다
+			if (abs(diff.X) > 1 || abs(diff.Z) > 1)
+				g_LogGame.DLog("ERROR diff > 1");
+#endif // __DEBUG__
+
+			// 기존 AOI 범위 curTilePos +- AOI_VIEW_COUNT
+			// 변경 AOI 범위 newTilePos +- AOI_VIEW_COUNT
+			COORDINATE OutOfRangeAOI = { curTilePos.X - (diff.X * AOI_VIEW_COUNT), curTilePos.Z - (diff.Z * AOI_VIEW_COUNT) };	// 벗어난 AOI
+			COORDINATE InOfRangeAOI = { newTilePos.X + (diff.X * AOI_VIEW_COUNT), newTilePos.Z + (diff.Z * AOI_VIEW_COUNT) };	// 들어간 AOI 
+			
+			if (diff.X != 0)
+			{
+				int MinOutH = curTilePos.Z - AOI_VIEW_COUNT;
+				int MaxOutH = curTilePos.Z + AOI_VIEW_COUNT;
+				for (int H = MinOutH; H <= MaxOutH; H++)
+				{
+					CTile* pOut = m_parent->GetTile({ OutOfRangeAOI.X, H });
+					if (pOut == nullptr)
+						continue;
+
+					// OutOfRangeAOI
+					// 시야 밖으로 나감 판정
+				}
+
+				int MinInH = newTilePos.Z - AOI_VIEW_COUNT;
+				int MaxInH = newTilePos.Z + AOI_VIEW_COUNT;
+				for (int H = MinInH; H <= MaxInH; H++)
+				{
+					CTile* pIn = m_parent->GetTile({ InOfRangeAOI.X, H });
+					if (pIn == nullptr)
+						continue;
+
+					// InOfRangeAOI
+					// 시야 안으로 들어온 판정
+				}
+			}
+			
+			if (diff.Z != 0)
+			{
+				int MinOutW = curTilePos.X - AOI_VIEW_COUNT;
+				int MaxOutW = curTilePos.X + AOI_VIEW_COUNT;
+				
+				// 겹치는 부분 제거
+				if (diff.X < 0)
+					MaxOutW--;
+				else if (diff.X > 0)
+					MinOutW--;
+
+				for (int W = MinOutW; W <= MaxOutW; W++)
+				{
+					CTile* pOut = m_parent->GetTile({ W, OutOfRangeAOI.Z });
+					if (pOut == nullptr)
+						continue;
+
+					// OutOfRangeAOI
+					// 시야 밖으로 나감 판정
+				}
+
+				int MinInW = newTilePos.X - AOI_VIEW_COUNT;
+				int MaxInW = newTilePos.X + AOI_VIEW_COUNT;
+
+				// 겹치는 부분 제거
+				if (diff.X < 0)
+					MaxInW--;
+				else if (diff.X > 0)
+					MinInW--;
+
+				for (int W = MinInW; W <= MaxInW; W++)
+				{
+					CTile* pIn = m_parent->GetTile({ W, InOfRangeAOI.Z });
+					if (pIn == nullptr)
+						continue;
+
+					// InOfRangeAOI
+					// 시야 안으로 들어온 판정
+				}
+			}
+
+			// 같은 Grid 에서 관리 할때
+			if (pCurTile->GetManagementGrid() == pNewTile->GetManagementGrid())
+			{
+				pCurTile->RemovePlayer(vec[i]);
+				pNewTile->AddPlayer(vec[i]);
+			}
+			// 다른 Grid 에서 관리 할때
+			else
+			{
+				
+			}
 		}
+
+		if (!ret)
+			continue;
+
+		vecCompleteMove.push_back(vec[i]);
+		//GetTile();
+	}
+
+	Loop = static_cast<int>(vecCompleteMove.size());
+	for (int i = 0; i < Loop; i++)
+	{
+		RemoveMoveVector(vecCompleteMove[i]);
 	}
 }
 
-void CGrid::AddMsgProc()
+void CGrid::EntityJobRun()
 {
-	st_AddMsg msg;
-	while (m_AddQueue.POP(msg))
+	st_GridJob msg;
+	while (m_queueEntity.POP(msg))
 	{
 		switch (msg.type)
 		{
-		case EGRID_ADD_TYPE::GRID_ENTER:
-			AddPlayer(msg.pEntity);
+		case EGRID_ADD_TYPE::ENTER_ZONE:
+		{
+			OnEnterZone(msg.pEntity);
+		}
 			break;
-		case EGRID_ADD_TYPE::GRID_LEAVE:
-			RemovePlayer(msg.pEntity);
+		case EGRID_ADD_TYPE::LEAVE_ZONE:
+		{
+			OnLeaveZone(msg.pEntity);
+		}
 			break;
 		case EGRID_ADD_TYPE::ADD_TELEPORT:
 		{
-			AddPlayer(msg.pEntity);
-			st_STC_Teleport res;
-			res.ret = 0;
-			((CPlayer*)msg.pEntity)->SendPacket(res);
+			OnTeleport(msg.pEntity);
 		}
-		break;
-		case EGRID_ADD_TYPE::SUB:
-			RemovePlayer(msg.pEntity);
 			break;
 		default:
 			g_LogGame.ELog("ERROR msg Change Grid type: %d", msg.type);
@@ -81,29 +181,88 @@ void CGrid::AddMsgProc()
 	}
 }
 
-void CGrid::MoveUpdate()
+void CGrid::OnEnterZone(CEntity* pEntity)
 {
-	const std::vector<CEntity*> mvec = m_MoveVector.GetVector();
-	std::vector<CEntity*> movecomplete;
-	int Loop = mvec.size();
-	for (int i = 0; i < Loop; i++)
+	AddPlayer(pEntity);
+	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
+	if (pTile == nullptr)
 	{
-		if (mvec[i]->MoveUpdate())
-		{
-			movecomplete.push_back(mvec[i]);
-		}
+		g_LogGame.ELog("ERROR EnterZone");
+		return;
 	}
-	Loop = movecomplete.size();
-	for (int i = 0; i < Loop; i++)
-	{
-		m_MoveVector.RemoveEntity(movecomplete[i]);
-	}
+
+	pTile->AddPlayer(pEntity);
+	
+	SendInitAOITile(pTile->GetCoord(), pEntity);	
 }
 
-void CGrid::Update(void* pMainWorld)
+void CGrid::OnLeaveZone(CEntity* pEntity)
+{
+	RemovePlayer(pEntity);
+	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
+	if (pTile == nullptr)
+	{
+		g_LogGame.ELog("ERROR LeaveZone");
+		return;
+	}
+	pTile->RemovePlayer(pEntity);
+
+	SendRemoveAOITile(pTile->GetCoord(), pEntity);
+}
+
+void CGrid::OnTeleport(CEntity* pEntity)
+{
+	AddPlayer(pEntity);
+	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
+	if (pTile == nullptr)
+	{
+		g_LogGame.ELog("ERROR Teleport");
+		return;
+	}
+	pTile->AddPlayer(pEntity);
+	st_STC_Teleport res;
+	res.ret = 0;
+	res.pos = pEntity->GetPosition();
+	((CPlayer*)pEntity)->SendPacket(res);
+}
+
+void CGrid::Init(int id, CMainWorld* pParent)
+{
+	m_iID = id;
+	m_parent = pParent;
+}
+
+void CGrid::OnRegisterTile(CTile* pTile)
+{
+	m_iTileCount++;
+	m_vecTiles.push_back(pTile);
+	pTile->OnReigsterGrid(m_iID);
+}
+
+void CGrid::EnqueueProcJob(PROC_MSG& msg)
+{
+	m_queueProc.Enqueue(msg);
+}
+
+void CGrid::EnqueueEntityJob(int type, CEntity* pEntity)
+{
+	m_queueEntity.Push({ type, pEntity });
+}
+
+void CGrid::AddMoveVector(CEntity* pEntity)
+{
+	m_vecMove.AddEntity(pEntity);
+}
+
+void CGrid::RemoveMoveVector(CEntity* pEntity)
+{
+	m_vecMove.RemoveEntity(pEntity);
+}
+
+void CGrid::Update()
 {
 	PROC_MSG job;
-	while (m_queue.TryDequeue(job))
+	while (m_queueProc.TryDequeue(job))
 	{
 		CPlayer* pPlayer = g_Net.GetPlayer(job.PlayerHandle);
 		if (pPlayer == nullptr)
@@ -120,85 +279,75 @@ void CGrid::Update(void* pMainWorld)
 
 		proc.DO_GAME_Proc(job.type, pPlayer, job.packet);
 	}
-
-	AddMsgProc();
 	
-	MoveUpdate();
+	EntityJobRun();
 	
-
 	for (int i = 0; i < m_iTileCount; i++)
 	{
-		m_Tiles[i].Update();
+		m_vecTiles[i]->Update();
 	}
 }
 
 bool CGrid::AddPlayer(CEntity* pEntity)
 {
-	CPlayer* pPlayer = (CPlayer*)pEntity;
-	st_Vector3F pos = pEntity->GetPosition();
-
-	st_Vector3F localPos = pos - m_stOrigin;
-
-	int tileX = static_cast<int>(localPos.X) / m_iTileCountW;
-	int tileZ = static_cast<int>(localPos.Z) / m_iTileCountH;
-
-	if (!m_Tiles[tileZ * m_iTileCountW + tileX].AddPlayer(pPlayer->GetID(), pPlayer))
+	pEntity->SetGridID(m_iID);
+	
+	if (!m_vecPlayer.AddEntity(pEntity))
 		return false;
 
-	// 주위 에 생성 broadcast 필요
-
-	return true;
-}
-
-bool CGrid::EnqueueAddPlayer(int type, CEntity* pEntity)
-{
-	if (EGRID_ADD_TYPE::END < type || type < 0)
-		return false;
-	st_AddMsg msg = {type, pEntity};
-
-	m_AddQueue.Push(msg);
+	((CPlayer*)pEntity)->AddRef();
 	return true;
 }
 
 bool CGrid::RemovePlayer(CEntity* pEntity)
 {
-	CPlayer* pPlayer = (CPlayer*)pEntity;
-	st_Vector3F pos = pEntity->GetPosition();
-
-	st_Vector3F localPos = pos - m_stOrigin;
-
-	int tileX = static_cast<int>(localPos.X) / m_iTileCountW;
-	int tileZ = static_cast<int>(localPos.Z) / m_iTileCountH;
-
-	if (!m_Tiles[tileZ * m_iTileCountW + tileX].RemovePlayer(pPlayer->GetID(), pPlayer))
+	if (!m_vecPlayer.RemoveEntity(pEntity))
 		return false;
-
-	// 주위 에 삭제 boradcast 필요
+	
+	m_vecMove.RemoveEntity(pEntity);
+	((CPlayer*)pEntity)->ReleaseRef();
 
 	return true;
 }
 
-bool CGrid::EnqueueRemovePlayer(int type, CEntity* pEntity)
+void CGrid::SendInitAOITile(COORDINATE& pivot, CEntity* pEntity)
 {
-	if (EGRID_ADD_TYPE::END < type || type < 0)
-		return false;
-	st_AddMsg msg = { type, pEntity };
+	st_STC_AoiInPlayer res;
+	res.info.ID = pEntity->GetID();
+	res.info.pos = pEntity->GetPosition();
+	res.info.speed = pEntity->GetMoveSpeed();
 
-	m_AddQueue.Push(msg);
-	return true;
+	CPacket cPacket;
+	cPacket << res;
+
+	// 해당 Player 에게 해당 Grid 에 있는 Player 들의 정보 보내기
+	for (int z = -AOI_VIEW_COUNT; z <= AOI_VIEW_COUNT; z++)
+	{
+		for (int x = -AOI_VIEW_COUNT; x <= AOI_VIEW_COUNT; x++)
+		{
+			CTile* pAOITile = m_parent->GetTile({ pivot.X + x, pivot.Z + z });
+			if (pAOITile == nullptr)
+				continue;
+
+			// 시야 안으로 들어 왔음을 알림
+			pAOITile->Enqueue(ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI, pEntity);
+			// 시야 안으로 들어온 플레이어 에 대한 정보를 알림
+			pAOITile->Enqueue(ETILE_JOB_TYPE::BROADCAST_ENTITY_INFO, pEntity);
+		}
+	}
 }
 
-void CGrid::AddMove(CEntity* pEntity)
+void CGrid::SendRemoveAOITile(COORDINATE& pivot, CEntity* pEntity)
 {
-	m_MoveVector.AddEntity(pEntity);
-}
+	for (int z = -AOI_VIEW_COUNT; z <= AOI_VIEW_COUNT; z++)
+	{
+		for (int x = -AOI_VIEW_COUNT; x <= AOI_VIEW_COUNT; x++)
+		{
+			CTile* pAOITile = m_parent->GetTile({ pivot.X + x, pivot.Z + z });
+			if (pAOITile == nullptr)
+				continue;
 
-void CGrid::RemoveMove(CEntity* pEntity)
-{
-	m_MoveVector.RemoveEntity(pEntity);
-}
-
-st_Vector3F CGrid::GetCenter()
-{
-	return m_stOrigin + st_Vector3F(m_iGridSizeW * 0.5f, 0, m_iGridSizeH * 0.5f);
+			pAOITile->Enqueue(ETILE_JOB_TYPE::BROADCAST_ENTITY_REMOVE, pEntity);
+		}
+	}
 }

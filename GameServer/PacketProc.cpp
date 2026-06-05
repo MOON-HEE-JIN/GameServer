@@ -197,10 +197,10 @@ int PacketProc::DO_GAME_TELEPORT(CPlayer* pTarget, CPacket& pReqPacket)
     if (!pZone->CheckPos(req.pos))
         return -1;
 
-    pTarget->Teleport(req.pos);
+    int ret = pTarget->Teleport(req.pos);
 
     g_LogGame.DLog("TelePort");
 
-    return 0;
+    return ret;
 }
 

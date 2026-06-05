@@ -43,7 +43,7 @@ bool CEntity::MoveUpdate()
     if (remaindist <= speeddist)
     {
         m_stPosition = m_stGoalPosition;
-		MoveComplete();
+		//MoveComplete();
         return true;
     }
     else

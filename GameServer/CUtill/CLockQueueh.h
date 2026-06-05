@@ -2,6 +2,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <queue>
+#include <vector>
 
 template<typename T>
 class CLQueue
@@ -17,6 +18,7 @@ private:
 public:
 	void Push(T value);
 	bool POP(T& out);
+	int PopVector(std::vector<T>& vec);
 };
 
 template<typename T>
@@ -52,4 +54,19 @@ inline bool CLQueue<T>::POP(T& out)
 	m_queue.pop();
 	LeaveCriticalSection(&cs);
 	return true;
+}
+
+template<typename T>
+inline int CLQueue<T>::PopVector(std::vector<T>& vec)
+{
+	int ret = 0;
+	EnterCriticalSection(&cs);
+	while (!m_queue.empty())
+	{
+		vec.push_back(m_queue.front());
+		m_queue.pop();
+		ret++;
+	}
+	LeaveCriticalSection(&cs);
+	return ret;
 }

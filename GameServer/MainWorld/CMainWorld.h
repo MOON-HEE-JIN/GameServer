@@ -54,15 +54,15 @@ public:
 	virtual bool Teleport(CPlayer* pPlayer, st_Vector3F pos) override;
 	virtual void Process() override {};
 	virtual void PushMoveVector(CEntity* pEntity) override;
+	virtual bool SendZoneInfo(CPlayer* pPlayer) override;
 	void Run(int id);
 	void Start();
 
 public:
-	bool IsValidCoord(COORDINATE& coord);
-	bool IsValid(int x, int y);
 	COORDINATE CalCoord(st_Vector3F pos);
 public:
 	CTile* GetTile(st_Vector3F pos);
+	CTile* GetTile(const COORDINATE& coord);
 	CGrid* GetGrid(int id);
 };
 

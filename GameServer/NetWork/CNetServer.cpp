@@ -56,7 +56,7 @@ void CNetServer::OnDisconnect(CSession* pSession)
 	if (pPlayer != nullptr)
 	{
 		pPlayer->SetRelease();
-
+		pPlayer->ReleaseRef();
 		ZONE_CHANGE_JOB z(GetTickCount(), eZONESTATUS::RELEASE, pPlayer->GetID()
 			, pPlayer->GetChannel(), pPlayer->GetZoneID()
 			, pPlayer->GetChannel(), pPlayer->GetZoneID()
@@ -239,7 +239,7 @@ void CNetServer::AddPlayerHandle(int handle)
 		g_PlayerHandleManager.push_back(handle);
 	}
 	LeaveCriticalSection(&g_csPlayerManager);
-	m_iPlayerConnectCount.fetch_add(1);
+	m_iPlayerConnectCount.fetch_sub(1);
 }
 
 void CNetServer::NetLog()

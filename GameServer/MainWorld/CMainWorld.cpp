@@ -41,6 +41,9 @@ CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
 	// Tile 을 관리할 Grid
 	m_Grids = new CGrid[MAX_MANAGENTMENT_GRID_COUNT];
 
+	for (int i = 0; i < MAX_MANAGENTMENT_GRID_COUNT; i++)
+		m_Grids[i].Init(this);
+
 	// MainWorld Tile 로 나누기
 	m_Tiles = new CTile[m_iAllTileCount];
 
@@ -56,6 +59,16 @@ CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
 			m_Grids[H % MAX_MANAGENTMENT_GRID_COUNT].OnRegisterTile(&m_Tiles[H * m_iTileCountW + W]);
 		}
 	}
+
+	// 일정 크기로 Grid 에 tile 을 등록해주는 방식이라면
+	// 그러면 Grid 의 bounds 0 ~ 512  512 ~ 1024 이렇게 2 * 2 로 나누고
+	// Grid bounds 에 해당하는 tile 을 넣어준다면
+	// 지금 방식은 어느 타일이든 Grid 에 들어갈수 있고 Grid 에서 관리하는 Tile 의 규칙이 없다면
+	// 서로 다른 Grid 사이에서의 이동이 많이 일어날까  범위를 맞춘 Grid 하고 차이가 날까
+	// 범위 에 맞게 tile 이 설정된 Grid vs 임의 tile 을 가지고 있는 Grid
+	// 어느 쪽이 서로 다른 Thread 사이의 이동이 많이 일어나는가? --> 맵의 구성요소 에 따라 달라지지 않나?
+	// 일단 진행
+	//
 
 	m_vecThreadRunGrids.resize(MAX_MAINWORLD_THREAD_COUNT);
 }
@@ -96,7 +109,7 @@ void CMainWorld::OnEnterZone(CPlayer* pPlayer)
 	}
 	
 	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::GRID_ENTER, pPlayer->GetID(), pPlayer);
-	pTile->AddPlayer(pPlayer->GetID(), pPlayer);
+	pTile->AddPlayer(pPlayer);
 	//g_LogGame.ILog("Enter %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
 
@@ -112,7 +125,7 @@ void CMainWorld::OnLeaveZone(CPlayer* pPlayer)
 	}
 
 	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::GRID_LEAVE, pPlayer->GetID(), pPlayer);
-	pTile->RemovePlayer(pPlayer->GetID(), pPlayer);
+	pTile->RemovePlayer(pPlayer);
 	//g_LogGame.ILog("Leave %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
 
@@ -149,12 +162,9 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 	CGrid* pNewGrid = GetGrid(pNewTile->GetManagementGrid());
 
 	CTile* pCurTile = GetTile(pPlayer->GetPosition());
+	pCurTile->RemovePlayer(pPlayer);
 	
-	pCurGrid->DirectRemovePlayer(pPlayer);
-	pCurTile->RemovePlayer(pPlayer->GetID(), pPlayer);
-
-	// 추후 Teleport 시 이동 계산이 필요하다면 이 부분에서 계산 후 이동 처리
-	if (0)
+	if (pCurGrid->GetRunID() == pNewGrid->GetRunID())
 	{
 		g_LogGame.ELog("ERROR Teleport");
 		return false;
@@ -165,10 +175,14 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 	if (pCurGrid->GetRunID() == pNewGrid->GetRunID())
 	{		
 		pNewGrid->DirectAddPlayer(pPlayer);
-		pNewTile->AddPlayer(pPlayer->GetID(), pPlayer);
+		pNewTile->AddPlayer(pPlayer);
 		return true;
 	}
 	
+	// pCurGrid 여기서 Enqueue 로 할 이유가 있는가? 한번 생각 해보기
+	pCurGrid->EnqueueEntityJob(EGRID_ADD_TYPE::GRID_LEAVE, pPlayer->GetID(), pPlayer);
+	
+	pPlayer->SetPosition(pos);
 	pNewGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ADD_TELEPORT, pPlayer->GetID(), pPlayer);
 	
 	return true;
@@ -182,6 +196,12 @@ void CMainWorld::PushMoveVector(CEntity* pEntity)
 		return;
 	
 	pCurGrid->AddMoveVector(pEntity);
+}
+
+bool CMainWorld::SendZoneInfo(CPlayer* pPlayer)
+{
+	// tile 기반 주변 정보 보내기
+	return false;
 }
 
 void CMainWorld::Run(int id)
@@ -219,6 +239,11 @@ void CMainWorld::Start()
 	}
 }
 
+COORDINATE CMainWorld::CalCoord(st_Vector3F pos)
+{
+	return { static_cast<int>(pos.X) / DEFAULT_TILE_SIZE, static_cast<int>(pos.Z) / DEFAULT_TILE_SIZE };
+}
+
 CTile* CMainWorld::GetTile(st_Vector3F pos)
 {
 	if (pos.X < 0 || pos.X > m_iWidth || pos.Z < 0 || pos.Z > m_iHeight)
@@ -226,7 +251,15 @@ CTile* CMainWorld::GetTile(st_Vector3F pos)
 
 	COORDINATE coord = {static_cast<int>(pos.X) / DEFAULT_TILE_SIZE, static_cast<int>(pos.Z) / DEFAULT_TILE_SIZE };
 	
-	return &m_Tiles[coord.Z * DEFAULT_TILE_SIZE + coord.X];
+	return &m_Tiles[coord.Z * m_iTileCountW + coord.X];
+}
+
+CTile* CMainWorld::GetTile(const COORDINATE& coord)
+{
+	if (coord.Z < 0 || coord.Z >= m_iTileCountH || coord.X < 0 || coord.X >= m_iTileCountW)
+		return nullptr;
+
+	return &m_Tiles[coord.Z * m_iTileCountW + coord.X];
 }
 
 CGrid* CMainWorld::GetGrid(int id)

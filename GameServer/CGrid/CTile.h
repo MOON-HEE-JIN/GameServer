@@ -1,7 +1,9 @@
 ﻿#pragma once
 
 #include "../CEntity.h"
-#include "../CUtill/CCellContainer.h"
+#include "../CUtill/CEntityManagmentVector.h"
+#include "../CUtill/CLockQueueh.h"
+#include "../CUtill/CPacket.h"
 
 class CTile
 {
@@ -17,19 +19,21 @@ private:
 	st_Vector3F m_StartPos;
 	st_Vector3F m_EndPos;
 
-	CTContainer<CEntity> m_Players;
-	CTContainer<CEntity> m_Monsters;
+	CLQueue<CPacket*> m_queuePacket;
+
+	CEntityVector m_vecPlayer{ EIndexType::VECTOR_INDEX_TILE };
+	CEntityVector m_vecMonster{ EIndexType::VECTOR_INDEX_TILE };
 
 	int m_iDebugLogTime;
 	int m_iDebugLogDelayTime = 2 * 1000;
 public:
 	int GetActiveCount() { return m_iActive.load(); }
-
 public:
 	void Init(COORDINATE coord, st_Vector3F start, st_Vector3F end);
 
-	bool AddPlayer(int key, CEntity* pEntity);
-	bool RemovePlayer(int key, CEntity* pEntity);
+	void Enqueue(CPacket* pPacket);
+	bool AddPlayer(CEntity* pEntity);
+	bool RemovePlayer(CEntity* pEntity);
 
 	void OnReigsterGrid(int Id) { m_iManagementID = Id; }
 
@@ -37,4 +41,6 @@ public:
 	COORDINATE GetCoord() { return m_Coord; }
 
 	void Update();
+public:
+	void SendPacket(CPacket* pPacket);
 };

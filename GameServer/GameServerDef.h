@@ -7,6 +7,8 @@
 #define ProcSubThreadCnt 2
 #define ProcThreadCnt ProcLoginThreadCnt + ProcMainThreadCnt + ProcSubThreadCnt
 
+#define AOI_VIEW_COUNT 2
+
 #define POSITION_TOLERANCE 5
 #define FIXED_DELTA 0.01667f		// fps 60
 #define MAX_FRAME_LOOP_COUNT 6
@@ -78,8 +80,14 @@ typedef struct st_GridPos
 	st_GridPos() = default;
 	st_GridPos(int _X, int _Z) : X(_X), Z(_Z) {};
 
-	bool operator==(const st_GridPos& other)
+	bool operator==(const st_GridPos& other) const
 	{
 		return (X == other.X && Z == other.Z);
 	}
+
+	st_GridPos operator-(const st_GridPos& other) const
+	{
+		return st_GridPos(X - other.X, Z - other.Z);
+	}
+
 }COORDINATE;

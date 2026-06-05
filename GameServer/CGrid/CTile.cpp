@@ -12,9 +12,13 @@ void CTile::Init(COORDINATE coord, st_Vector3F start, st_Vector3F end)
 
 	//g_LogGame.DLog("Create Tile[%d,%d] size[%d,%d]", coordX, coordZ, tilew, tileh);
 }
-bool CTile::AddPlayer(int key, CEntity* pEntity)
+void CTile::Enqueue(CPacket* pPacket)
 {
-	bool ret = m_Players.Add(key, pEntity);
+	m_queuePacket.Push(pPacket);
+}
+bool CTile::AddPlayer(CEntity* pEntity)
+{
+	bool ret = m_vecPlayer.AddEntity(pEntity);
 	if (ret)
 	{
 		m_iActive.fetch_add(1);
@@ -24,9 +28,9 @@ bool CTile::AddPlayer(int key, CEntity* pEntity)
 	return ret;
 }
 
-bool CTile::RemovePlayer(int key, CEntity* pEntity)
+bool CTile::RemovePlayer(CEntity* pEntity)
 {
-	bool ret = m_Players.Sub(key, pEntity);
+	bool ret = m_vecPlayer.RemoveEntity(pEntity);
 	if (ret)
 	{
 		m_iActive.fetch_sub(1);

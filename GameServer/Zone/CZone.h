@@ -37,6 +37,5 @@ public:
 	void PushMoveVector(CEntity* pEntity);
 	void PopMoveVector(CEntity* pEntity);
 
-	bool SendZoneInfo(CPlayer* pPlayer);
 	virtual void OnLeaveZone(CPlayer* pPlayer) override;
 };

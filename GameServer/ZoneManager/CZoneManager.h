@@ -16,7 +16,8 @@ public:
 
 public:
 	bool ReadZoneBinFile(const char* filepath);
-
+	std::map<int, int> m_mapDebug;
+	std::map<int, int> m_mapDebug2;
 private:
 	const int MAX_MAIN_WORLD_COUNT = 1;
 	std::unordered_map<int, st_IDX> m_mapZoneIDX;
@@ -52,7 +53,6 @@ public:
 	CZoneBasic* GetZone(int Channel, int ZoneID);
 public:
 	void SendZone(int Channel, int Zone, CPacket* pPacket, CPlayer* pPlayer = nullptr);
-	bool SendZoneInfo(int Channel, int Zone, CPlayer* pPlayer);
 public:
 	int m_iLogDelayTime = 1 * 1000;
 	int m_iLogTime = 0;

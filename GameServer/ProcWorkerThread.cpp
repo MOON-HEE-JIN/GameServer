@@ -193,6 +193,20 @@ void CProcWorker::ProxyProc()
     std::vector<PROC_MSG> vec;
     while (m_ProcJobQueue->TryDequeue(job))
     {
+        
+        CPlayer* pPlayer = g_Net.GetPlayer(job.PlayerHandle);
+        if (pPlayer == nullptr)
+            continue;
+        if (pPlayer->GetZoneStatus() != eZONESTATUS::STABLE)
+        {
+            st_STC_ChangeingZone res;
+            res.ret = ERROR_CODE::ZONE_CHANEING;
+            res.type = job.type;
+
+            pPlayer->SendPacket(res);
+            continue;
+        }
+
         vec.push_back(job);
 
         // mainworld 인 경우 오는 패킷이 많을수 있음

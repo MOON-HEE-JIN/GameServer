@@ -10,6 +10,7 @@
 
 #include "../Zone/CBinZoneIdx.h"
 #include "../Zone/CBinZone.h"
+#include "../NetWork/CNetServer.h"
 
 CZoneManager g_ZoneManager;
 
@@ -131,15 +132,6 @@ void CZoneManager::SendZone(int Channel, int Zone, CPacket* pPacket, CPlayer* pP
 	m_mapZones[Zone][Channel]->SendZoneCast(pPacket, pPlayer);
 }
 
-bool CZoneManager::SendZoneInfo(int Channel, int Zone, CPlayer* pPlayer)
-{
-	if (!IsValidChannelZone(Channel, Zone))
-		return false;
-
-	m_mapZones[Zone][Channel]->SendZoneInfo(pPlayer);
-	return true;
-}
-
 bool CZoneManager::ReqEnterLoginZone(CPlayer* pPlayer)
 {
 	if (pPlayer->GetZoneID() != 0)
@@ -150,15 +142,13 @@ bool CZoneManager::ReqEnterLoginZone(CPlayer* pPlayer)
 
 	CZone_Login* pZone = (CZone_Login*)m_mapZones[0][pPlayer->GetChannel()];
 
-	ZONE_CHANGE_JOB job(GetTickCount(), eZONESTATUS::ENTER, pPlayer->GetID()
+	pPlayer->SetZoneStatus(eZONESTATUS::LOGIN);
+	ZONE_CHANGE_JOB job(GetTickCount(), eZONESTATUS::LOGIN, pPlayer->GetID()
 		, pPlayer->GetChannel(), 0
 		, pPlayer->GetChannel(), 0
 		, 0, 0);
 
-	pPlayer->AddRef();
 	pZone->Enqueue(job);
-	pPlayer->SetZoneStatus(eZONESTATUS::LEAVE);
-
 	return true;
 }
 
@@ -214,8 +204,14 @@ bool CZoneManager::ReqEnterZone(CPlayer* pPlayer, int Channel, int ToZone)
 			, pPlayer->GetChannel(), pPlayer->GetZoneID()
 			, 0, 0);
 
-		pToZone->Enqueue(job);
+		if (m_mapDebug.find(pPlayer->GetID()) == m_mapDebug.end())
+		{
+			m_mapDebug[pPlayer->GetID()] = 1;
+		}
+		
 		pPlayer->SetZoneStatus(eZONESTATUS::LEAVE);
+
+		pToZone->Enqueue(job);
 		return true;
 	}
 }
@@ -352,6 +348,19 @@ void CZoneManager::Log()
 
 bool EnqueueChangeJob(int id, int zone, ZONE_CHANGE_JOB& job)
 {
+	if (job.type == eZONESTATUS::LEAVE)
+	{
+		CPlayer* pPlayer = g_Net.GetPlayer(job.handle);
+		if (pPlayer == nullptr)
+			return false;
+		
+		if (job.ack == false && pPlayer->m_iDebugCoutn == 1)
+		{
+			int a = 100;
+			a++;
+		}
+		
+	}
 	CZoneBasic* pZone = g_ZoneManager.GetZone(id, zone);
 	if (pZone == nullptr)
 		return false;

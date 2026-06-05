@@ -2,6 +2,7 @@
 
 #include "../PacketProc.h"
 #include "../NetWork/CNetServer.h"
+#include "../Stub/StructDef.h"
 #include "../Stub/EnumDef.h"
 #include "../CPlayer.h"
 #include "../Log/CLog.h"
@@ -153,24 +154,25 @@ void CGrid::EntityMoveRun()
 
 void CGrid::EntityJobRun()
 {
-	st_AddMsg msg;
+	st_GridJob msg;
 	while (m_queueEntity.POP(msg))
 	{
 		switch (msg.type)
 		{
-		case EGRID_ADD_TYPE::GRID_ENTER:
-			AddPlayer(msg.pEntity);
+		case EGRID_ADD_TYPE::ENTER_ZONE:
+		{
+			OnEnterZone(msg.pEntity);
+		}
 			break;
-		case EGRID_ADD_TYPE::GRID_LEAVE:
-			RemovePlayer(msg.pEntity);
+		case EGRID_ADD_TYPE::LEAVE_ZONE:
+		{
+			OnLeaveZone(msg.pEntity);
+		}
 			break;
 		case EGRID_ADD_TYPE::ADD_TELEPORT:
 		{
 			OnTeleport(msg.pEntity);
 		}
-		break;
-		case EGRID_ADD_TYPE::SUB:
-			RemovePlayer(msg.pEntity);
 			break;
 		default:
 			g_LogGame.ELog("ERROR msg Change Grid type: %d", msg.type);
@@ -179,17 +181,54 @@ void CGrid::EntityJobRun()
 	}
 }
 
+void CGrid::OnEnterZone(CEntity* pEntity)
+{
+	AddPlayer(pEntity);
+	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
+	if (pTile == nullptr)
+	{
+		g_LogGame.ELog("ERROR EnterZone");
+		return;
+	}
+
+	pTile->AddPlayer(pEntity);
+	
+	SendInitAOITile(pTile->GetCoord(), pEntity);	
+}
+
+void CGrid::OnLeaveZone(CEntity* pEntity)
+{
+	RemovePlayer(pEntity);
+	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
+	if (pTile == nullptr)
+	{
+		g_LogGame.ELog("ERROR LeaveZone");
+		return;
+	}
+	pTile->RemovePlayer(pEntity);
+
+	SendRemoveAOITile(pTile->GetCoord(), pEntity);
+}
+
 void CGrid::OnTeleport(CEntity* pEntity)
 {
 	AddPlayer(pEntity);
-
+	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
+	if (pTile == nullptr)
+	{
+		g_LogGame.ELog("ERROR Teleport");
+		return;
+	}
+	pTile->AddPlayer(pEntity);
 	st_STC_Teleport res;
 	res.ret = 0;
+	res.pos = pEntity->GetPosition();
 	((CPlayer*)pEntity)->SendPacket(res);
 }
 
-void CGrid::Init(CMainWorld* pParent)
+void CGrid::Init(int id, CMainWorld* pParent)
 {
+	m_iID = id;
 	m_parent = pParent;
 }
 
@@ -205,9 +244,9 @@ void CGrid::EnqueueProcJob(PROC_MSG& msg)
 	m_queueProc.Enqueue(msg);
 }
 
-void CGrid::EnqueueEntityJob(int type, int key, CEntity* pEntity)
+void CGrid::EnqueueEntityJob(int type, CEntity* pEntity)
 {
-	m_queueEntity.Push({ type, key, pEntity });
+	m_queueEntity.Push({ type, pEntity });
 }
 
 void CGrid::AddMoveVector(CEntity* pEntity)
@@ -245,7 +284,7 @@ void CGrid::Update()
 	
 	for (int i = 0; i < m_iTileCount; i++)
 	{
-		//m_vecTiles[i]->Update();
+		m_vecTiles[i]->Update();
 	}
 }
 
@@ -253,12 +292,62 @@ bool CGrid::AddPlayer(CEntity* pEntity)
 {
 	pEntity->SetGridID(m_iID);
 	
-	return m_vecPlayer.AddEntity(pEntity);
+	if (!m_vecPlayer.AddEntity(pEntity))
+		return false;
+
+	((CPlayer*)pEntity)->AddRef(88);
+	return true;
 }
 
 bool CGrid::RemovePlayer(CEntity* pEntity)
 {
+	if (!m_vecPlayer.RemoveEntity(pEntity))
+		return false;
+	
 	m_vecMove.RemoveEntity(pEntity);
-	pEntity->SetGridID(-1);
-	return m_vecPlayer.RemoveEntity(pEntity);
+	((CPlayer*)pEntity)->ReleaseRef(88);
+
+	return true;
+}
+
+void CGrid::SendInitAOITile(COORDINATE& pivot, CEntity* pEntity)
+{
+	st_STC_AoiInPlayer res;
+	res.info.ID = pEntity->GetID();
+	res.info.pos = pEntity->GetPosition();
+	res.info.speed = pEntity->GetMoveSpeed();
+
+	CPacket cPacket;
+	cPacket << res;
+
+	// 해당 Player 에게 해당 Grid 에 있는 Player 들의 정보 보내기
+	for (int z = -AOI_VIEW_COUNT; z <= AOI_VIEW_COUNT; z++)
+	{
+		for (int x = -AOI_VIEW_COUNT; x <= AOI_VIEW_COUNT; x++)
+		{
+			CTile* pAOITile = m_parent->GetTile({ pivot.X + x, pivot.Z + z });
+			if (pAOITile == nullptr)
+				continue;
+
+			// 시야 안으로 들어 왔음을 알림
+			pAOITile->Enqueue(ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI, pEntity);
+			// 시야 안으로 들어온 플레이어 에 대한 정보를 알림
+			pAOITile->Enqueue(ETILE_JOB_TYPE::BROADCAST_ENTITY_INFO, pEntity);
+		}
+	}
+}
+
+void CGrid::SendRemoveAOITile(COORDINATE& pivot, CEntity* pEntity)
+{
+	for (int z = -AOI_VIEW_COUNT; z <= AOI_VIEW_COUNT; z++)
+	{
+		for (int x = -AOI_VIEW_COUNT; x <= AOI_VIEW_COUNT; x++)
+		{
+			CTile* pAOITile = m_parent->GetTile({ pivot.X + x, pivot.Z + z });
+			if (pAOITile == nullptr)
+				continue;
+
+			pAOITile->Enqueue(ETILE_JOB_TYPE::BROADCAST_ENTITY_REMOVE, pEntity);
+		}
+	}
 }

@@ -22,12 +22,13 @@ struct st_Msg
 	__int32		type;
 	st_String		Message;
 };
-struct st_CTS_ChangeZone
+struct st_PlayerInfo
 {
-	__int32		channel;
-	__int32		zone;
+	__int32		ID;
+	st_Vector3F		pos;
+	float		speed;
 };
-struct st_CTS_EnterZone
+struct st_CTS_ChangeZone
 {
 	__int32		channel;
 	__int32		zone;
@@ -55,6 +56,24 @@ struct st_CTS_Teleport
 {
 	st_Vector3F		pos;
 };
+struct st_STC_AoiInPlayer
+{
+	st_PlayerInfo		info;
+};
+struct st_STC_AoiInPlayers
+{
+	__int32		Loop1;
+	st_PlayerInfo		info[50];
+};
+struct st_STC_AoiOutPlayer
+{
+	__int32		ID;
+};
+struct st_STC_AoiOutPlayers
+{
+	__int32		Loop1;
+	st_PlayerInfo		info[50];
+};
 struct st_STC_ChangeZone
 {
 	__int32		ret;
@@ -69,24 +88,6 @@ struct st_STC_ChangeingZone
 struct st_STC_ConnectInfo
 {
 	st_ConnectInfo		info;
-};
-struct st_STC_CreateChar
-{
-	__int32		ID;
-	st_Vector3F		pos;
-	float		speed;
-};
-struct st_STC_EnterZone
-{
-	__int32		ret;
-	__int32		Loop1;
-	st_EntityInfo		info[50];
-};
-struct st_STC_LeaveZone
-{
-	__int32		channel;
-	__int32		zone;
-	__int32		ID;
 };
 struct st_STC_LoopBack
 {
@@ -112,4 +113,5 @@ struct st_STC_ObserverConnect
 struct st_STC_Teleport
 {
 	__int32		ret;
+	st_Vector3F		pos;
 };

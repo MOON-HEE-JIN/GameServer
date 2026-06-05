@@ -16,9 +16,6 @@ class PacketProc : public Stub<CPlayer, CPacket>
 	int DO_GAME_CHANGEZONE(CPlayer* pTarget, CPacket& pReqPacket) override;
 
 	// Stub을(를) 통해 상속됨
-	int DO_GAME_ENTERZONE(CPlayer* pTarget, CPacket& pReqPacket) override;
-
-	// Stub을(를) 통해 상속됨
 	int DO_GAME_MOVESTART(CPlayer* pTarget, CPacket& pReqPacket) override;
 	int DO_GAME_MOVESTOP(CPlayer* pTarget, CPacket& pReqPacket) override;
 

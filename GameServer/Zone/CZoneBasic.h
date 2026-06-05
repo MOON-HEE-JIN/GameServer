@@ -3,7 +3,6 @@
 #include "CZoneBase.h"
 #include "../CPlayer.h"
 #include "../MemoryManager/CLockFreeQueue_FromGPT.h"
-
 #include <vector>
 #include <unordered_map>
 
@@ -20,7 +19,7 @@ protected:
 	virtual void OnLeaveZone(CPlayer* pPlayer) {};
 private:
 	CLockFreeQueue_MPSC<ZONE_CHANGE_JOB> m_queue;
-
+	std::vector<ZONE_CHANGE_JOB> m_vecChangeZoneJobDebug;
 public:
 	virtual bool Teleport(CPlayer* pPlayer, st_Vector3F pos) { return true; };
 

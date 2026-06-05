@@ -61,6 +61,10 @@ public:
 public:
 	COORDINATE CalCoord(st_Vector3F pos);
 public:
+	int GetTileCountW() { return m_iTileCountW; }
+	int GetTileCountH() { return m_iTileCountH; }
+	int GetTileKey(COORDINATE& coord) { return coord.X * m_iTileCountW + coord.Z; }
+
 	CTile* GetTile(st_Vector3F pos);
 	CTile* GetTile(const COORDINATE& coord);
 	CGrid* GetGrid(int id);

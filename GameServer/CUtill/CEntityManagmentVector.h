@@ -24,7 +24,7 @@ public:
 			return false;
 
 		m_vec.push_back(pEntity);
-
+		
 		return true;
 	}
 	bool RemoveEntity(CEntity* pEntity)

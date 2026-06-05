@@ -94,33 +94,6 @@ int PacketProc::DO_GAME_CHANGEZONE(CPlayer* pTarget, CPacket& pReqPacket)
     return ERROR_CODE::NOT_ERROR;
 }
 
-int PacketProc::DO_GAME_ENTERZONE(CPlayer* pTarget, CPacket& pReqPacket)
-{
-    st_CTS_EnterZone data;
-    pReqPacket >> data;
-
-    if (pTarget->GetZoneID() != data.zone)
-        return ERROR_CODE::ZONE_ID;
-
-    if (pTarget->GetChannel() != data.channel)
-        return ERROR_CODE::ZONE_ID;
-
-    // Zone 에 대한 주위 정보 보내기 (본인 제외)
-    if (!g_ZoneManager.SendZoneInfo(pTarget->GetChannel(), pTarget->GetZoneID(), pTarget))
-        return ERROR_CODE::ZONE_ID;
-
-    // Zone 에서 의 본인 정보 보내기
-    st_STC_CreateChar pack;
-    pack.ID = pTarget->GetID();
-    pack.pos.X = 0;
-	pack.pos.Y = 0;
-    pack.pos.Z = 0;
-    pack.speed = pTarget->GetMoveSpeed();
-    //pTarget->SendPacket(pack);
-
-    return 0;
-}
-
 int PacketProc::DO_GAME_MOVESTART(CPlayer* pTarget, CPacket& pReqPacket)
 {
     st_CTS_MoveStart req;

@@ -31,10 +31,29 @@ void CPlayer::Clear()
 	m_bRelease.store(false);
 }
 
-void CPlayer::ReleaseRef()
+void CPlayer::AddRef(int reason)
+{
+	m_iRef.fetch_add(1);
+	m_iRefReason.push_back(reason);
+	if (m_iRef.load() == 6)
+	{
+		int a = 100;
+		a++;
+	}
+}
+
+void CPlayer::ReleaseRef(int reason)
 {
 	m_iRef.fetch_sub(1);
-
+	if (m_iRefReasonCount.size() > 0)
+	{
+		if (m_iRefReasonCount[0] == reason)
+		{
+			int a = 100;
+			a++;
+		}
+	}
+	m_iRefReasonCount.push_back(reason);
 	if (m_iRef.load() > 0)
 		return;
 

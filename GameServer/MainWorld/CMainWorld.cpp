@@ -42,7 +42,7 @@ CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
 	m_Grids = new CGrid[MAX_MANAGENTMENT_GRID_COUNT];
 
 	for (int i = 0; i < MAX_MANAGENTMENT_GRID_COUNT; i++)
-		m_Grids[i].Init(this);
+		m_Grids[i].Init(i, this);
 
 	// MainWorld Tile 로 나누기
 	m_Tiles = new CTile[m_iAllTileCount];
@@ -108,8 +108,8 @@ void CMainWorld::OnEnterZone(CPlayer* pPlayer)
 		return;
 	}
 	
-	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::GRID_ENTER, pPlayer->GetID(), pPlayer);
-	pTile->AddPlayer(pPlayer);
+	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ENTER_ZONE, pPlayer);
+	
 	//g_LogGame.ILog("Enter %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
 
@@ -124,8 +124,8 @@ void CMainWorld::OnLeaveZone(CPlayer* pPlayer)
 		return;
 	}
 
-	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::GRID_LEAVE, pPlayer->GetID(), pPlayer);
-	pTile->RemovePlayer(pPlayer);
+	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::LEAVE_ZONE, pPlayer);
+	
 	//g_LogGame.ILog("Leave %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
 
@@ -162,9 +162,12 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 	CGrid* pNewGrid = GetGrid(pNewTile->GetManagementGrid());
 
 	CTile* pCurTile = GetTile(pPlayer->GetPosition());
+	
+	pCurGrid->DirectRemovePlayer(pPlayer);
 	pCurTile->RemovePlayer(pPlayer);
 	
-	if (pCurGrid->GetRunID() == pNewGrid->GetRunID())
+	// 추후 Teleporty 관련 조건 체크
+	if (0)
 	{
 		g_LogGame.ELog("ERROR Teleport");
 		return false;
@@ -179,11 +182,7 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 		return true;
 	}
 	
-	// pCurGrid 여기서 Enqueue 로 할 이유가 있는가? 한번 생각 해보기
-	pCurGrid->EnqueueEntityJob(EGRID_ADD_TYPE::GRID_LEAVE, pPlayer->GetID(), pPlayer);
-	
-	pPlayer->SetPosition(pos);
-	pNewGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ADD_TELEPORT, pPlayer->GetID(), pPlayer);
+	pNewGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ADD_TELEPORT, pPlayer);
 	
 	return true;
 }

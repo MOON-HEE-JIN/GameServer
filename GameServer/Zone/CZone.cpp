@@ -47,42 +47,6 @@ void CZone::PopMoveVector(CEntity* pEntity)
 	pEntity->SetMoveVectorIndex(-1);
 }
 
-bool CZone::SendZoneInfo(CPlayer* pPlayer)
-{
-	if (pPlayer->GetZoneID() != GetZoneID())
-		return false;
-
-	int nLoop = static_cast<int>(m_vecPlayers.size());
-	int index = 0;
-
-	st_STC_EnterZone info = { 0, };
-	
-	while (1)
-	{
-		int i = index++;
-		if (index >= nLoop)
-			break;
-		if (m_vecPlayers[i] == pPlayer || m_vecPlayers[i] == nullptr)
-			continue;
-
-		info.info[info.Loop1].type = 0;
-		info.info[info.Loop1].ID = pPlayer->GetID();
-		info.info[info.Loop1].pos = pPlayer->GetPosition();
-		info.Loop1++;
-		if (info.Loop1 >= 48)
-		{
-			pPlayer->SendPacket(info);
-			ZeroMemory(&info, sizeof(info));
-		}
-	}
-	if (info.Loop1 > 0)
-	{
-		pPlayer->SendPacket(info);
-	}
-	
-	return true;
-}
-
 void CZone::OnLeaveZone(CPlayer* pPlayer)
 {
 	PopMoveVector(pPlayer);

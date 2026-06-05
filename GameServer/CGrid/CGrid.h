@@ -12,10 +12,9 @@
 class CMainWorld;
 class CTile;
 
-struct st_AddMsg
+struct st_GridJob
 {
 	int type;
-	int key;
 	CEntity* pEntity;
 };
 
@@ -31,9 +30,8 @@ private:
 	int m_iID;
 	int m_iRunID;
 	CLockFreeQueue_SPSC<PROC_MSG> m_queueProc;
-	CLQueue<st_AddMsg> m_queueEntity;
+	CLQueue<st_GridJob> m_queueEntity;
 	
-	std::set<int> m_setTileKeys;
 	std::vector<CTile*> m_vecTiles;
 	int m_iTileCount;
 
@@ -46,12 +44,17 @@ private:
 	void EntityMoveRun();
 	void EntityJobRun();
 
+	void OnEnterZone(CEntity* pEntity);
+	void OnLeaveZone(CEntity* pEntity);
 	void OnTeleport(CEntity* pEntity);
 
 	bool AddPlayer(CEntity* pEntity);
 	bool RemovePlayer(CEntity* pEntity);
+
+	void SendInitAOITile(COORDINATE& pivot, CEntity* pEntity);
+	void SendRemoveAOITile(COORDINATE& pivot, CEntity* pEntity);
 public:
-	void Init(CMainWorld* pParent);
+	void Init(int id, CMainWorld* pParent);
 	void OnRegisterTile(CTile* pTile);
 
 	int GetRunID() { return m_iRunID; }
@@ -61,7 +64,7 @@ public:
 	bool DirectRemovePlayer(CEntity* pEntity) { return RemovePlayer(pEntity); }
 
 	void EnqueueProcJob(PROC_MSG& msg);
-	void EnqueueEntityJob(int type, int key, CEntity* pEntity);
+	void EnqueueEntityJob(int type, CEntity* pEntity);
 
 	void AddMoveVector(CEntity* pEntity);
 	void RemoveMoveVector(CEntity* pEntity);

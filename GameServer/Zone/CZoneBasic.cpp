@@ -26,6 +26,7 @@ void CZoneBasic::ChangeZoneProcess()
 
 	while (m_queue.TryDequeue(job))
 	{
+		m_vecChangeZoneJobDebug.push_back(job);
 		CPlayer* pPlayer = g_Net.GetPlayer(job.handle);
 		if (pPlayer == nullptr)
 			continue;
@@ -43,6 +44,22 @@ void CZoneBasic::ChangeZoneProcess()
 		{
 		case NONE:
 		case STABLE:
+			break;
+		case LOGIN:
+		{
+			EnterZone(pPlayer);
+
+			// 새로운 Zone 에 입장 완료
+			pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+			{
+				st_STC_ChangeZone pack;
+				pack.ret = 0;
+				pack.channel = job.toID;
+				pack.zone = job.toZone;
+
+				pPlayer->SendPacket(pack);
+			}
+		}
 			break;
 		case ENTER:
 		{
@@ -172,7 +189,7 @@ bool CZoneBasic::EnterZone(CPlayer* pPlayer)
 
 	pPlayer->SetZone(this);
 
-	pPlayer->AddRef();
+	pPlayer->AddRef(33);
 	OnEnterZone(pPlayer);
 	return true;
 }
@@ -187,6 +204,8 @@ bool CZoneBasic::LeaveZone(CPlayer* pPlayer)
 	if (leaveIndex < 0 || leaveIndex >= static_cast<int>(m_vecPlayers.size()))
 		return false;
 
+	pPlayer->ReleaseRef(666);
+	pPlayer->m_iDebugCoutn++;
 	// 마지막 플레이어 가져오기
 	CPlayer* ePlayer = m_vecPlayers.back();
 
@@ -200,7 +219,7 @@ bool CZoneBasic::LeaveZone(CPlayer* pPlayer)
 
 	m_vecPlayers.pop_back();
 
-	pPlayer->ReleaseRef();
+	
 	// 존 떠날때 이벤트
 	OnLeaveZone(pPlayer);
 	return true;

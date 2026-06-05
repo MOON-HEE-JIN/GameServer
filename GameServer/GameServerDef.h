@@ -7,7 +7,7 @@
 #define ProcSubThreadCnt 2
 #define ProcThreadCnt ProcLoginThreadCnt + ProcMainThreadCnt + ProcSubThreadCnt
 
-#define AOI_VIEW_COUNT 2
+#define AOI_VIEW_COUNT 1
 
 #define POSITION_TOLERANCE 5
 #define FIXED_DELTA 0.01667f		// fps 60

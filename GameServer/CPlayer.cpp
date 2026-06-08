@@ -43,6 +43,10 @@ void CPlayer::ReleaseRef()
 	if (m_iRef.load() > 0)
 		return;
 
+	if (m_iRef.load() < 0)
+	{
+		g_LogGame.ELog("Player Handle %d Ref Count Error : %d", GetID(), m_iRef.load());
+	}
 	int key = GetID();
 	Clear();
 	g_Net.AddPlayerHandle(key);

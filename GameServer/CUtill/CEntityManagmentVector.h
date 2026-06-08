@@ -37,6 +37,9 @@ public:
 		if (index == -1)
 			return false;
 
+		if (index < 0 || index >= static_cast<int>(m_vec.size()))
+			return false;
+
 		if (m_vec[index] != pEntity)
 			return false;
 

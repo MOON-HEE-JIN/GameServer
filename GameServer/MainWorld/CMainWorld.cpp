@@ -108,7 +108,7 @@ void CMainWorld::OnEnterZone(CPlayer* pPlayer)
 		return;
 	}
 	
-	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ENTER_ZONE, pPlayer);
+	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ENTER_GRID, pPlayer);
 	
 	//g_LogGame.ILog("Enter %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
@@ -124,7 +124,7 @@ void CMainWorld::OnLeaveZone(CPlayer* pPlayer)
 		return;
 	}
 
-	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::LEAVE_ZONE, pPlayer);
+	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::LEAVE_GRID, pPlayer);
 	
 	//g_LogGame.ILog("Leave %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
@@ -163,26 +163,20 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 
 	CTile* pCurTile = GetTile(pPlayer->GetPosition());
 	
-	pCurGrid->DirectRemovePlayer(pPlayer);
-	pCurTile->RemovePlayer(pPlayer);
-	
-	// 추후 Teleporty 관련 조건 체크
+	// 추후 Teleport 관련 조건 체크
 	if (0)
 	{
 		g_LogGame.ELog("ERROR Teleport");
 		return false;
 	}
 
+	// 여기서 동일한게 pCurGrid 대상으로 Enqueue 를 한다면 어느 Grid 가 먼저 실행 될지 알수 없기에
+	// 먼저 pCurGrid 에서 제거 후 pNewGrid 에 추가 하는 방식으로 진행
+	pCurGrid->DirectRemovePlayer(pPlayer);
+	
 	pPlayer->SetPosition(pos);
 
-	if (pCurGrid->GetRunID() == pNewGrid->GetRunID())
-	{		
-		pNewGrid->DirectAddPlayer(pPlayer);
-		pNewTile->AddPlayer(pPlayer);
-		return true;
-	}
-	
-	pNewGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ADD_TELEPORT, pPlayer);
+	pNewGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ENTER_GRID, pPlayer);
 	
 	return true;
 }
@@ -195,6 +189,16 @@ void CMainWorld::PushMoveVector(CEntity* pEntity)
 		return;
 	
 	pCurGrid->AddMoveVector(pEntity);
+}
+
+void CMainWorld::PopMoveVector(CEntity* pEntity)
+{
+	CGrid* pCurGrid = GetGrid(pEntity->GetGridID());
+
+	if (pCurGrid == nullptr)
+		return;
+
+	pCurGrid->RemoveMoveVector(pEntity);
 }
 
 bool CMainWorld::SendZoneInfo(CPlayer* pPlayer)

@@ -159,19 +159,14 @@ void CGrid::EntityJobRun()
 	{
 		switch (msg.type)
 		{
-		case EGRID_ADD_TYPE::ENTER_ZONE:
+		case EGRID_ADD_TYPE::ENTER_GRID:
 		{
-			OnEnterZone(msg.pEntity);
+			OnEnterGrid(msg.pEntity);
 		}
 			break;
-		case EGRID_ADD_TYPE::LEAVE_ZONE:
+		case EGRID_ADD_TYPE::LEAVE_GRID:
 		{
-			OnLeaveZone(msg.pEntity);
-		}
-			break;
-		case EGRID_ADD_TYPE::ADD_TELEPORT:
-		{
-			OnTeleport(msg.pEntity);
+			OnLeaveGrid(msg.pEntity);
 		}
 			break;
 		default:
@@ -181,7 +176,7 @@ void CGrid::EntityJobRun()
 	}
 }
 
-void CGrid::OnEnterZone(CEntity* pEntity)
+void CGrid::OnEnterGrid(CEntity* pEntity)
 {
 	AddPlayer(pEntity);
 	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
@@ -196,7 +191,7 @@ void CGrid::OnEnterZone(CEntity* pEntity)
 	SendInitAOITile(pTile->GetCoord(), pEntity);	
 }
 
-void CGrid::OnLeaveZone(CEntity* pEntity)
+void CGrid::OnLeaveGrid(CEntity* pEntity)
 {
 	RemovePlayer(pEntity);
 	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
@@ -210,22 +205,6 @@ void CGrid::OnLeaveZone(CEntity* pEntity)
 	SendRemoveAOITile(pTile->GetCoord(), pEntity);
 }
 
-void CGrid::OnTeleport(CEntity* pEntity)
-{
-	AddPlayer(pEntity);
-	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
-	if (pTile == nullptr)
-	{
-		g_LogGame.ELog("ERROR Teleport");
-		return;
-	}
-	pTile->AddPlayer(pEntity);
-	st_STC_Teleport res;
-	res.ret = 0;
-	res.pos = pEntity->GetPosition();
-	((CPlayer*)pEntity)->SendPacket(res);
-}
-
 void CGrid::Init(int id, CMainWorld* pParent)
 {
 	m_iID = id;
@@ -237,6 +216,21 @@ void CGrid::OnRegisterTile(CTile* pTile)
 	m_iTileCount++;
 	m_vecTiles.push_back(pTile);
 	pTile->OnReigsterGrid(m_iID);
+}
+
+bool CGrid::DirectAddPlayer(CEntity* pEntity)
+{
+	return AddPlayer(pEntity);
+}
+
+bool CGrid::DirectRemovePlayer(CEntity* pEntity)
+{
+	CTile* pCurTile = m_parent->GetTile(pEntity->GetPosition());
+	pCurTile->RemovePlayer(pEntity);
+
+	SendRemoveAOITile(pCurTile->GetCoord(), pEntity);
+
+	return RemovePlayer(pEntity);
 }
 
 void CGrid::EnqueueProcJob(PROC_MSG& msg)

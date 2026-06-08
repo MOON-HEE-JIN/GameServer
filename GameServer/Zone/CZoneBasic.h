@@ -31,6 +31,7 @@ public:
 	virtual bool EnterZone(CPlayer* pPlayer);
 	virtual bool LeaveZone(CPlayer* pPlayer);
 	virtual void PushMoveVector(CEntity* pEntity) {};
+	virtual void PopMoveVector(CEntity* pEntity) {};
 
 	bool Enqueue(ZONE_CHANGE_JOB& job);
 	bool TryPush(CPlayer* pPlayer);

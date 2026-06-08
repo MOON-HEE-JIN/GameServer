@@ -172,8 +172,16 @@ int PacketProc::DO_GAME_TELEPORT(CPlayer* pTarget, CPacket& pReqPacket)
 
     int ret = pTarget->Teleport(req.pos);
 
+    if(!ret)
+		return -1;
+    
+    st_STC_Teleport res;
+    res.ret = 0;
+    res.pos = pTarget->GetPosition();
+    pTarget->SendPacket(res);
+
     g_LogGame.DLog("TelePort");
 
-    return ret;
+    return 0;
 }
 

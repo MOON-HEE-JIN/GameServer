@@ -44,15 +44,12 @@ private:
 	void EntityMoveRun();
 	void EntityJobRun();
 
-	void OnEnterZone(CEntity* pEntity);
-	void OnLeaveZone(CEntity* pEntity);
-	void OnTeleport(CEntity* pEntity);
+	void OnEnterGrid(CEntity* pEntity);
+	void OnLeaveGrid(CEntity* pEntity);
 
 	bool AddPlayer(CEntity* pEntity);
 	bool RemovePlayer(CEntity* pEntity);
 
-	void SendInitAOITile(COORDINATE& pivot, CEntity* pEntity);
-	void SendRemoveAOITile(COORDINATE& pivot, CEntity* pEntity);
 public:
 	void Init(int id, CMainWorld* pParent);
 	void OnRegisterTile(CTile* pTile);
@@ -60,8 +57,8 @@ public:
 	int GetRunID() { return m_iRunID; }
 	void SetRunID(int value) { m_iRunID = value; };
 
-	bool DirectAddPlayer(CEntity* pEntity) { return AddPlayer(pEntity); }
-	bool DirectRemovePlayer(CEntity* pEntity) { return RemovePlayer(pEntity); }
+	bool DirectAddPlayer(CEntity* pEntity);
+	bool DirectRemovePlayer(CEntity* pEntity);
 
 	void EnqueueProcJob(PROC_MSG& msg);
 	void EnqueueEntityJob(int type, CEntity* pEntity);
@@ -70,4 +67,7 @@ public:
 	void RemoveMoveVector(CEntity* pEntity);
 
 	void Update();
+
+	void SendInitAOITile(COORDINATE& pivot, CEntity* pEntity);
+	void SendRemoveAOITile(COORDINATE& pivot, CEntity* pEntity);
 };

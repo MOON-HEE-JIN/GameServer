@@ -191,6 +191,16 @@ void CMainWorld::PushMoveVector(CEntity* pEntity)
 	pCurGrid->AddMoveVector(pEntity);
 }
 
+void CMainWorld::PopMoveVector(CEntity* pEntity)
+{
+	CGrid* pCurGrid = GetGrid(pEntity->GetGridID());
+
+	if (pCurGrid == nullptr)
+		return;
+
+	pCurGrid->RemoveMoveVector(pEntity);
+}
+
 bool CMainWorld::SendZoneInfo(CPlayer* pPlayer)
 {
 	// tile 기반 주변 정보 보내기

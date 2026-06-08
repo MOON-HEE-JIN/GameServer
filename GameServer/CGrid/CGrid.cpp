@@ -31,7 +31,11 @@ void CGrid::EntityMoveRun()
 		bool ret = vec[i]->MoveUpdate();
 		
 		// true. 이동이 완료된 상태
-		vecCompleteMove.push_back(vec[i]);
+		if(ret)
+			vecCompleteMove.push_back(vec[i]);
+
+		// 임시 코드 진행 막기
+		continue;
 
 		// 여기서 Tile 을 바꿔줘야하나 아니면 CEntity::MoveComplete 에서 Tile 의 위치를 바꿔줘야하나?
 		// 중요한건 Tile 을 바꿀려면 Tile 을 알고 있는 CMainWorld 을 알고 있어야함
@@ -281,7 +285,8 @@ void CGrid::Update()
 	}
 	
 	EntityJobRun();
-	
+	EntityMoveRun();
+
 	for (int i = 0; i < m_iTileCount; i++)
 	{
 		m_vecTiles[i]->Update();

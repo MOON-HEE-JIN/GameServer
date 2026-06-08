@@ -50,7 +50,7 @@ public:
 
 	CZoneBasic* GetZone(int Channel, int ZoneID);
 public:
-	void SendZone(int Channel, int Zone, CPacket* pPacket, CPlayer* pPlayer = nullptr);
+	void SendZone(int Channel, int Zone, CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer = nullptr);
 public:
 	int m_iLogDelayTime = 1 * 1000;
 	int m_iLogTime = 0;

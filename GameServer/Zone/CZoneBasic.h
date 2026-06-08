@@ -36,6 +36,6 @@ public:
 	bool TryPush(CPlayer* pPlayer);
 	bool TryEnterZone();
 
-	void SendZoneCast(CPacket* pPacket, CPlayer* pPlayer = nullptr);
+	virtual void BoradCast(CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer = nullptr);
 	virtual bool SendZoneInfo(CPlayer* pPlayer) { return true; };
 };

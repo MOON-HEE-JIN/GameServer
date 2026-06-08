@@ -197,6 +197,22 @@ void CMainWorld::PushMoveVector(CEntity* pEntity)
 	pCurGrid->AddMoveVector(pEntity);
 }
 
+void CMainWorld::BoradCast(CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer)
+{
+	// 해당 Player 에게 해당 Grid 에 있는 Player 들의 정보 보내기
+	for (int z = -AOI_VIEW_COUNT; z <= AOI_VIEW_COUNT; z++)
+	{
+		for (int x = -AOI_VIEW_COUNT; x <= AOI_VIEW_COUNT; x++)
+		{
+			CTile* pAOITile = GetTile({ pivot.X + x, pivot.Z + z });
+			if (pAOITile == nullptr)
+				continue;
+
+			pAOITile->Enqueue(ETILE_JOB_TYPE::BROADCAST_PACKET, pPlayer, pPacket);
+		}
+	}
+}
+
 bool CMainWorld::SendZoneInfo(CPlayer* pPlayer)
 {
 	// tile 기반 주변 정보 보내기

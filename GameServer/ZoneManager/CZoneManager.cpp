@@ -124,12 +124,12 @@ void CZoneManager::StartMainWorld()
 	}
 }
 
-void CZoneManager::SendZone(int Channel, int Zone, CPacket* pPacket, CPlayer* pPlayer)
+void CZoneManager::SendZone(int Channel, int Zone, CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer)
 {
 	if (!IsValidChannelZone(Channel, Zone))
 		return;
 
-	m_mapZones[Zone][Channel]->SendZoneCast(pPacket, pPlayer);
+	m_mapZones[Zone][Channel]->BoradCast(pPacket, pivot, pPlayer);
 }
 
 bool CZoneManager::ReqEnterLoginZone(CPlayer* pPlayer)

@@ -43,7 +43,7 @@ bool CEntity::MoveUpdate()
     if (remaindist <= speeddist)
     {
         m_stPosition = m_stGoalPosition;
-		//MoveComplete();
+		MoveComplete();
         return true;
     }
     else
@@ -155,7 +155,7 @@ void CEntity::MoveComplete()
     pack << res;
     
 	// Zone Broadcast
-    g_ZoneManager.SendZone(GetChannel(), GetZoneID(), &pack);
+    g_ZoneManager.SendZone(GetChannel(), GetZoneID(), &pack, GetTilePos());
 }
 
 int CEntity::MoveStop(st_Vector3F pos)

@@ -39,6 +39,11 @@ void CTile::TileJobRun()
 			Broadcast(&cPacket, job.pEntity);
 		}
 			break;
+		case ETILE_JOB_TYPE::BROADCAST_PACKET:
+		{
+			Broadcast(&job.packet, job.pEntity);
+		}
+			break;
 		default:
 			break;
 		}
@@ -56,9 +61,15 @@ void CTile::Init(COORDINATE coord, st_Vector3F start, st_Vector3F end)
 }
 
 
-void CTile::Enqueue(int type, CEntity* pEntity)
+void CTile::Enqueue(int type, CEntity* pEntity, CPacket* pPacket)
 {
-	m_queue.Push({ type, pEntity });
+	if(pPacket == nullptr)
+	{
+		CPacket emptyPacket;
+		m_queue.Push({ type, pEntity, emptyPacket });
+	}
+	else
+		m_queue.Push({ type, pEntity, *pPacket});
 }
 
 bool CTile::AddPlayer(CEntity* pEntity)

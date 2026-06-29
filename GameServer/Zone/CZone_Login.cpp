@@ -2,7 +2,7 @@
 
 #include "../NetWork/CNetServer.h"
 CZone_Login::CZone_Login(int ID, int ZoneID, int ProcID, int Maximum)
-	: CZoneBase(ID, ZoneID, ProcID, Maximum)
+	: CZoneBasic(ID, ZoneID, ProcID, Maximum)
 {
 	InitializeCriticalSection(&cs);
 }

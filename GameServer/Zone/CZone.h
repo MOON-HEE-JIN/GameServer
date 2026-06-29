@@ -4,13 +4,13 @@
 #include <unordered_map>
 #include <atomic>
 
-#include "../Zone/CZoneBase.h"
+#include "../Zone/CZoneBasic.h"
 #include "../Zone/ZoneDefines.h"
 
-class CZone : public CZoneBase
+class CZone : public CZoneBasic
 {
 public:
-	CZone(int ID, int ZoneID, int ProcID, int Maximum);
+	CZone(int channel, int ZoneID, int ProcID, int Maximum);
 	~CZone();
 	
 protected:
@@ -34,9 +34,8 @@ public:
 	void InsertTriggerVolumeParam(int index, std::vector<st_TriggerVolumeParam> param) { m_mapTriggerVolumeParams[index] = param; }
 
 public:
-	void PushMoveVector(CEntity* pEntity);
-	void PopMoveVector(CEntity* pEntity);
+	virtual void PushMoveVector(CEntity* pEntity) override;
+	virtual void PopMoveVector(CEntity* pEntity) override;
 
-	bool SendZoneInfo(CPlayer* pPlayer);
 	virtual void OnLeaveZone(CPlayer* pPlayer) override;
 };

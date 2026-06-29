@@ -41,6 +41,8 @@ private:
 	
 	std::atomic<int> m_iRecvOverlappedCount;
 	std::atomic<int> m_iSendOverlapeedCount;
+	std::atomic<int> m_iRecvOverlappedSize;
+	std::atomic<int> m_iSendOverlappedSize;
 protected:
 	void DisConnect(CSession* pSession);
 	void Recv(CSession* pSession, int type, CPacket& packet);
@@ -64,8 +66,12 @@ private:
 protected:
 	int GetRecvOverlappedCount() { return m_iRecvOverlappedCount.load(); };
 	int GetSendOverlappedCount() { return m_iSendOverlapeedCount.load(); };
-	void ResetRecvOverlappedCount() { m_iRecvOverlappedCount.store(0); };
-	void ResetSendOverlappedCount() { m_iSendOverlapeedCount.store(0); };
+	int GetRecvOverlappedSize() { return m_iRecvOverlappedSize.load(); }
+	int GetSendOverlappedSize() { return m_iSendOverlappedSize.load(); }
+	int GetConnectionSessionCount() { return m_iConnectSessionCount.load(); }
+
+	void ResetRecvOverlappedLog() { m_iRecvOverlappedCount.store(0); m_iRecvOverlappedSize.store(0); }
+	void ResetSendOverlappedLog() { m_iSendOverlapeedCount.store(0); m_iSendOverlappedSize.store(0); };
 
 	void StartServer(CBaseNet* ptr);
 	void WaitStopServer();

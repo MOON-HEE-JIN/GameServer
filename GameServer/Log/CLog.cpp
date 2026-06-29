@@ -25,7 +25,7 @@ CLog::~CLog()
 
 void CLog::DLog(const char* format, ...)
 {
-#ifdef _DEBUG
+#ifdef __DEBUG__
 	va_list args;
 	va_start(args, format);
 	std::string log = BuildMessage("DEBUG", format, args);
@@ -34,7 +34,7 @@ void CLog::DLog(const char* format, ...)
 	LOG_JOB job(m_filePath, log);
 
 	g_LogJobQueue.Enqueue({ m_filePath, log });
-#endif // _DEBUG
+#endif // __DEBUG__
 }
 
 void CLog::ILog(const char* format, ...)

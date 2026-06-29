@@ -38,9 +38,12 @@ public:
 	int ShutDown();
 public:
 	CPlayer* GetPlayer(int handle);
+	int GetPlayerCount() { return m_iPlayerConnectCount.load(); }
+
 	CPlayer* AllocPlayer(int& outPlayerHandle);
 	void FreePlayer(CPlayer* pPlayer);
-
+	void AddPlayerHandle(int handle);
+	void PlayerDisConnect(const SESSION_HANDLE& key);
 public:
 	void NetLog();
 };

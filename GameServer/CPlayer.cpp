@@ -1,15 +1,20 @@
 ﻿#include "CPlayer.h"
 #include "NetWork/CNetServer.h"
 #include "ZoneManager/CZoneManager.h"
+#include "Log/CLog.h"
 
 void CPlayer::Init(SESSION_HANDLE sessionID, int handle, int Channel, int Zone)
 {
+	m_iRef.store(1);
+
 	m_SessionHandle = sessionID;
 	m_PlayerHandle = handle;
 	m_iChannel = Channel;
 	m_OwnerZone = Zone;
 
 	m_bRelease.store(false);
+
+	m_iGridID = -1;
 }
 
 void CPlayer::Clear()
@@ -21,9 +26,33 @@ void CPlayer::Clear()
 	m_iChannel = 0;
 	m_OwnerZone = 0;
 
+	m_iGridID = -1;
+
 	m_bRelease.store(false);
 }
 
+void CPlayer::AddRef()
+{
+	m_iRef.fetch_add(1);
+}
+
+void CPlayer::ReleaseRef()
+{
+	m_iRef.fetch_sub(1);
+
+	if (m_iRef.load() > 0)
+		return;
+
+	if (m_iRef.load() < 0)
+	{
+		g_LogGame.ELog("Player Handle %d Ref Count Error : %d", GetID(), m_iRef.load());
+	}
+	int key = GetID();
+	Clear();
+	g_Net.AddPlayerHandle(key);
+	
+	g_LogGame.DLog("Player Handle %d ReleaseRef", key);
+}
 
 void CPlayer::SetRelease()
 {
@@ -34,5 +63,17 @@ void CPlayer::SetRelease()
 void CPlayer::SendPacket(CPacket* pPacket)
 {
 	TrySend(m_SessionHandle, pPacket);
+}
+
+bool CPlayer::Teleport(st_Vector3F pos)
+{
+	st_Vector3F originPos = m_stPosition;
+
+	if (!((CZoneBasic*)m_pZone)->Teleport(this, pos))
+	{
+		m_stPosition = originPos;
+		return false;
+	}
+	return true;
 }
 

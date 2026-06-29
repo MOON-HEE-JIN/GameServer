@@ -16,7 +16,7 @@
 // - Consumer : TryDequeue only (single thread)
 // - Memory   : CHMemoryPool<T> (Hazard Pointer retire/reclaim)
 
-template<typename T, int MAX_THREADS = 16, std::size_t RETIRE_THRESHOLD = 512>
+template<typename T, int MAX_THREADS = 64, std::size_t RETIRE_THRESHOLD = 512>
 class CLockFreeQueue_MPSC
 {
 private:

@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include <math.h>
+
 
 struct st_Header
 {
@@ -40,6 +42,16 @@ struct st_Vector3F
 		return *this;
 	}
 
+	st_Vector3F operator*(const int value) const
+	{
+		return st_Vector3F(X * value, Y * value, Z * value);
+	}
+
+	st_Vector3F operator*(const float value) const
+	{
+		return st_Vector3F(X * value, Y * value, Z * value);
+	}
+
 	float Length() const
 	{
 		return static_cast<float>(sqrt(X * X + Y * Y + Z * Z));
@@ -73,4 +85,11 @@ struct st_Vector3F
 		Y = 0;
 		Z = 0;
 	}
+};
+
+struct st_Vector3L
+{
+	double X;
+	double Y;
+	double Z;
 };

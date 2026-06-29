@@ -56,8 +56,8 @@ void CNetServer::OnDisconnect(CSession* pSession)
 	if (pPlayer != nullptr)
 	{
 		pPlayer->SetRelease();
-
-		ZONE_CHANGE_JOB z(GetTickCount(), eZONESTATUS::RELEASE, pPlayer->GetPlayerHandle()
+		pPlayer->ReleaseRef();
+		ZONE_CHANGE_JOB z(GetTickCount(), eZONESTATUS::RELEASE, pPlayer->GetID()
 			, pPlayer->GetChannel(), pPlayer->GetZoneID()
 			, pPlayer->GetChannel(), pPlayer->GetZoneID()
 			, 0, 0);
@@ -229,23 +229,53 @@ CPlayer* CNetServer::AllocPlayer(int& outPlayerHandle)
 
 void CNetServer::FreePlayer(CPlayer* pPlayer)
 {
-	int key = pPlayer->GetPlayerHandle();
-	pPlayer->Clear();
+	pPlayer->ReleaseRef();
+}
+
+void CNetServer::AddPlayerHandle(int handle)
+{
 	EnterCriticalSection(&g_csPlayerManager);
 	{
-		g_PlayerHandleManager.push_back(key);
+		g_PlayerHandleManager.push_back(handle);
 	}
 	LeaveCriticalSection(&g_csPlayerManager);
+	m_iPlayerConnectCount.fetch_sub(1);
 }
 
 void CNetServer::NetLog()
 {
 	if (m_iLogTime + m_iLogDelayTime < GetTickCount())
 	{
-		g_LogServer.ILog("=== IO Count  Recv : %d, Send : %d ===", GetRecvOverlappedCount(), GetSendOverlappedCount());
-		ResetRecvOverlappedCount();
-		ResetSendOverlappedCount();
+		g_LogServer.ILog("================\n \
+			IO Count  Recv : %d[%d], Send : %d[%d]\n \
+			SessionCount : %d, PlayerCount : %d\n \
+			================"
+			, GetRecvOverlappedCount(), GetRecvOverlappedSize(), GetSendOverlappedCount(), GetSendOverlappedSize()
+			, GetConnectionSessionCount(), GetPlayerCount());
+		ResetRecvOverlappedLog();
+		ResetSendOverlappedLog();
 
 		m_iLogTime = GetTickCount();
 	}
+}
+
+void CNetServer::PlayerDisConnect(const SESSION_HANDLE& key)
+{
+	CSession* pSession = g_Net.GetSession(key);
+	if (pSession == nullptr)
+		return ;
+
+	SESSION_HANDLE CurKey = pSession->GetConnectKey();
+
+	// 연결 및 재사용 횟수 체크
+	if (!pSession->GetBoolConnect()) return ;
+	if (pSession->GetConnectGen() != key.Gen) return ;
+
+	if (!pSession->AddRef()) return;
+	
+	DisConnect(pSession);
+
+	pSession->SubRef();
+
+	return ;
 }

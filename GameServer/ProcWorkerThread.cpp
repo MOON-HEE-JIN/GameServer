@@ -14,6 +14,8 @@ static std::vector<int> s_ProcWorkerThreadIDs;
 
 std::vector<CProcWorker*> s_ProcWorker;
 
+CProcWorker g_MainProcWorker;
+
 static HANDLE s_hExit;
 static PacketProc s_PacketProc;
 
@@ -24,6 +26,8 @@ void CreateProcWorkerThread()
 
     s_ProcWorkerThreadIDs.resize(ProcThreadCnt);
 
+    int createmainworld = 0;
+
     for (int i = 0; i < ProcThreadCnt; i++)
     {
         s_ProcWorkerThreadIDs[i] = i;
@@ -32,7 +36,15 @@ void CreateProcWorkerThread()
 		pWorker->Init(i, &s_PacketProc, &g_ProcJobQueue[i]);
 
 		s_ProcWorker.push_back(pWorker);
-        HANDLE h = (HANDLE)_beginthreadex(NULL, 0, ProcWorkerThread, &s_ProcWorkerThreadIDs[i], 0, NULL);
+        HANDLE h;
+        if (i > 0 && createmainworld++ < ProcMainThreadCnt)
+        {
+            h = (HANDLE)_beginthreadex(NULL, 0, ProcMainWorldWorkerThread, &s_ProcWorkerThreadIDs[i], 0, NULL);
+        }
+        else
+        {
+            h = (HANDLE)_beginthreadex(NULL, 0, ProcWorkerThread, &s_ProcWorkerThreadIDs[i], 0, NULL);
+        }
         s_ProcWorkerThreadHandles.push_back(h);
     }
 
@@ -122,6 +134,36 @@ unsigned __stdcall ProcWorkerThread(void* arg)
     return 0;
 }
 
+unsigned __stdcall ProcMainWorldWorkerThread(void* arg)
+{
+    int procID = *(int*)arg;
+    timeBeginPeriod(1);
+    int ret = 0;
+
+    s_ProcWorker[procID]->SetMain();
+    s_ProcWorker[procID]->InitZoneVector();
+
+    double accumulatedtime = 0.0f;
+    double lasttime = CUtil::GetQPCNowTime();
+
+    while (g_Net.GetRun())
+    {
+        //1000 Frames 1초당 1000 처리
+        ret = WaitForSingleObject(s_hExit, 1);
+
+        // 종료 이벤트
+        if (ret == WAIT_OBJECT_0)
+            break;
+
+        // MainWorld 는 여기서 각각 실행GridThread 로 넣어 줘야한다
+        s_ProcWorker[procID]->ProxyProc();
+        s_ProcWorker[procID]->ZoneProc();
+    }
+
+    g_LogThread.ILog("=== END THREAD ProcWorkerThread ===");
+    return 0;
+}
+
 void CProcWorker::Proc()
 {
     PROC_MSG job;
@@ -143,11 +185,49 @@ void CProcWorker::Proc()
     }
 }
 
+void CProcWorker::ProxyProc()
+{
+    PROC_MSG job;
+    int max_dequeue = 1000;
+    int dequeue = 0;
+    std::vector<PROC_MSG> vec;
+    while (m_ProcJobQueue->TryDequeue(job))
+    {
+        
+        CPlayer* pPlayer = g_Net.GetPlayer(job.PlayerHandle);
+        if (pPlayer == nullptr)
+            continue;
+        if (pPlayer->GetZoneStatus() != eZONESTATUS::STABLE)
+        {
+            st_STC_ChangeingZone res;
+            res.ret = ERROR_CODE::ZONE_CHANEING;
+            res.type = job.type;
+
+            pPlayer->SendPacket(res);
+            continue;
+        }
+
+        vec.push_back(job);
+
+        // mainworld 인 경우 오는 패킷이 많을수 있음
+        // 많은 dequeue 때문에 작업이 밀리수있어서 빨리 쳐준다
+        if (dequeue++ >= max_dequeue)
+            break;
+    }
+
+    // 기본 설정 잘못됨 MainWorld Thread 인데 다른게 들어옴
+    if (!GetMain())
+        exit(1);
+
+    CMainWorld* pMainWorld = (CMainWorld*)GetMainWorld();
+    pMainWorld->MessageRouting(vec);
+}
+
 void CProcWorker::ZoneProc()
 {
     for (int i = 0; i < m_ZoneCnt; i++)
     {
-        m_vecZone[i]->ZoneChangeJobProcess();
+        m_vecZone[i]->ChangeZoneProcess();
     }
 }
 
@@ -185,6 +265,14 @@ void CProcWorker::InitZoneVector()
             , m_ProcID
             , m_vecZone[i]->GetChannel(), m_vecZone[i]->GetZoneID(), m_vecZone[i]->GetProcID());
     }
+}
+
+CZoneBasic* CProcWorker::GetMainWorld()
+{
+    if(!GetMain())
+        return nullptr;
+
+    return m_vecZone[0];
 }
 
 void DeleteProcWorker()

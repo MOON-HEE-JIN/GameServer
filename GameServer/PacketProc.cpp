@@ -94,33 +94,6 @@ int PacketProc::DO_GAME_CHANGEZONE(CPlayer* pTarget, CPacket& pReqPacket)
     return ERROR_CODE::NOT_ERROR;
 }
 
-int PacketProc::DO_GAME_ENTERZONE(CPlayer* pTarget, CPacket& pReqPacket)
-{
-    st_CTS_EnterZone data;
-    pReqPacket >> data;
-
-    if (pTarget->GetZoneID() != data.zone)
-        return ERROR_CODE::ZONE_ID;
-
-    if (pTarget->GetChannel() != data.channel)
-        return ERROR_CODE::ZONE_ID;
-
-    // Zone 에 대한 주위 정보 보내기 (본인 제외)
-    if (!g_ZoneManager.SendZoneInfo(pTarget->GetChannel(), pTarget->GetZoneID(), pTarget))
-        return ERROR_CODE::ZONE_ID;
-
-    // Zone 에서 의 본인 정보 보내기
-    st_STC_CreateChar pack;
-    pack.ID = pTarget->GetPlayerHandle();
-    pack.pos.X = 0;
-	pack.pos.Y = 0;
-    pack.pos.Z = 0;
-    pack.speed = pTarget->GetMoveSpeed();
-    //pTarget->SendPacket(pack);
-
-    return 0;
-}
-
 int PacketProc::DO_GAME_MOVESTART(CPlayer* pTarget, CPacket& pReqPacket)
 {
     st_CTS_MoveStart req;
@@ -180,6 +153,35 @@ int PacketProc::DO_GAME_MOVESTOP(CPlayer* pTarget, CPacket& pReqPacket)
 
 int PacketProc::DO_OBSERVER_CONNET_OBSERVER(CPlayer* pTarget, CPacket& pReqPacket)
 {
+    return 0;
+}
+
+int PacketProc::DO_GAME_TELEPORT(CPlayer* pTarget, CPacket& pReqPacket)
+{
+    st_CTS_Teleport req;
+    pReqPacket >> req;
+
+    
+    // 이후 에러코드 수정 해야함
+    CZoneBase* pZone = g_ZoneManager.GetZone(pTarget->GetChannel(), pTarget->GetZoneID());
+    if (pZone == nullptr)
+        return -1;
+    
+    if (!pZone->CheckPos(req.pos))
+        return -1;
+
+    int ret = pTarget->Teleport(req.pos);
+
+    if(!ret)
+		return -1;
+    
+    st_STC_Teleport res;
+    res.ret = 0;
+    res.pos = pTarget->GetPosition();
+    pTarget->SendPacket(res);
+
+    g_LogGame.DLog("TelePort");
+
     return 0;
 }
 

@@ -180,7 +180,7 @@ bool CZoneBasic::EnterZone(CPlayer* pPlayer)
 
 	pPlayer->SetZone(this);
 
-	pPlayer->AddRef();
+	pPlayer->AddManageRef();
 	OnEnterZone(pPlayer);
 	return true;
 }
@@ -195,7 +195,7 @@ bool CZoneBasic::LeaveZone(CPlayer* pPlayer)
 	if (leaveIndex < 0 || leaveIndex >= static_cast<int>(m_vecPlayers.size()))
 		return false;
 
-	pPlayer->ReleaseRef();
+	pPlayer->ReleaseManageRef();
 	// 마지막 플레이어 가져오기
 	CPlayer* ePlayer = m_vecPlayers.back();
 

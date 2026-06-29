@@ -132,6 +132,9 @@
     <ClCompile Include="Zone\CZoneBasic.cpp">
       <Filter>소스 파일\Zone</Filter>
     </ClCompile>
+    <ClCompile Include="CObject.cpp">
+      <Filter>소스 파일\CObject</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PacketProc.h">

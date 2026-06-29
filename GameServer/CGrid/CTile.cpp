@@ -68,7 +68,7 @@ bool CTile::AddPlayer(CEntity* pEntity)
 	{
 		m_iActive.fetch_add(1);
 		pEntity->SetTilePos(m_Coord);
-		((CPlayer*)pEntity)->AddRef();
+		((CPlayer*)pEntity)->AddManageRef();
 		
 		g_LogGame.DLog("Enter Tile[%d,%d] ActiveCount : %d", m_Coord.X, m_Coord.Z, m_iActive.load());
 	}
@@ -81,7 +81,7 @@ bool CTile::RemovePlayer(CEntity* pEntity)
 	if (ret)
 	{
 		m_iActive.fetch_sub(1);
-		((CPlayer*)pEntity)->ReleaseRef();
+		((CPlayer*)pEntity)->ReleaseManageRef();
 		g_LogGame.DLog("Leave Tile[%d,%d] ActiveCount : %d", m_Coord.X, m_Coord.Z, m_iActive.load());
 	}
 	if (!ret)

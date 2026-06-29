@@ -56,7 +56,6 @@ void CNetServer::OnDisconnect(CSession* pSession)
 	if (pPlayer != nullptr)
 	{
 		pPlayer->SetRelease();
-		pPlayer->ReleaseRef();
 		ZONE_CHANGE_JOB z(GetTickCount(), eZONESTATUS::RELEASE, pPlayer->GetID()
 			, pPlayer->GetChannel(), pPlayer->GetZoneID()
 			, pPlayer->GetChannel(), pPlayer->GetZoneID()
@@ -229,7 +228,7 @@ CPlayer* CNetServer::AllocPlayer(int& outPlayerHandle)
 
 void CNetServer::FreePlayer(CPlayer* pPlayer)
 {
-	pPlayer->ReleaseRef();
+	pPlayer->ReleaseVarRef();
 }
 
 void CNetServer::AddPlayerHandle(int handle)

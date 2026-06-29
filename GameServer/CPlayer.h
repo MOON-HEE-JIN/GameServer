@@ -24,21 +24,24 @@ private:
 	* - EnterZone 에서 +1, LeaveZone 에서 -1
 	* - Grid AddPlayer +1, RemovePlayer -1
 	*/
-	std::atomic<int> m_iRef;
+	std::atomic<int> m_iVarRef;
+	std::atomic<int> m_iManageRef;
+
 	SESSION_HANDLE m_SessionHandle;
 	int m_PlayerHandle;									// Player 전체 에 대한 handle
 	
 	std::atomic<bool> m_bRelease;						// 삭제 처리중
-
+	virtual void OnFree() override;
 	CZoneBase* m_pZone;
 private:
 	void SessionHandleClear() { m_SessionHandle = SESSION_HANDLE(-1, 0); }
 	void Clear();
 
 public:
-	int GetRef() { return m_iRef.load(); }
-	void AddRef();
-	void ReleaseRef();
+	void AddVarRef() { AddRef(m_iVarRef); };
+	void ReleaseVarRef() { ReleaseRef(m_iVarRef, ERefType::Var); }
+	void AddManageRef() { AddRef(m_iManageRef); };
+	void ReleaseManageRef() { ReleaseRef(m_iManageRef, ERefType::Manage); };
 
 	SESSION_HANDLE GetSessionHandle() { return m_SessionHandle; }
 	virtual int GetID() { return m_PlayerHandle; }

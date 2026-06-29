@@ -3,8 +3,8 @@
 #include "GameServerDef.h"
 #include <vector>
 #include <atomic>
-
-class CEntity
+#include "CObject.h"
+class CEntity : public CObject
 {
 public:
 	CEntity();

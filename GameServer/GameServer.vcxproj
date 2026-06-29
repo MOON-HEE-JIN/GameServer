@@ -192,6 +192,7 @@
     <ClCompile Include="CEntity.cpp" />
     <ClCompile Include="CGrid\CGrid.cpp" />
     <ClCompile Include="CGrid\CTile.cpp" />
+    <ClCompile Include="CObject.cpp" />
     <ClCompile Include="CPlayer.cpp" />
     <ClCompile Include="CUtill\CBinFile.cpp" />
     <ClCompile Include="CUtill\CBinFileManager.cpp" />

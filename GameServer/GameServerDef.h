@@ -13,6 +13,12 @@
 #define FIXED_DELTA 0.01667f		// fps 60
 #define MAX_FRAME_LOOP_COUNT 6
 
+enum ERefType
+{
+	Var = 1,
+	Manage,
+};
+
 enum EIndexType
 {
 	VECTOR_INDEX_ZONE,

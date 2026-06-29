@@ -47,6 +47,7 @@ private:
 	void OnEnterZone(CEntity* pEntity);
 	void OnLeaveZone(CEntity* pEntity);
 	void OnTeleport(CEntity* pEntity);
+	void OnChangeThread(CEntity* pEntity);
 
 	bool AddPlayer(CEntity* pEntity);
 	bool RemovePlayer(CEntity* pEntity);
@@ -69,5 +70,6 @@ public:
 	void AddMoveVector(CEntity* pEntity);
 	void RemoveMoveVector(CEntity* pEntity);
 
+	void ProcessPacket();
 	void Update();
 };

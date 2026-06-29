@@ -5,9 +5,16 @@
 #include "../CUtill/CLockQueueh.h"
 #include "../CUtill/CPacket.h"
 
+class CMainWorld;
+
 struct st_TileJob
 {
 	int type;
+	CEntity* pEntity;
+};
+
+struct st_TileBroadCast
+{
 	CEntity* pEntity;
 	CPacket packet;
 };
@@ -19,6 +26,8 @@ public:
 	~CTile() {};
 
 private:
+	CMainWorld* m_parent;
+
 	std::atomic<int> m_iActive;
 	int m_iManagementID;
 	COORDINATE m_Coord;
@@ -28,6 +37,7 @@ private:
 	st_Vector3F m_EndPos;
 
 	CLQueue<st_TileJob> m_queue;
+	CLQueue<st_TileBroadCast> m_queueBroadCast;
 
 	CEntityVector m_vecPlayer{ EIndexType::VECTOR_INDEX_TILE };
 	CEntityVector m_vecMonster{ EIndexType::VECTOR_INDEX_TILE };
@@ -37,14 +47,17 @@ private:
 
 private:
 	void TileJobRun();
+	void TileBroadCast();
 
 	void NotifyEntityTileEnterAOI(CEntity* pEntity);
 	void Broadcast(CPacket* pPacket, CEntity* pEntity = nullptr);
 
 public:
-	void Init(COORDINATE coord, st_Vector3F start, st_Vector3F end);
+	void Init(CMainWorld* parent, COORDINATE coord, st_Vector3F start, st_Vector3F end);
 
-	void Enqueue(int type, CEntity* pEntity, CPacket* pPacket = nullptr);
+	void EnqueueJob(int type, CEntity* pEntity);
+	void EnqueueBroadCast(CEntity* pEntity, CPacket* Packet);
+
 	bool AddPlayer(CEntity* pEntity);
 	bool RemovePlayer(CEntity* pEntity);
 

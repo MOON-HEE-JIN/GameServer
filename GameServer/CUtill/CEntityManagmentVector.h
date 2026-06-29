@@ -8,14 +8,17 @@
 class CEntityVector
 {
 public:
-	CEntityVector(EIndexType type) { m_iKeyType = (int)type; };
+	CEntityVector(EIndexType type) { m_iKeyType = (int)type; m_iCount = 0; };
 	~CEntityVector() {};
 
 private:
 	int m_iKeyType;
+	int m_iCount;
 	std::vector<CEntity*> m_vec;
 public:
 	const std::vector<CEntity*>& GetVector() { return m_vec; }
+
+	int GetSize() { return m_iCount; }
 
 	bool AddEntity(CEntity* pEntity)
 	{
@@ -24,7 +27,7 @@ public:
 			return false;
 
 		m_vec.push_back(pEntity);
-		
+		m_iCount++;
 		return true;
 	}
 	bool RemoveEntity(CEntity* pEntity)
@@ -51,6 +54,7 @@ public:
 			pEnd->SetVectorIndex(m_iKeyType, index);
 		}
 
+		m_iCount--;
 		m_vec.pop_back();
 		return true;
 	}

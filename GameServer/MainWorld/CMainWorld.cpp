@@ -3,7 +3,7 @@
 #include "../NetWork/CNetServer.h"
 #include "../Stub/EnumDef.h"
 #include "../Log/CLog.h"
-
+#include "../CUtill/CUtill.h"
 // 
 	// MainWorld 당 MAX_MAINWORLD_THREAD_COUNT == 4 Thread 담당
 	// MainWorld 를 MAX_MAINWORLD_THREAD_COUNT * MAX_MAINWORLD_THREAD_COUNT 로 나눈다
@@ -52,6 +52,7 @@ CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
 		for (int W = 0; W < m_iTileCountW; W++)
 		{
 			m_Tiles[H * m_iTileCountW + W].Init(
+				this,
 				{ W,H },
 				{ static_cast<float>(W * DEFAULT_TILE_SIZE), 0, static_cast<float>(H * DEFAULT_TILE_SIZE) },
 				{ static_cast<float>(W * DEFAULT_TILE_SIZE + DEFAULT_TILE_SIZE), 0, static_cast<float>(H * DEFAULT_TILE_SIZE + DEFAULT_TILE_SIZE) });
@@ -162,7 +163,8 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 	CGrid* pNewGrid = GetGrid(pNewTile->GetManagementGrid());
 
 	CTile* pCurTile = GetTile(pPlayer->GetPosition());
-	
+
+	// 좌표 변경 전에 지워주기
 	pCurGrid->DirectRemovePlayer(pPlayer);
 	pCurTile->RemovePlayer(pPlayer);
 	
@@ -173,15 +175,15 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 		return false;
 	}
 
+	// 시야 범위 밖으로 나갔다는 패킷 뿌려주기
+	st_STC_AoiOutPlayer AoiOutPlayer;
+	AoiOutPlayer.ID = pPlayer->GetID();
+	CPacket AoiOutPacket;
+	AoiOutPacket << AoiOutPlayer;
+	BoradCast(&AoiOutPacket, pCurTile->GetCoord(), pPlayer);
+
 	pPlayer->SetPosition(pos);
 
-	if (pCurGrid->GetRunID() == pNewGrid->GetRunID())
-	{		
-		pNewGrid->DirectAddPlayer(pPlayer);
-		pNewTile->AddPlayer(pPlayer);
-		return true;
-	}
-	
 	pNewGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ADD_TELEPORT, pPlayer);
 	
 	return true;
@@ -195,6 +197,20 @@ void CMainWorld::PushMoveVector(CEntity* pEntity)
 		return;
 	
 	pCurGrid->AddMoveVector(pEntity);
+
+	g_LogGame.DLog("Push MoveVector EntityID : %d, GridID : %d", pEntity->GetID(), pEntity->GetGridID());
+}
+
+void CMainWorld::PopMoveVector(CEntity* pEntity)
+{
+	CGrid* pCurGrid = GetGrid(pEntity->GetGridID());
+
+	if (pCurGrid == nullptr)
+		return;
+
+	pCurGrid->RemoveMoveVector(pEntity);
+
+	g_LogGame.DLog("Pop MoveVector EntityID : %d, GridID : %d", pEntity->GetID(), pEntity->GetGridID());
 }
 
 void CMainWorld::BoradCast(CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer)
@@ -208,7 +224,7 @@ void CMainWorld::BoradCast(CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer)
 			if (pAOITile == nullptr)
 				continue;
 
-			pAOITile->Enqueue(ETILE_JOB_TYPE::BROADCAST_PACKET, pPlayer, pPacket);
+			pAOITile->EnqueueBroadCast(pPlayer, pPacket);
 		}
 	}
 }
@@ -224,12 +240,42 @@ void CMainWorld::Run(int id)
 	std::vector<CGrid*> vec = m_vecThreadRunGrids[id];
 	int Loop = static_cast<int>(vec.size());
 	int ret = 0;
+	
+	double accumulatedtime = 0.0f;
+	double lasttime = CUtil::GetQPCNowTime();
+
 	while (m_bActive)
 	{
 		ret = WaitForSingleObject(m_hExit, 1);
 
+		if (ret == WAIT_OBJECT_0)
+			break;
+	
 		for (int i = 0; i < Loop; i++)
-			vec[i]->Update();
+			vec[i]->ProcessPacket();
+
+		// 지연 시간 누적
+		double nowtime = CUtil::GetQPCNowTime();
+		double frame = nowtime - lasttime;
+		lasttime = nowtime;
+
+		accumulatedtime += frame;
+
+		int nLoop = 0;
+		while (accumulatedtime >= FIXED_DELTA && nLoop < MAX_FRAME_LOOP_COUNT)
+		{
+			for (int i = 0; i < Loop; i++)
+				vec[i]->Update();
+
+			accumulatedtime -= FIXED_DELTA;
+			nLoop++;
+		}
+
+		// 너무 많은 frame 이 쌓인다면 쌓인 frame 처리하느라 더 지연 최대 frame 만큼만 돌리기
+		if (nLoop == MAX_FRAME_LOOP_COUNT)
+		{
+			accumulatedtime = 0.0f;
+		}
 	}
 }
 

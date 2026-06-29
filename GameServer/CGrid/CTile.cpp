@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include "../Log/CLog.h"
 #include "../CPlayer.h"
+#include "../MainWorld/CMainWorld.h"
 
 void CTile::TileJobRun()
 {
@@ -15,33 +16,9 @@ void CTile::TileJobRun()
 		case ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI:
 			NotifyEntityTileEnterAOI(job.pEntity);
 			break;
-		case ETILE_JOB_TYPE::BROADCAST_ENTITY_INFO:
+		case ETILE_JOB_TYPE::WRONG_ENTITY_REMOVE:
 		{
-			st_STC_AoiInPlayer res;
-			res.info.ID = job.pEntity->GetID();
-			res.info.pos = job.pEntity->GetPosition();
-			res.info.speed = job.pEntity->GetMoveSpeed();
-
-			CPacket cPacket;
-			cPacket << res;
-
-			Broadcast(&cPacket, job.pEntity);
-		}
-			break;
-		case ETILE_JOB_TYPE::BROADCAST_ENTITY_REMOVE:
-		{
-			st_STC_AoiOutPlayer res;
-			res.ID = job.pEntity->GetID();
-
-			CPacket cPacket;
-			cPacket << res;
-
-			Broadcast(&cPacket, job.pEntity);
-		}
-			break;
-		case ETILE_JOB_TYPE::BROADCAST_PACKET:
-		{
-			Broadcast(&job.packet, job.pEntity);
+			RemovePlayer(job.pEntity);
 		}
 			break;
 		default:
@@ -50,8 +27,19 @@ void CTile::TileJobRun()
 	}
 }
 
-void CTile::Init(COORDINATE coord, st_Vector3F start, st_Vector3F end)
+void CTile::TileBroadCast()
 {
+	std::vector<st_TileBroadCast> vec;
+	m_queueBroadCast.PopVector(vec);
+	for (st_TileBroadCast& job : vec)
+	{
+		Broadcast(&job.packet, job.pEntity);
+	}
+}
+
+void CTile::Init(CMainWorld* parent, COORDINATE coord, st_Vector3F start, st_Vector3F end)
+{
+	m_parent = parent;
 	m_Coord = coord;
 
 	m_StartPos = start;
@@ -60,16 +48,17 @@ void CTile::Init(COORDINATE coord, st_Vector3F start, st_Vector3F end)
 	//g_LogGame.DLog("Create Tile[%d,%d] size[%d,%d]", coordX, coordZ, tilew, tileh);
 }
 
-
-void CTile::Enqueue(int type, CEntity* pEntity, CPacket* pPacket)
+void CTile::EnqueueJob(int type, CEntity* pEntity)
 {
-	if(pPacket == nullptr)
-	{
-		CPacket emptyPacket;
-		m_queue.Push({ type, pEntity, emptyPacket });
-	}
-	else
-		m_queue.Push({ type, pEntity, *pPacket});
+	m_queue.Push({ type, pEntity});
+}
+
+void CTile::EnqueueBroadCast(CEntity* pEntity, CPacket* Packet)
+{
+	CPacket localPacket;
+	localPacket.PutData(Packet->GetReadBuffPtr(), Packet->GetDataSize());
+
+	m_queueBroadCast.Push({ pEntity, localPacket });
 }
 
 bool CTile::AddPlayer(CEntity* pEntity)
@@ -82,6 +71,13 @@ bool CTile::AddPlayer(CEntity* pEntity)
 		((CPlayer*)pEntity)->AddRef();
 		
 		g_LogGame.DLog("Enter Tile[%d,%d] ActiveCount : %d", m_Coord.X, m_Coord.Z, m_iActive.load());
+#ifdef __DEBUG__
+		int PlayerCount = m_vecPlayer.GetSize();
+		if (m_iActive.load() != PlayerCount)
+		{
+			g_LogGame.DLog("Add Not Equel Active[%d] != PlayerCount[%d]", m_iActive.load(), PlayerCount);
+		}
+#endif // __DEBUG__
 	}
 	return ret;
 }
@@ -94,17 +90,34 @@ bool CTile::RemovePlayer(CEntity* pEntity)
 		m_iActive.fetch_sub(1);
 		((CPlayer*)pEntity)->ReleaseRef();
 		g_LogGame.DLog("Leave Tile[%d,%d] ActiveCount : %d", m_Coord.X, m_Coord.Z, m_iActive.load());
+#ifdef __DEBUG__
+		int PlayerCount = m_vecPlayer.GetSize();
+		if (m_iActive.load() != PlayerCount)
+		{
+			g_LogGame.DLog("Remove Not Equel Active[%d] != PlayerCount[%d]", m_iActive.load(), PlayerCount);
+		}
+#endif // __DEBUG__
 	}
-	if (!ret)
+	else
 	{
-		g_LogGame.ELog("ERROR LEVEL");
+		// 현재 자신의 타일에 없음
+		COORDINATE curTilePos = pEntity->GetTilePos();
+		if (curTilePos != m_Coord)
+		{
+			g_LogGame.ELog("Error Wrong Tile Remove");
+			CTile* pTile = m_parent->GetTile(curTilePos);
+			pTile->EnqueueJob(ETILE_JOB_TYPE::WRONG_ENTITY_REMOVE, pEntity);
+		}
 	}
+
 	return ret;
 }
 
 void CTile::Update()
 {
 	TileJobRun();
+	TileBroadCast();
+
 	if (m_iDebugLogTime + m_iDebugLogDelayTime < GetTickCount())
 	{
 		if (m_iActive.load() > 0)

@@ -101,7 +101,11 @@ int PacketProc::DO_GAME_MOVESTART(CPlayer* pTarget, CPacket& pReqPacket)
 
     float dist = pTarget->GetPosition().DistanceToNSquared(req.pos);
     if (dist > POSITION_TOLERANCE * POSITION_TOLERANCE)
+    {
+        g_LogGame.DLog("NOT EQUAL POSITION CLIENT[%.2f, %.2f] - SERVER[%.2f, %.2f]",
+			req.pos.X, req.pos.Y, pTarget->GetPosition().X, pTarget->GetPosition().Y);
         return ERROR_CODE::NOT_EQUAL_POSITION;
+    }
     
 #ifdef __DEBUG__
 	st_Vector3F dir = pTarget->GetPosition().Direction(req.goal);
@@ -123,11 +127,13 @@ int PacketProc::DO_GAME_MOVESTART(CPlayer* pTarget, CPacket& pReqPacket)
     res.pos = pTarget->GetPosition();
     pTarget->SendPacket(res);
 
-	// Zone 에 있는 다른 Player 들에게 이동 시작 패킷 보내기
-	CPacket pack;
-    pack << res;
-	//g_ZoneManager.SendZone(pTarget->GetChannel(), pTarget->GetZoneID(), &pack, pTarget);
-
+    st_STC_OtherMoveStart othermove;
+    othermove.ID = pTarget->GetID();
+    othermove.type = pTarget->GetType();
+    othermove.dir = pTarget->GetDirVector();
+    othermove.pos = pTarget->GetPosition();
+    
+    pTarget->BroadCast(othermove);
     return 0;
 }
 
@@ -135,10 +141,13 @@ int PacketProc::DO_GAME_MOVESTOP(CPlayer* pTarget, CPacket& pReqPacket)
 {
     st_CTS_MoveStop req;
     pReqPacket >> req;
-
+    
 	float dist = pTarget->GetPosition().DistanceToNSquared(req.pos);
     if (dist > POSITION_TOLERANCE * POSITION_TOLERANCE)
-        return ERROR_CODE::NOT_EQUAL_POSITION;
+    {
+		g_LogGame.DLog("NOT EQUAL POSITION CLIENT[%.2f, %.2f] - SERVER[%.2f, %.2f]", req.pos.X, req.pos.Y, pTarget->GetPosition().X, pTarget->GetPosition().Y);
+        //return ERROR_CODE::NOT_EQUAL_POSITION;
+    }
 
     int ret = pTarget->MoveStop(req.pos);
     if (ret != 0)
@@ -146,8 +155,12 @@ int PacketProc::DO_GAME_MOVESTOP(CPlayer* pTarget, CPacket& pReqPacket)
 
     st_STC_MoveStop res;
     res.ret = 0;
+	res.ID = pTarget->GetID();
     res.pos = pTarget->GetPosition();
     pTarget->SendPacket(res);
+
+    pTarget->BroadCast(res);
+    
     return 0;
 }
 
@@ -171,9 +184,15 @@ int PacketProc::DO_GAME_TELEPORT(CPlayer* pTarget, CPacket& pReqPacket)
         return -1;
 
     int ret = pTarget->Teleport(req.pos);
-
+    if (!ret)
+        return ret;
     g_LogGame.DLog("TelePort");
 
-    return ret;
+    st_STC_Teleport res;
+	res.ret = 0;
+	res.pos = pTarget->GetPosition();
+	pTarget->SendPacket(res);
+
+    return 0;
 }
 

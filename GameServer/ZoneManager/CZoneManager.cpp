@@ -299,7 +299,7 @@ void CZoneManager::PopZoneMoveVector(CEntity* pEntity)
 	if (!IsValidChannelZone(channel, zone))
 		return;
 
-	CZone* pZone = (CZone*)m_mapZones[zone][channel];
+	CZoneBasic* pZone = (CZoneBasic*)m_mapZones[zone][channel];
 	pZone->PopMoveVector(pEntity);
 }
 

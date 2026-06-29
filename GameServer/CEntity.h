@@ -46,6 +46,7 @@ public:
 	void SetGridVectorIndex(int value) { m_vecIndex[EIndexType::VECTOR_INDEX_GRID] = value; };
 	void SetTileVectorIndex(int value) { m_vecIndex[EIndexType::VECTOR_INDEX_TILE] = value; };
 	void SetMoveVectorIndex(int value) { m_vecIndex[EIndexType::VECTOR_INDEX_MOVE] = value; };
+
 public:
 	int GetChannel() { return m_iChannel; }
 	int GetZoneID() { return m_OwnerZone.load(); }
@@ -57,6 +58,8 @@ public:
 	st_Vector3F GetGoalPosition() { return m_stGoalPosition; }
 	st_Vector3F GetDirVector() { return m_stDirVector; }
 	float GetMoveSpeed() { return m_fMoveSpeed; }
+	int GetMoveState() { return m_eMoveState; }
+	int GetType() { return m_nEntityType; }
 
 	void SetZoneID(int channel, int zone) { m_iChannel = channel;  m_OwnerZone.store(zone); };
 	void SetZoneStatus(eZONESTATUS type) { m_eZoneStatus = type; }

@@ -110,6 +110,13 @@ struct st_STC_ObserverConnect
 {
 	__int32		ret;
 };
+struct st_STC_OtherMoveStart
+{
+	__int32		type;
+	__int32		ID;
+	st_Vector3F		pos;
+	st_Vector3F		dir;
+};
 struct st_STC_Teleport
 {
 	__int32		ret;

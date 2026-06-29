@@ -34,14 +34,11 @@ void CGrid::EntityMoveRun()
 		if(ret)
 			vecCompleteMove.push_back(vec[i]);
 
-		// 임시 코드 진행 막기
-		continue;
-
-		// 여기서 Tile 을 바꿔줘야하나 아니면 CEntity::MoveComplete 에서 Tile 의 위치를 바꿔줘야하나?
-		// 중요한건 Tile 을 바꿀려면 Tile 을 알고 있는 CMainWorld 을 알고 있어야함
+		// Move 완료 여부와 상관 없이 Tile, Grid Update
 		COORDINATE curTilePos = vec[i]->GetTilePos();
 		COORDINATE newTilePos = m_parent->CalCoord(vec[i]->GetPosition());
 
+		// 현재 TilePos 와 새 TilePos 가 다른 경우
 		if (curTilePos != newTilePos)
 		{
 			// Tile 변경
@@ -58,8 +55,34 @@ void CGrid::EntityMoveRun()
 
 			// 기존 AOI 범위 curTilePos +- AOI_VIEW_COUNT
 			// 변경 AOI 범위 newTilePos +- AOI_VIEW_COUNT
-			COORDINATE OutOfRangeAOI = { curTilePos.X - (diff.X * AOI_VIEW_COUNT), curTilePos.Z - (diff.Z * AOI_VIEW_COUNT) };	// 벗어난 AOI
-			COORDINATE InOfRangeAOI = { newTilePos.X + (diff.X * AOI_VIEW_COUNT), newTilePos.Z + (diff.Z * AOI_VIEW_COUNT) };	// 들어간 AOI 
+			COORDINATE OutOfRangeAOI = { curTilePos.X - (diff.X), curTilePos.Z - (diff.Z) };	// 벗어난 AOI
+			COORDINATE InOfRangeAOI = { newTilePos.X + (diff.X), newTilePos.Z + (diff.Z) };		// 들어간 AOI 
+			
+			// 범위 밖으로 나감
+			st_STC_AoiOutPlayer outAoiPlayer;
+			outAoiPlayer.ID = vec[i]->GetID();
+			CPacket outAoiPacket;
+			outAoiPacket << outAoiPlayer;
+
+			// 범위 안으로 들어옴
+			st_STC_AoiInPlayer inAoiPlayer;
+			inAoiPlayer.info.ID = vec[i]->GetID();
+			inAoiPlayer.info.pos = vec[i]->GetPosition();
+			inAoiPlayer.info.speed = vec[i]->GetMoveSpeed();
+			
+			CPacket inAoiPacket;
+			inAoiPacket << inAoiPlayer;
+			
+			if (vec[i]->GetMoveState() != eMOVESTATE::STOPPED)
+			{
+				st_STC_OtherMoveStart inAoiPlayerMove;
+				inAoiPlayerMove.type = vec[i]->GetType();
+				inAoiPlayerMove.ID = vec[i]->GetID();
+				inAoiPlayerMove.dir = vec[i]->GetDirVector();
+				inAoiPlayerMove.pos = vec[i]->GetPosition();
+
+				inAoiPacket << inAoiPlayerMove;
+			}
 			
 			if (diff.X != 0)
 			{
@@ -73,6 +96,8 @@ void CGrid::EntityMoveRun()
 
 					// OutOfRangeAOI
 					// 시야 밖으로 나감 판정
+					pOut->EnqueueBroadCast(nullptr, &outAoiPacket);						// 다른 유저에게 삭제 메시지
+					pOut->EnqueueJob(ETILE_JOB_TYPE::NOTIFY_TILE_REMOVE_AOI, vec[i]);	// 나에게 다른 유저 지우기 메시지
 				}
 
 				int MinInH = newTilePos.Z - AOI_VIEW_COUNT;
@@ -85,6 +110,8 @@ void CGrid::EntityMoveRun()
 
 					// InOfRangeAOI
 					// 시야 안으로 들어온 판정
+					pIn->EnqueueBroadCast(nullptr, &inAoiPacket);						// 다른 유저에게 생성 메시지
+					pIn->EnqueueJob(ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI, vec[i]);		// 나에게 다른 유저 생성 메시지
 				}
 			}
 			
@@ -107,6 +134,8 @@ void CGrid::EntityMoveRun()
 
 					// OutOfRangeAOI
 					// 시야 밖으로 나감 판정
+					pOut->EnqueueBroadCast(nullptr, &outAoiPacket);						// 다른 유저에게 삭제 메시지
+					pOut->EnqueueJob(ETILE_JOB_TYPE::NOTIFY_TILE_REMOVE_AOI, vec[i]);	// 나에게 다른 유저 지우기 메시지
 				}
 
 				int MinInW = newTilePos.X - AOI_VIEW_COUNT;
@@ -126,19 +155,24 @@ void CGrid::EntityMoveRun()
 
 					// InOfRangeAOI
 					// 시야 안으로 들어온 판정
+					pIn->EnqueueBroadCast(nullptr, &inAoiPacket);						// 다른 유저에게 생성 메시지
+					pIn->EnqueueJob(ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI, vec[i]);		// 나에게 다른 유저 생성 메시지
 				}
 			}
+
+			this->RemovePlayer(vec[i]);
+			pCurTile->RemovePlayer(vec[i]);
 
 			// 같은 Grid 에서 관리 할때
 			if (pCurTile->GetManagementGrid() == pNewTile->GetManagementGrid())
 			{
-				pCurTile->RemovePlayer(vec[i]);
 				pNewTile->AddPlayer(vec[i]);
 			}
 			// 다른 Grid 에서 관리 할때
 			else
 			{
-				
+				CGrid* pNewGrid = m_parent->GetGrid(pNewTile->GetManagementGrid());
+				pNewGrid->EnqueueEntityJob(EGRID_ADD_TYPE::CHANGE_THREAD, vec[i]);
 			}
 		}
 
@@ -176,6 +210,11 @@ void CGrid::EntityJobRun()
 		case EGRID_ADD_TYPE::ADD_TELEPORT:
 		{
 			OnTeleport(msg.pEntity);
+		}
+			break;
+		case EGRID_ADD_TYPE::CHANGE_THREAD:
+		{
+			OnChangeThread(msg.pEntity);
 		}
 			break;
 		default:
@@ -224,10 +263,25 @@ void CGrid::OnTeleport(CEntity* pEntity)
 		return;
 	}
 	pTile->AddPlayer(pEntity);
-	st_STC_Teleport res;
-	res.ret = 0;
-	res.pos = pEntity->GetPosition();
-	((CPlayer*)pEntity)->SendPacket(res);
+	
+	SendInitAOITile(pTile->GetCoord(), pEntity);
+}
+
+void CGrid::OnChangeThread(CEntity* pEntity)
+{
+	AddPlayer(pEntity);
+	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
+	if (pTile == nullptr)
+	{
+		g_LogGame.ELog("ERROR Teleport");
+		return;
+	}
+	pTile->AddPlayer(pEntity);
+
+	if (pEntity->GetMoveState() == eMOVESTATE::STOPPED)
+		return;
+
+	AddMoveVector(pEntity);
 }
 
 void CGrid::Init(int id, CMainWorld* pParent)
@@ -263,7 +317,7 @@ void CGrid::RemoveMoveVector(CEntity* pEntity)
 	m_vecMove.RemoveEntity(pEntity);
 }
 
-void CGrid::Update()
+void CGrid::ProcessPacket()
 {
 	PROC_MSG job;
 	while (m_queueProc.TryDequeue(job))
@@ -283,7 +337,10 @@ void CGrid::Update()
 
 		proc.DO_GAME_Proc(job.type, pPlayer, job.packet);
 	}
-	
+}
+
+void CGrid::Update()
+{
 	EntityJobRun();
 	EntityMoveRun();
 
@@ -334,16 +391,22 @@ void CGrid::SendInitAOITile(COORDINATE& pivot, CEntity* pEntity)
 			if (pAOITile == nullptr)
 				continue;
 
-			// 시야 안으로 들어 왔음을 알림
-			pAOITile->Enqueue(ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI, pEntity);
-			// 시야 안으로 들어온 플레이어 에 대한 정보를 알림
-			pAOITile->Enqueue(ETILE_JOB_TYPE::BROADCAST_ENTITY_INFO, pEntity);
+			// 시야 안 정보를 나에게 보냄
+			pAOITile->EnqueueJob(ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI, pEntity);
+			// 나의 정보를 시야에 보냄
+			pAOITile->EnqueueBroadCast(pEntity, &cPacket);
 		}
 	}
 }
 
 void CGrid::SendRemoveAOITile(COORDINATE& pivot, CEntity* pEntity)
 {
+	CPacket cPacket;
+	st_STC_AoiOutPlayer res;
+	res.ID = pEntity->GetID();
+
+	cPacket << res;
+
 	for (int z = -AOI_VIEW_COUNT; z <= AOI_VIEW_COUNT; z++)
 	{
 		for (int x = -AOI_VIEW_COUNT; x <= AOI_VIEW_COUNT; x++)
@@ -352,7 +415,7 @@ void CGrid::SendRemoveAOITile(COORDINATE& pivot, CEntity* pEntity)
 			if (pAOITile == nullptr)
 				continue;
 
-			pAOITile->Enqueue(ETILE_JOB_TYPE::BROADCAST_ENTITY_REMOVE, pEntity);
+			pAOITile->EnqueueBroadCast(pEntity, &cPacket);
 		}
 	}
 }

@@ -138,6 +138,8 @@ int CEntity::MoveStart(st_Vector3F goal, st_Vector3F dir)
 
 void CEntity::MoveComplete()
 {
+    m_eMoveState = eMOVESTATE::STOPPED;
+
     st_STC_MoveStop res;
     res.pos = m_stPosition;
     res.type = m_nEntityType;
@@ -146,7 +148,7 @@ void CEntity::MoveComplete()
     switch (m_nEntityType)
     {
     case 0:
-        res.ID = ((CPlayer*)this)->GetID();
+        res.ID = GetID();
         break;
     default:
         break;
@@ -160,12 +162,6 @@ void CEntity::MoveComplete()
 
 int CEntity::MoveStop(st_Vector3F pos)
 {
-    // 움직일수 없는 상태인지 체크
-    if (0)
-    {
-
-    }
-
     m_eMoveState = eMOVESTATE::STOPPED;
 
     g_ZoneManager.PopZoneMoveVector(this);

@@ -30,7 +30,7 @@ public:
 
 	virtual bool EnterZone(CPlayer* pPlayer);
 	virtual bool LeaveZone(CPlayer* pPlayer);
-	virtual void PushMoveVector(CEntity* pEntity) {};
+	virtual bool PushMoveVector(CEntity* pEntity) { return false; };
 	virtual void PopMoveVector(CEntity* pEntity) {};
 
 	bool Enqueue(ZONE_CHANGE_JOB& job);

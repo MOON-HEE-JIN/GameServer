@@ -2,10 +2,11 @@
 #include "ZoneManager/CZoneManager.h"
 #include "./CUtill/CUtill.h"
 #include "Stub/StructDef.h"
-
+#include "Stub/EnumDef.h"
 CEntity::CEntity()
 {
     m_vecIndex.resize(EIndexType::VECTOR_INDEX_END);
+    Reset();
 }
 
 void CEntity::Reset()
@@ -51,55 +52,6 @@ bool CEntity::MoveUpdate()
 		m_stPosition += st_Vector3F(speedDx, speedDy, speedDz);
     }
 
-    if (m_stDirVector.X > 0)
-    {
-        if (m_stPosition.X > m_stGoalPosition.X)
-        {
-            int a = 100;
-            a++;
-        }
-    }
-    else
-    {
-        if (m_stPosition.X < m_stGoalPosition.X)
-        {
-            int a = 100;
-            a++;
-        }
-    }
-    if (m_stDirVector.Y > 0)
-    {
-        if (m_stPosition.Y > m_stGoalPosition.Y)
-        {
-            int a = 100;
-            a++;
-        }
-    }
-    else
-    {
-        if (m_stPosition.Y < m_stGoalPosition.Y)
-        {
-            int a = 100;
-            a++;
-        }
-    }
-    if (m_stDirVector.Z > 0)
-    {
-        if (m_stPosition.Z > m_stGoalPosition.Z)
-        {
-            int a = 100;
-            a++;
-        }
-    }
-    else
-    {
-        if (m_stPosition.Z < m_stGoalPosition.Z)
-        {
-            int a = 100;
-            a++;
-        }
-    }
-
     return false;
 }
 
@@ -127,11 +79,20 @@ int CEntity::MoveStart(st_Vector3F goal, st_Vector3F dir)
 
     }
 
+    // 움직이는중 방향 변경
+    if (GetMoveVectorIndex() != -1)
+    {
+		m_stGoalPosition = goal;
+        m_stDirVector = dir;
+        return 0;
+    }
+
     m_eMoveState = eMOVESTATE::MOVEING;
     m_stGoalPosition = goal;
     m_stDirVector = dir;
-    
-    g_ZoneManager.PushZoneMoveVector(this);
+
+    if (!g_ZoneManager.PushZoneMoveVector(this))
+        return ERROR_CODE::ERROR_INDEX;
 
     return 0;
 }

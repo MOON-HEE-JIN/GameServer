@@ -45,7 +45,7 @@ public:
 
 	bool LeaveZone(CPlayer* pPlayer);
 
-	void PushZoneMoveVector(CEntity* pEntity);
+	bool PushZoneMoveVector(CEntity* pEntity);
 	void PopZoneMoveVector(CEntity* pEntity);
 
 	CZoneBasic* GetZone(int Channel, int ZoneID);

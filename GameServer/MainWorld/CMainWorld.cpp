@@ -152,6 +152,13 @@ void CMainWorld::MessageRouting(std::vector<PROC_MSG>& vec)
 
 bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 {
+	// 추후 Teleporty 관련 조건 체크
+	if (0)
+	{
+		g_LogGame.ELog("ERROR Teleport");
+		return false;
+	}
+
 	CTile* pNewTile = GetTile(pos);
 	
 	g_LogGame.DLog("REQ Teleport Pos [%f, %f, %f]  NewTile [%d, %d]", pos.X, pos.Y, pos.Z, pNewTile->GetCoord().X, pNewTile->GetCoord().Z);
@@ -168,13 +175,6 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 	pCurGrid->DirectRemovePlayer(pPlayer);
 	pCurTile->RemovePlayer(pPlayer);
 	
-	// 추후 Teleporty 관련 조건 체크
-	if (0)
-	{
-		g_LogGame.ELog("ERROR Teleport");
-		return false;
-	}
-
 	// 시야 범위 밖으로 나갔다는 패킷 뿌려주기
 	st_STC_AoiOutPlayer AoiOutPlayer;
 	AoiOutPlayer.ID = pPlayer->GetID();
@@ -189,16 +189,18 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 	return true;
 }
 
-void CMainWorld::PushMoveVector(CEntity* pEntity)
+bool CMainWorld::PushMoveVector(CEntity* pEntity)
 {
 	CGrid* pCurGrid = GetGrid(pEntity->GetGridID());
 	
 	if (pCurGrid == nullptr)
-		return;
-	
-	pCurGrid->AddMoveVector(pEntity);
+		return false;
 
+	if (!pCurGrid->AddMoveVector(pEntity))
+		return false;
+	
 	g_LogGame.DLog("Push MoveVector EntityID : %d, GridID : %d", pEntity->GetID(), pEntity->GetGridID());
+	return true;
 }
 
 void CMainWorld::PopMoveVector(CEntity* pEntity)
@@ -222,6 +224,9 @@ void CMainWorld::BoradCast(CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer)
 		{
 			CTile* pAOITile = GetTile({ pivot.X + x, pivot.Z + z });
 			if (pAOITile == nullptr)
+				continue;
+
+			if (pAOITile->GetActiveCount() == 0)
 				continue;
 
 			pAOITile->EnqueueBroadCast(pPlayer, pPacket);

@@ -280,15 +280,15 @@ bool CZoneManager::LeaveZone(CPlayer* pPlayer)
 	return m_mapZones[zoneID][channel]->LeaveZone(pPlayer);
 }
 
-void CZoneManager::PushZoneMoveVector(CEntity* pEntity)
+bool CZoneManager::PushZoneMoveVector(CEntity* pEntity)
 {
 	int channel = pEntity->GetChannel();
 	int zone = pEntity->GetZoneID();
 
 	if (!IsValidChannelZone(channel, zone))
-		return;
+		return false;
 
-	m_mapZones[zone][channel]->PushMoveVector(pEntity);
+	return m_mapZones[zone][channel]->PushMoveVector(pEntity);
 }
 
 void CZoneManager::PopZoneMoveVector(CEntity* pEntity)

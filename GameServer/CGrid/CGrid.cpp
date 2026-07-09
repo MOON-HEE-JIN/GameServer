@@ -38,155 +38,164 @@ void CGrid::EntityMoveRun()
 		COORDINATE curTilePos = vec[i]->GetTilePos();
 		COORDINATE newTilePos = m_parent->CalCoord(vec[i]->GetPosition());
 
-		// 현재 TilePos 와 새 TilePos 가 다른 경우
-		if (curTilePos != newTilePos)
-		{
-			// Tile 변경
-			CTile* pCurTile = m_parent->GetTile(curTilePos);
-			CTile* pNewTile = m_parent->GetTile(newTilePos);
+		if (curTilePos == newTilePos)
+			continue;
 
-			COORDINATE diff = newTilePos - curTilePos;
+		// Tile 변경
+		CTile* pCurTile = m_parent->GetTile(curTilePos);
+		CTile* pNewTile = m_parent->GetTile(newTilePos);
+
+		COORDINATE diff = newTilePos - curTilePos;
 
 #ifdef __DEBUG__
-			// 이동 으로 인한 tile 변경은 1 로 제한 된다
-			if (abs(diff.X) > 1 || abs(diff.Z) > 1)
-				g_LogGame.DLog("ERROR diff > 1");
+		// 이동 으로 인한 tile 변경은 1 로 제한 된다
+		if (abs(diff.X) > 1 || abs(diff.Z) > 1)
+			g_LogGame.DLog("ERROR diff > 1");
 #endif // __DEBUG__
 
-			// 기존 AOI 범위 curTilePos +- AOI_VIEW_COUNT
-			// 변경 AOI 범위 newTilePos +- AOI_VIEW_COUNT
-			COORDINATE OutOfRangeAOI = { curTilePos.X - (diff.X), curTilePos.Z - (diff.Z) };	// 벗어난 AOI
-			COORDINATE InOfRangeAOI = { newTilePos.X + (diff.X), newTilePos.Z + (diff.Z) };		// 들어간 AOI 
-			
-			// 범위 밖으로 나감
-			st_STC_AoiOutPlayer outAoiPlayer;
-			outAoiPlayer.ID = vec[i]->GetID();
-			CPacket outAoiPacket;
-			outAoiPacket << outAoiPlayer;
+		// 기존 AOI 범위 curTilePos +- AOI_VIEW_COUNT
+		// 변경 AOI 범위 newTilePos +- AOI_VIEW_COUNT
+		COORDINATE OutOfRangeAOI = { curTilePos.X - (diff.X), curTilePos.Z - (diff.Z) };	// 벗어난 AOI
+		COORDINATE InOfRangeAOI = { newTilePos.X + (diff.X), newTilePos.Z + (diff.Z) };		// 들어간 AOI 
 
-			// 범위 안으로 들어옴
-			st_STC_AoiInPlayer inAoiPlayer;
-			inAoiPlayer.info.ID = vec[i]->GetID();
-			inAoiPlayer.info.pos = vec[i]->GetPosition();
-			inAoiPlayer.info.speed = vec[i]->GetMoveSpeed();
-			
-			CPacket inAoiPacket;
-			inAoiPacket << inAoiPlayer;
-			
-			if (vec[i]->GetMoveState() != eMOVESTATE::STOPPED)
+		// 범위 밖으로 나감
+		st_STC_AoiOutPlayer outAoiPlayer;
+		outAoiPlayer.ID = vec[i]->GetID();
+		CPacket outAoiPacket;
+		outAoiPacket << outAoiPlayer;
+
+		// 범위 안으로 들어옴
+		st_STC_AoiInPlayer inAoiPlayer;
+		inAoiPlayer.info.ID = vec[i]->GetID();
+		inAoiPlayer.info.pos = vec[i]->GetPosition();
+		inAoiPlayer.info.speed = vec[i]->GetMoveSpeed();
+
+		CPacket inAoiPacket;
+		inAoiPacket << inAoiPlayer;
+
+		if (vec[i]->GetMoveState() != eMOVESTATE::STOPPED)
+		{
+			st_STC_OtherMoveStart inAoiPlayerMove;
+			inAoiPlayerMove.type = vec[i]->GetType();
+			inAoiPlayerMove.ID = vec[i]->GetID();
+			inAoiPlayerMove.dir = vec[i]->GetDirVector();
+			inAoiPlayerMove.pos = vec[i]->GetPosition();
+
+			inAoiPacket << inAoiPlayerMove;
+		}
+
+		if (diff.X != 0)
+		{
+			int MinOutH = curTilePos.Z - AOI_VIEW_COUNT;
+			int MaxOutH = curTilePos.Z + AOI_VIEW_COUNT;
+			for (int H = MinOutH; H <= MaxOutH; H++)
 			{
-				st_STC_OtherMoveStart inAoiPlayerMove;
-				inAoiPlayerMove.type = vec[i]->GetType();
-				inAoiPlayerMove.ID = vec[i]->GetID();
-				inAoiPlayerMove.dir = vec[i]->GetDirVector();
-				inAoiPlayerMove.pos = vec[i]->GetPosition();
+				CTile* pOut = m_parent->GetTile({ OutOfRangeAOI.X, H });
+				if (pOut == nullptr)
+					continue;
 
-				inAoiPacket << inAoiPlayerMove;
-			}
-			
-			if (diff.X != 0)
-			{
-				int MinOutH = curTilePos.Z - AOI_VIEW_COUNT;
-				int MaxOutH = curTilePos.Z + AOI_VIEW_COUNT;
-				for (int H = MinOutH; H <= MaxOutH; H++)
-				{
-					CTile* pOut = m_parent->GetTile({ OutOfRangeAOI.X, H });
-					if (pOut == nullptr)
-						continue;
-
-					// OutOfRangeAOI
-					// 시야 밖으로 나감 판정
-					pOut->EnqueueBroadCast(nullptr, &outAoiPacket);						// 다른 유저에게 삭제 메시지
-					pOut->EnqueueJob(ETILE_JOB_TYPE::NOTIFY_TILE_REMOVE_AOI, vec[i]);	// 나에게 다른 유저 지우기 메시지
-				}
-
-				int MinInH = newTilePos.Z - AOI_VIEW_COUNT;
-				int MaxInH = newTilePos.Z + AOI_VIEW_COUNT;
-				for (int H = MinInH; H <= MaxInH; H++)
-				{
-					CTile* pIn = m_parent->GetTile({ InOfRangeAOI.X, H });
-					if (pIn == nullptr)
-						continue;
-
-					// InOfRangeAOI
-					// 시야 안으로 들어온 판정
-					pIn->EnqueueBroadCast(nullptr, &inAoiPacket);						// 다른 유저에게 생성 메시지
-					pIn->EnqueueJob(ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI, vec[i]);		// 나에게 다른 유저 생성 메시지
-				}
-			}
-			
-			if (diff.Z != 0)
-			{
-				int MinOutW = curTilePos.X - AOI_VIEW_COUNT;
-				int MaxOutW = curTilePos.X + AOI_VIEW_COUNT;
-				
-				// 겹치는 부분 제거
-				if (diff.X < 0)
-					MaxOutW--;
-				else if (diff.X > 0)
-					MinOutW--;
-
-				for (int W = MinOutW; W <= MaxOutW; W++)
-				{
-					CTile* pOut = m_parent->GetTile({ W, OutOfRangeAOI.Z });
-					if (pOut == nullptr)
-						continue;
-
-					// OutOfRangeAOI
-					// 시야 밖으로 나감 판정
-					pOut->EnqueueBroadCast(nullptr, &outAoiPacket);						// 다른 유저에게 삭제 메시지
-					pOut->EnqueueJob(ETILE_JOB_TYPE::NOTIFY_TILE_REMOVE_AOI, vec[i]);	// 나에게 다른 유저 지우기 메시지
-				}
-
-				int MinInW = newTilePos.X - AOI_VIEW_COUNT;
-				int MaxInW = newTilePos.X + AOI_VIEW_COUNT;
-
-				// 겹치는 부분 제거
-				if (diff.X < 0)
-					MaxInW--;
-				else if (diff.X > 0)
-					MinInW--;
-
-				for (int W = MinInW; W <= MaxInW; W++)
-				{
-					CTile* pIn = m_parent->GetTile({ W, InOfRangeAOI.Z });
-					if (pIn == nullptr)
-						continue;
-
-					// InOfRangeAOI
-					// 시야 안으로 들어온 판정
-					pIn->EnqueueBroadCast(nullptr, &inAoiPacket);						// 다른 유저에게 생성 메시지
-					pIn->EnqueueJob(ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI, vec[i]);		// 나에게 다른 유저 생성 메시지
-				}
+				// OutOfRangeAOI
+				// 시야 밖으로 나감 판정
+				pOut->EnqueueBroadCast(nullptr, &outAoiPacket);						// 다른 유저에게 삭제 메시지
+				pOut->EnqueueJob(ETILE_JOB_TYPE::NOTIFY_TILE_REMOVE_AOI, vec[i]);	// 나에게 다른 유저 지우기 메시지
 			}
 
-			this->RemovePlayer(vec[i]);
-			pCurTile->RemovePlayer(vec[i]);
+			int MinInH = newTilePos.Z - AOI_VIEW_COUNT;
+			int MaxInH = newTilePos.Z + AOI_VIEW_COUNT;
+			for (int H = MinInH; H <= MaxInH; H++)
+			{
+				CTile* pIn = m_parent->GetTile({ InOfRangeAOI.X, H });
+				if (pIn == nullptr)
+					continue;
 
-			// 같은 Grid 에서 관리 할때
-			if (pCurTile->GetManagementGrid() == pNewTile->GetManagementGrid())
-			{
-				pNewTile->AddPlayer(vec[i]);
-			}
-			// 다른 Grid 에서 관리 할때
-			else
-			{
-				CGrid* pNewGrid = m_parent->GetGrid(pNewTile->GetManagementGrid());
-				pNewGrid->EnqueueEntityJob(EGRID_ADD_TYPE::CHANGE_THREAD, vec[i]);
+				// InOfRangeAOI
+				// 시야 안으로 들어온 판정
+				pIn->EnqueueBroadCast(nullptr, &inAoiPacket);						// 다른 유저에게 생성 메시지
+				pIn->EnqueueJob(ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI, vec[i]);		// 나에게 다른 유저 생성 메시지
 			}
 		}
 
-		if (!ret)
-			continue;
+		if (diff.Z != 0)
+		{
+			int MinOutW = curTilePos.X - AOI_VIEW_COUNT;
+			int MaxOutW = curTilePos.X + AOI_VIEW_COUNT;
 
-		vecCompleteMove.push_back(vec[i]);
-		//GetTile();
+			// 겹치는 부분 제거
+			if (diff.X < 0)
+				MaxOutW--;
+			else if (diff.X > 0)
+				MinOutW--;
+
+			for (int W = MinOutW; W <= MaxOutW; W++)
+			{
+				CTile* pOut = m_parent->GetTile({ W, OutOfRangeAOI.Z });
+				if (pOut == nullptr)
+					continue;
+
+				// OutOfRangeAOI
+				// 시야 밖으로 나감 판정
+				pOut->EnqueueBroadCast(nullptr, &outAoiPacket);						// 다른 유저에게 삭제 메시지
+				pOut->EnqueueJob(ETILE_JOB_TYPE::NOTIFY_TILE_REMOVE_AOI, vec[i]);	// 나에게 다른 유저 지우기 메시지
+			}
+
+			int MinInW = newTilePos.X - AOI_VIEW_COUNT;
+			int MaxInW = newTilePos.X + AOI_VIEW_COUNT;
+
+			// 겹치는 부분 제거
+			if (diff.X < 0)
+				MaxInW--;
+			else if (diff.X > 0)
+				MinInW--;
+
+			for (int W = MinInW; W <= MaxInW; W++)
+			{
+				CTile* pIn = m_parent->GetTile({ W, InOfRangeAOI.Z });
+				if (pIn == nullptr)
+					continue;
+
+				// InOfRangeAOI
+				// 시야 안으로 들어온 판정
+				pIn->EnqueueBroadCast(nullptr, &inAoiPacket);						// 다른 유저에게 생성 메시지
+				pIn->EnqueueJob(ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI, vec[i]);		// 나에게 다른 유저 생성 메시지
+			}
+		}
+
+		// Tile 이 변경 된 상태 관리 주체를 변경 해야 한다
+		// 현재 Grid, Tile 에서 제거
+		// 새로운 Grid, Tile 에 추가
+
+		// 더이상 해당 Tile 에서 관리 하지 않음
+		pCurTile->RemovePlayer(vec[i]);
+
+		// 같은 Grid 에서 관리 할때
+		if (pCurTile->GetManagementGrid() == pNewTile->GetManagementGrid())
+		{
+			g_LogGame.DLog("이동 으로 인한 같은 Thread 내 의 Tile 변경");
+			pNewTile->AddPlayer(vec[i]);
+		}
+		else
+		{
+			CGrid* pNewGrid = m_parent->GetGrid(pNewTile->GetManagementGrid());
+			if(pNewGrid == nullptr)
+			{
+				g_LogGame.ELog("ERROR Change Thread GridID : %d", pNewTile->GetManagementGrid());
+				continue;
+			}
+			m_vecChangeThreadMove.push_back({ vec[i], pNewGrid });
+		}
 	}
 
 	Loop = static_cast<int>(vecCompleteMove.size());
 	for (int i = 0; i < Loop; i++)
 	{
 		RemoveMoveVector(vecCompleteMove[i]);
+	}
+
+	Loop = static_cast<int>(m_vecChangeThreadMove.size());
+	for (int i = 0; i < Loop; i++)
+	{
+		RemovePlayer(m_vecChangeThreadMove[i].pEntity);
+		m_vecChangeThreadMove[i].pGrid->EnqueueEntityJob(EGRID_ADD_TYPE::CHANGE_THREAD_REQUEST, m_vecChangeThreadMove[i].pEntity);
 	}
 }
 
@@ -212,10 +221,17 @@ void CGrid::EntityJobRun()
 			OnTeleport(msg.pEntity);
 		}
 			break;
-		case EGRID_ADD_TYPE::CHANGE_THREAD:
+		case EGRID_ADD_TYPE::CHANGE_THREAD_REQUEST:
 		{
 			OnChangeThread(msg.pEntity);
 		}
+			break;
+		case EGRID_ADD_TYPE::CHANGE_THREAD_REQUEST_NO:
+		{
+			AddPlayer(msg.pEntity);
+		}
+			break;
+		case EGRID_ADD_TYPE::CHANGE_THREAD_REQUEST_OK:
 			break;
 		default:
 			g_LogGame.ELog("ERROR msg Change Grid type: %d", msg.type);
@@ -269,14 +285,27 @@ void CGrid::OnTeleport(CEntity* pEntity)
 
 void CGrid::OnChangeThread(CEntity* pEntity)
 {
+	int PreGridID = pEntity->GetGridID();
 	AddPlayer(pEntity);
 	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
 	if (pTile == nullptr)
 	{
-		g_LogGame.ELog("ERROR Teleport");
+		if (PreGridID != pEntity->GetGridID())
+		{
+			CGrid* pPreGrid = m_parent->GetGrid(PreGridID);
+			pPreGrid->EnqueueEntityJob(EGRID_ADD_TYPE::CHANGE_THREAD_REQUEST_NO, pEntity);
+		}
+		g_LogGame.ELog("ERROR ChangeThread");
 		return;
 	}
 	pTile->AddPlayer(pEntity);
+	g_LogGame.DLog("이동 으로 인한 다른 Thread 간 의 Tile 변경");
+
+	if (PreGridID != pEntity->GetGridID())
+	{
+		CGrid* pPreGrid = m_parent->GetGrid(PreGridID);
+		pPreGrid->EnqueueEntityJob(EGRID_ADD_TYPE::CHANGE_THREAD_REQUEST_OK, pEntity);
+	}
 
 	if (pEntity->GetMoveState() == eMOVESTATE::STOPPED)
 		return;
@@ -307,9 +336,9 @@ void CGrid::EnqueueEntityJob(int type, CEntity* pEntity)
 	m_queueEntity.Push({ type, pEntity });
 }
 
-void CGrid::AddMoveVector(CEntity* pEntity)
+bool CGrid::AddMoveVector(CEntity* pEntity)
 {
-	m_vecMove.AddEntity(pEntity);
+	return m_vecMove.AddEntity(pEntity);
 }
 
 void CGrid::RemoveMoveVector(CEntity* pEntity)

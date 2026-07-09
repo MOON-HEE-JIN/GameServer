@@ -49,7 +49,8 @@ private:
 	void TileJobRun();
 	void TileBroadCast();
 
-	void NotifyEntityTileEnterAOI(CEntity* pEntity);
+	void NotifyEntityTileEnterAOI(CEntity* pEntity);	// 나에게 타일 정보 생성 메시지
+	void NotifyEntityTileLeaveAOI(CEntity* pEntity);	// 나에게 타일 정보 삭제 메시지(필요한가 에 대해서 클라에서 따로 타일 관리를 하면 안되는 것인가? 생각 해보기)
 	void Broadcast(CPacket* pPacket, CEntity* pEntity = nullptr);
 
 public:

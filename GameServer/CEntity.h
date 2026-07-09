@@ -42,6 +42,7 @@ public:
 	int GetMoveVectorIndex() { return m_vecIndex[EIndexType::VECTOR_INDEX_MOVE]; };
 
 	bool SetVectorIndex(int type, int value);
+	void ResetVectorIndex(int type) { m_vecIndex[type] = -1; };
 	void SetZoneVectorIndex(int value) { m_vecIndex[EIndexType::VECTOR_INDEX_ZONE] = value; };
 	void SetGridVectorIndex(int value) { m_vecIndex[EIndexType::VECTOR_INDEX_GRID] = value; };
 	void SetTileVectorIndex(int value) { m_vecIndex[EIndexType::VECTOR_INDEX_TILE] = value; };

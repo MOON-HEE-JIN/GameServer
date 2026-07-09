@@ -145,13 +145,17 @@ int PacketProc::DO_GAME_MOVESTOP(CPlayer* pTarget, CPacket& pReqPacket)
 	float dist = pTarget->GetPosition().DistanceToNSquared(req.pos);
     if (dist > POSITION_TOLERANCE * POSITION_TOLERANCE)
     {
-		g_LogGame.DLog("NOT EQUAL POSITION CLIENT[%.2f, %.2f] - SERVER[%.2f, %.2f]", req.pos.X, req.pos.Y, pTarget->GetPosition().X, pTarget->GetPosition().Y);
+		g_LogGame.DLog("NOT EQUAL POSITION CLIENT[%.2f, %.2f] - SERVER[%.2f, %.2f]", req.pos.X, req.pos.Z, pTarget->GetPosition().X, pTarget->GetPosition().Y);
         //return ERROR_CODE::NOT_EQUAL_POSITION;
     }
 
     int ret = pTarget->MoveStop(req.pos);
     if (ret != 0)
+    {
+        g_LogGame.ELog("Not PopMoveVector Player[%d] MoveStop Error[%d] Goal[%.2f, %.2f, %.2f] Dir[%.2f, %.2f, %.2f]",
+			pTarget->GetID(), ret, req.pos.X, req.pos.Y, req.pos.Z, pTarget->GetDirVector().X, pTarget->GetDirVector().Y, pTarget->GetDirVector().Z);
         return ret;
+    }
 
     st_STC_MoveStop res;
     res.ret = 0;

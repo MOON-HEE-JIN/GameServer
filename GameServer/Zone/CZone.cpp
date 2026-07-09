@@ -15,14 +15,15 @@ CZone::~CZone()
 }
 
 
-void CZone::PushMoveVector(CEntity* pEntity)
+bool CZone::PushMoveVector(CEntity* pEntity)
 {
 	if (pEntity->GetMoveVectorIndex() != -1)
-		return;
-	
+		return false;
+
 	int index = static_cast<int>(m_vecEntityMoveVector.size());
 	m_vecEntityMoveVector.push_back(pEntity);
 	pEntity->SetMoveVectorIndex(index);
+	return true;
 }
 
 void CZone::PopMoveVector(CEntity* pEntity)

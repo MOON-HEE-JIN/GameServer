@@ -16,10 +16,11 @@ void CTile::TileJobRun()
 		case ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI:
 			NotifyEntityTileEnterAOI(job.pEntity);
 			break;
+		case ETILE_JOB_TYPE::NOTIFY_TILE_REMOVE_AOI:
+			NotifyEntityTileLeaveAOI(job.pEntity);
+			break;
 		case ETILE_JOB_TYPE::WRONG_ENTITY_REMOVE:
-		{
 			RemovePlayer(job.pEntity);
-		}
 			break;
 		default:
 			break;
@@ -162,14 +163,54 @@ void CTile::NotifyEntityTileEnterAOI(CEntity* pEntity)
 	}
 }
 
+void CTile::NotifyEntityTileLeaveAOI(CEntity* pEntity)
+{
+	const std::vector<CEntity*>& vec = m_vecPlayer.GetVector();
+	int Loop = static_cast<int>(vec.size());
+
+	st_STC_AoiOutPlayers res;
+	res.Loop1;
+	res.info;
+	ZeroMemory(&res, sizeof(res));
+	int index = 0;
+	for (int i = 0; i < Loop; i++)
+	{
+		if (vec[i] == pEntity)
+			continue;
+		res.info[index].ID = vec[i]->GetID();
+		res.info[index].pos = vec[i]->GetPosition();
+		res.info[index].speed = vec[i]->GetMoveSpeed();
+
+		index++;
+		res.Loop1++;
+		if (res.Loop1 > 49)
+		{
+			((CPlayer*)pEntity)->SendPacket(res);
+			index = 0;
+			ZeroMemory(&res, sizeof(res));
+		}
+	}
+
+	if (index > 0)
+	{
+		((CPlayer*)pEntity)->SendPacket(res);
+	}
+}
+
 void CTile::Broadcast(CPacket* pPacket, CEntity* pEntity)
 {
 	const std::vector<CEntity*>& vec = m_vecPlayer.GetVector();
 	int Loop = static_cast<int>(vec.size());
+	
+	if (Loop == 0)
+		return;
+
 	for (int i = 0; i < Loop; i++)
 	{
 		if (vec[i] == pEntity)
 			continue;
 		((CPlayer*)vec[i])->SendPacket(pPacket);
 	}
+
+	g_LogServer.DLog("Tile[%d,%d] Broadcast Packet Size : %d TileCount : %d", m_Coord.X, m_Coord.Z, pPacket->GetDataSize(), Loop);
 }

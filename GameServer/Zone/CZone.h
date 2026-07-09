@@ -34,7 +34,7 @@ public:
 	void InsertTriggerVolumeParam(int index, std::vector<st_TriggerVolumeParam> param) { m_mapTriggerVolumeParams[index] = param; }
 
 public:
-	virtual void PushMoveVector(CEntity* pEntity) override;
+	virtual bool PushMoveVector(CEntity* pEntity) override;
 	virtual void PopMoveVector(CEntity* pEntity) override;
 
 	virtual void OnLeaveZone(CPlayer* pPlayer) override;

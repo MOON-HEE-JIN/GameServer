@@ -18,6 +18,12 @@ struct st_GridJob
 	CEntity* pEntity;
 };
 
+struct st_GridChange
+{
+	CEntity* pEntity;
+	CGrid* pGrid;
+};
+
 class CGrid
 {
 public:
@@ -40,6 +46,7 @@ private:
 	// 추후 확인후 삭제 해야함
 	CEntityVector m_vecPlayer{ EIndexType::VECTOR_INDEX_GRID };
 	CEntityVector m_vecMove{ EIndexType::VECTOR_INDEX_MOVE };
+	std::vector<st_GridChange> m_vecChangeThreadMove;
 
 	void EntityMoveRun();
 	void EntityJobRun();
@@ -67,7 +74,7 @@ public:
 	void EnqueueProcJob(PROC_MSG& msg);
 	void EnqueueEntityJob(int type, CEntity* pEntity);
 
-	void AddMoveVector(CEntity* pEntity);
+	bool AddMoveVector(CEntity* pEntity);
 	void RemoveMoveVector(CEntity* pEntity);
 
 	void ProcessPacket();

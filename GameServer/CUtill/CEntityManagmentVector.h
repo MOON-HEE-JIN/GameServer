@@ -22,6 +22,9 @@ public:
 
 	bool AddEntity(CEntity* pEntity)
 	{
+		if (pEntity->GetVectorIndex(m_iKeyType) != -1)
+			return false;
+
 		int index = static_cast<int>(m_vec.size());
 		if (!pEntity->SetVectorIndex(m_iKeyType, index))
 			return false;
@@ -43,7 +46,7 @@ public:
 		if (m_vec[index] != pEntity)
 			return false;
 
-		pEntity->SetVectorIndex(m_iKeyType, -1);
+		pEntity->ResetVectorIndex(m_iKeyType);
 		int lastIndex = static_cast<int>(m_vec.size()) - 1;
 
 		if (index != lastIndex)

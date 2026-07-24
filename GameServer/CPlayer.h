@@ -29,7 +29,6 @@ private:
 	void Clear();
 
 public:
-	int GetRef() { return GetRef(); }
 	void AddVarRef();
 	void ReleaseVarRef();
 protected:

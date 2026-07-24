@@ -31,7 +31,6 @@ private:
 
 	unsigned short m_Port;
 	int m_iRunWorkerThreadCount;
-	int m_iDeleteTimeDelay;
 
 	std::vector<CSession*> m_vecSessionManager;
 	std::vector<SESSION_HANDLE> m_vecSessionFreeKey;

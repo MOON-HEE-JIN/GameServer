@@ -20,11 +20,9 @@ private:
 
 	DWORD IOCnt;
 	std::atomic<bool> bSendFlag;
-	DWORD UseFlag;
 	OVERLAPPED SendOverlap;
 	OVERLAPPED RecvOverlap;
 
-	CRITICAL_SECTION cs;
 	CRITICAL_SECTION m_csSendQ;
 
 	// 접속 종료중인지
@@ -32,6 +30,8 @@ private:
 	// 접속 상태 플래그
 	std::atomic<bool> bConnect;
 	std::atomic<int> RefCnt;
+	std::atomic<bool> bFreeFlag;
+	int m_iFreeTime;
 private:
 	std::atomic<SESSION_HANDLE> m_ConnectKey;
 	int m_ConnectPlayerHandle;	// 접속한 플레이어 ID
@@ -66,11 +66,14 @@ public:
 
 	void SetConnectPlayerHandle(int playerID) { m_ConnectPlayerHandle = playerID; }
 	bool SetProcID(int ProcID);
+
+	bool TryPushFreeVector();
 public:
 	void OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key);
 
 	void OnDisconnect();
 
+	int GetFreeTime() { return m_iFreeTime; }
 public:
 	void CloseSocket();
 	void SendPacket(CPacket* _pPacket);

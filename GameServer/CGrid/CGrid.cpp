@@ -161,17 +161,17 @@ void CGrid::EntityJobRun()
 		{
 		case EGRID_MSG_TYPE::GRID_MSG_ENTER:
 		{
-			OnEnterGrid(msg.pEntity);
+			OnEnterGrid(msg.EntityID);
 		}
 			break;
 		case EGRID_MSG_TYPE::GRID_MSG_LEAVE:
 		{
-			OnLeaveGrid(msg.pEntity);
+			OnLeaveGrid(msg.EntityID);
 		}
 			break;
 		case 3://EGRID_MSG_TYPE::GRID_MSG_TELEPORT:
 		{
-			OnTeleport(msg.pEntity);
+			//OnTeleport(msg.EntityID);
 		}
 			break;
 		default:
@@ -180,8 +180,15 @@ void CGrid::EntityJobRun()
 		}
 	}
 }
-void CGrid::OnEnterGrid(CEntity* pEntity)
+void CGrid::OnEnterGrid(int entityID)
 {
+	CEntity* pEntity = g_Net.GetPlayer(entityID);
+	if (pEntity == nullptr)
+	{
+		g_LogGame.ELog("ERROR EnterZone");
+		return;
+	}
+
 	AddPlayer(pEntity);
 	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
 	if (pTile == nullptr)
@@ -194,8 +201,14 @@ void CGrid::OnEnterGrid(CEntity* pEntity)
 
 	SendInitAOITile(pTile->GetCoord(), pEntity);
 }
-void CGrid::OnLeaveGrid(CEntity* pEntity)
+void CGrid::OnLeaveGrid(int entityID)
 {
+	CEntity* pEntity = g_Net.GetPlayer(entityID);
+	if (pEntity == nullptr)
+	{
+		g_LogGame.ELog("ERROR EnterZone");
+		return;
+	}
 	RemovePlayer(pEntity);
 	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
 	if (pTile == nullptr)
@@ -206,10 +219,6 @@ void CGrid::OnLeaveGrid(CEntity* pEntity)
 	pTile->RemovePlayer(pEntity);
 
 	SendRemoveAOITile(pTile->GetCoord(), pEntity);
-}
-
-void CGrid::OnTeleport(CEntity* pEntity)
-{	
 }
 
 void CGrid::Init(int id, CMainWorld* pParent)
@@ -230,9 +239,9 @@ void CGrid::EnqueueProcJob(PROC_MSG& msg)
 	m_queueProc.Enqueue(msg);
 }
 
-void CGrid::EnqueueEntityJob(int type, CEntity* pEntity)
+void CGrid::EnqueueEntityJob(int type, int entityID)
 {
-	m_queueEntity.Push({ type, pEntity });
+	m_queueEntity.Push({ type, entityID });
 }
 
 void CGrid::AddMoveVector(CEntity* pEntity)
@@ -314,9 +323,9 @@ void CGrid::SendInitAOITile(COORDINATE& pivot, CEntity* pEntity)
 				continue;
 
 			// 시야 안으로 들어 왔음을 알림
-			pAOITile->Enqueue(ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI, pEntity);
+			pAOITile->Enqueue(ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI, pEntity->GetID());
 			// 시야 안으로 들어온 플레이어 에 대한 정보를 알림
-			pAOITile->Enqueue(ETILE_JOB_TYPE::BROADCAST_ENTITY_INFO, pEntity);
+			pAOITile->Enqueue(ETILE_JOB_TYPE::BROADCAST_ENTITY_INFO, pEntity->GetID());
 		}
 	}
 }
@@ -331,7 +340,7 @@ void CGrid::SendRemoveAOITile(COORDINATE& pivot, CEntity* pEntity)
 			if (pAOITile == nullptr)
 				continue;
 
-			pAOITile->Enqueue(ETILE_JOB_TYPE::BROADCAST_ENTITY_REMOVE, pEntity);
+			pAOITile->Enqueue(ETILE_JOB_TYPE::BROADCAST_ENTITY_REMOVE, pEntity->GetID());
 		}
 	}
 }

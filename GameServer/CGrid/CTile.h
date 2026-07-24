@@ -8,7 +8,7 @@
 struct st_TileJob
 {
 	int type;
-	CEntity* pEntity;
+	int EntityID;
 };
 
 class CTile
@@ -43,7 +43,7 @@ private:
 public:
 	void Init(COORDINATE coord, st_Vector3F start, st_Vector3F end);
 
-	void Enqueue(int type, CEntity* pEntity);
+	void Enqueue(int type, int entityID);
 	bool AddPlayer(CEntity* pEntity);
 	bool RemovePlayer(CEntity* pEntity);
 

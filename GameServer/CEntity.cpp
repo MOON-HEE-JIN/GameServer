@@ -105,14 +105,15 @@ bool CEntity::MoveUpdate()
 
 void CEntity::ReleaseRef()
 {
-    m_iRef.fetch_sub(1);
+    int ref = m_iRef.fetch_sub(1);
 
 	if (m_iRef.load() < 0)
     {
         g_LogRef.ELog("Entity Type %d ReleaseRef Error", m_nEntityType);
     }
 
-    if (m_iRef.load() <= 0)
+	// 감소 전 참조카운트가 1이면 OnRelease 호출
+    if (ref == 1)
         OnRelease();
 }
 

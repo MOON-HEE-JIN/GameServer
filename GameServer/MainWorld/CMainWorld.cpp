@@ -118,7 +118,7 @@ void CMainWorld::OnEnterZone(CPlayer* pPlayer)
 		return;
 	}
 	CGrid* pCGrid = GetGrid(GridID);
-	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_ENTER, pPlayer);
+	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_ENTER, pPlayer->GetID());
 
 	//g_LogGame.ILog("Enter %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
@@ -138,7 +138,7 @@ void CMainWorld::OnLeaveZone(CPlayer* pPlayer)
 		return;
 
 	CGrid* pCGrid = GetGrid(GridID);
-	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_LEAVE, pPlayer);
+	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_LEAVE, pPlayer->GetID());
 
 	//g_LogGame.ILog("Leave %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
@@ -187,7 +187,7 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 	
 	pPlayer->SetPosition(pos);
 
-	pNewGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_ENTER, pPlayer);
+	pNewGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_ENTER, pPlayer->GetID());
 
 	st_STC_Teleport res;
 	res.ret = 0;

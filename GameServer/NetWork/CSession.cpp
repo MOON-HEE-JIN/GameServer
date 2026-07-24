@@ -7,7 +7,6 @@ CSession::CSession()
 {
 	sock = 0;
 	
-	InitializeCriticalSection(&cs);
 	InitializeCriticalSection(&m_csSendQ);
 
 	RecvQ = new CRingBuffer;
@@ -17,9 +16,9 @@ CSession::CSession()
 	SendOverlap = { 0 };
 
 	bSendFlag = false;
-	UseFlag = true;
 
 	bConnect = true;
+	bFreeFlag = false;
 
 	IOCnt = 0;
 
@@ -35,7 +34,6 @@ CSession::~CSession()
 
 	delete RecvQ;
 	delete SendQ;
-	DeleteCriticalSection(&cs);
 	DeleteCriticalSection(&m_csSendQ);
 }
 
@@ -51,10 +49,18 @@ bool CSession::SetProcID(int ProcID)
 	return true;
 }
 
+bool CSession::TryPushFreeVector()
+{
+	if (bFreeFlag.exchange(true) == false)
+	{
+		m_iFreeTime = GetTickCount();
+		return true;
+	}
+	return false;
+}
+
 void CSession::OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key)
 {
-	UseFlag = true;
-	
 	IOCnt = 0;
 	this->sock = sock;
 	
@@ -69,12 +75,13 @@ void CSession::OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key)
 	m_ProcId = 0;
 	bCloseing = false;
 	RefCnt = 0;
+	bFreeFlag = false;
 }
 
 void CSession::OnDisconnect()
 {
 	bSendFlag = false;
-	UseFlag = false;
+	bFreeFlag = false;
 
 	RecvOverlap = { 0 };
 	SendOverlap = { 0 };

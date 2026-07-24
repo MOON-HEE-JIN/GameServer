@@ -53,6 +53,6 @@ void CZone::ZoneEntityMoveProcess()
 
 	for (int i = 0; i < eraseCnt; i++)
 	{
-		PopMoveVector(vec[i]);
+		PopMoveVector(vecCompleteMove[i]);
 	}
 }

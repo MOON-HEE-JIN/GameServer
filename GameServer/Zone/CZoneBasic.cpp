@@ -198,10 +198,14 @@ bool CZoneBasic::LeaveZone(CPlayer* pPlayer)
 	if (pPlayer == nullptr)
 		return false;
 
-	m_vecEntitys.RemoveEntity(pPlayer);
-	// 존 떠날때 이벤트
-	OnLeaveZone(pPlayer);
-	return true;
+	if (m_vecEntitys.RemoveEntity(pPlayer))
+	{
+		// 존 떠날때 이벤트
+		OnLeaveZone(pPlayer);
+		return true;
+	}
+	
+	return false;
 }
 
 bool CZoneBasic::Enqueue(ZONE_CHANGE_JOB& job)

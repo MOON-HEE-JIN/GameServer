@@ -1,6 +1,7 @@
 ﻿#include "CTile.h"
 
 #include <Windows.h>
+#include "../NetWork/CNetServer.h"
 #include "../Log/CLog.h"
 #include "../CPlayer.h"
 
@@ -13,30 +14,50 @@ void CTile::TileJobRun()
 		switch (job.type)
 		{
 		case ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI:
-			NotifyEntityTileEnterAOI(job.pEntity);
+		{
+			CEntity* pEntity = g_Net.GetPlayer(job.EntityID);
+			if (pEntity == nullptr)
+			{
+				g_LogGame.ELog("ERROR NOTIFY_TILE_ENTER_AOI");
+				continue;
+			}
+			NotifyEntityTileEnterAOI(pEntity);
+		}
 			break;
 		case ETILE_JOB_TYPE::BROADCAST_ENTITY_INFO:
 		{
+			CEntity* pEntity = g_Net.GetPlayer(job.EntityID);
+			if (pEntity == nullptr)
+			{
+				g_LogGame.ELog("ERROR NOTIFY_TILE_ENTER_AOI");
+				continue;
+			}
 			st_STC_AoiInPlayer res;
-			res.info.ID = job.pEntity->GetID();
-			res.info.pos = job.pEntity->GetPosition();
-			res.info.speed = job.pEntity->GetMoveSpeed();
+			res.info.ID = pEntity->GetID();
+			res.info.pos = pEntity->GetPosition();
+			res.info.speed = pEntity->GetMoveSpeed();
 
 			CPacket cPacket;
 			cPacket << res;
 
-			Broadcast(&cPacket, job.pEntity);
+			Broadcast(&cPacket, pEntity);
 		}
 			break;
 		case ETILE_JOB_TYPE::BROADCAST_ENTITY_REMOVE:
 		{
+			CEntity* pEntity = g_Net.GetPlayer(job.EntityID);
+			if (pEntity == nullptr)
+			{
+				g_LogGame.ELog("ERROR NOTIFY_TILE_ENTER_AOI");
+				continue;
+			}
 			st_STC_AoiOutPlayer res;
-			res.ID = job.pEntity->GetID();
+			res.ID = pEntity->GetID();
 
 			CPacket cPacket;
 			cPacket << res;
 
-			Broadcast(&cPacket, job.pEntity);
+			Broadcast(&cPacket, pEntity);
 		}
 			break;
 		default:
@@ -56,9 +77,9 @@ void CTile::Init(COORDINATE coord, st_Vector3F start, st_Vector3F end)
 }
 
 
-void CTile::Enqueue(int type, CEntity* pEntity)
+void CTile::Enqueue(int type, int entityID)
 {
-	m_queue.Push({ type, pEntity });
+	m_queue.Push({ type, entityID });
 }
 
 bool CTile::AddPlayer(CEntity* pEntity)

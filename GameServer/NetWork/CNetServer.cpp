@@ -52,7 +52,7 @@ bool CNetServer::OnClientJoin(CSession* pSession)
 
 void CNetServer::OnDisconnect(CSession* pSession)
 {
-	CPlayer* pPlayer = g_PlayerManager[pSession->GetConnectPlayerHandle()];
+	CPlayer* pPlayer = GetPlayer(pSession->GetConnectPlayerHandle());
 	if (pPlayer != nullptr)
 	{
 		pPlayer->SetRelease();
@@ -96,7 +96,7 @@ int CNetServer::Initializer(int Port, int RunWorkerThreadCount)
 	g_PlayerManager.resize(MAX_CONNECT_COUNT);
 	for (int i = 0; i < MAX_CONNECT_COUNT; i++)
 		g_PlayerManager[i] = nullptr;
-	g_PlayerHandleManager.resize(MAX_CONNECT_COUNT);
+	g_PlayerHandleManager.reserve(MAX_CONNECT_COUNT);
 	for (int i = 0; i < MAX_CONNECT_COUNT; i++)
 	{
 		g_PlayerHandleManager.push_back(MAX_CONNECT_COUNT - 1 - i);

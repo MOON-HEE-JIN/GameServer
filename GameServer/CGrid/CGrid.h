@@ -15,7 +15,7 @@ class CTile;
 struct st_GridJob
 {
 	int type;
-	CEntity* pEntity;
+	int EntityID;
 };
 
 class CGrid
@@ -44,10 +44,10 @@ private:
 	void EntityMoveRun();
 	void EntityJobRun();
 
-	void OnEnterGrid(CEntity* pEntity);
-	void OnLeaveGrid(CEntity* pEntity);
+	void OnEnterGrid(int entityID);
+	void OnLeaveGrid(int entityID);
 
-	void OnTeleport(CEntity* pEntity);
+	void OnTeleport(int entityID);
 
 	bool AddPlayer(CEntity* pEntity);
 	bool RemovePlayer(CEntity* pEntity);
@@ -61,10 +61,10 @@ public:
 	int GetRunID() { return m_iRunID; }
 	void SetRunID(int value) { m_iRunID = value; };
 
-	void RemoveForTeleport(CEntity* pEntity) { OnLeaveGrid(pEntity); };
+	void RemoveForTeleport(CEntity* pEntity) { OnLeaveGrid(pEntity->GetID()); };
 
 	void EnqueueProcJob(PROC_MSG& msg);
-	void EnqueueEntityJob(int type, CEntity* pEntity);
+	void EnqueueEntityJob(int type, int entityID);
 
 	void AddMoveVector(CEntity* pEntity);
 	void RemoveMoveVector(CEntity* pEntity);

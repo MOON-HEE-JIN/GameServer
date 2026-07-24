@@ -146,7 +146,8 @@ void CBaseNet::PushSessionFree(CSession* pSession)
 {
 	EnterCriticalSection(&cs_SessionFree);
 	{
-		m_vecSessionFree.push(pSession);
+		if(pSession->TryPushFreeVector())
+			m_vecSessionFree.push(pSession);
 	}
 	LeaveCriticalSection(&cs_SessionFree);
 }
@@ -389,7 +390,7 @@ int CBaseNet::SessionFreeRun()
 			{
 				pSession = m_vecSessionFree.front();
 				int nTime = GetTickCount();
-				if (nTime > m_iDeleteTimeDelay + 30 * 1000)
+				if (nTime > pSession->GetFreeTime() + SESSION_DELETE_DELAY)
 				{
 					OnDisconnect(pSession);
 

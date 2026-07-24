@@ -31,3 +31,4 @@ extern CLog g_LogGame;
 extern CLog g_LogThread;
 extern CLog g_LogFile;
 extern CLog g_LogObserver;
+extern CLog g_LogRef;

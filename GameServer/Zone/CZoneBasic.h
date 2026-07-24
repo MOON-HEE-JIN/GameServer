@@ -3,6 +3,8 @@
 #include "CZoneBase.h"
 #include "../CPlayer.h"
 #include "../MemoryManager/CLockFreeQueue_FromGPT.h"
+#include "../CUtill/CEntityManagmentVector.h"
+#include "../GameServerDef.h"
 #include <vector>
 #include <unordered_map>
 
@@ -13,7 +15,7 @@ public:
 	~CZoneBasic();
 
 protected:
-	std::vector<CPlayer*> m_vecPlayers;
+	CEntityVector m_vecEntitys;
 
 	virtual void OnEnterZone(CPlayer* pPlayer) {};
 	virtual void OnLeaveZone(CPlayer* pPlayer) {};

@@ -41,12 +41,14 @@ public:
 	int GetPlayerCount() { return m_iPlayerConnectCount.load(); }
 
 	CPlayer* AllocPlayer(int& outPlayerHandle);
+	void TryDisConnect(const SESSION_HANDLE& key);
 	void FreePlayer(CPlayer* pPlayer);
 	void AddPlayerHandle(int handle);
 	void PlayerDisConnect(const SESSION_HANDLE& key);
 public:
 	void NetLog();
 };
+
 
 bool TryChangeZone(const SESSION_HANDLE& key, int ProcID);
 bool TrySend(const SESSION_HANDLE& key, CPacket* pPacket);

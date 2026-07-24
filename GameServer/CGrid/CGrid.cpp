@@ -159,17 +159,17 @@ void CGrid::EntityJobRun()
 	{
 		switch (msg.type)
 		{
-		case EGRID_ADD_TYPE::ENTER_ZONE:
+		case EGRID_MSG_TYPE::GRID_MSG_ENTER:
 		{
-			OnEnterZone(msg.pEntity);
+			OnEnterGrid(msg.pEntity);
 		}
 			break;
-		case EGRID_ADD_TYPE::LEAVE_ZONE:
+		case EGRID_MSG_TYPE::GRID_MSG_LEAVE:
 		{
-			OnLeaveZone(msg.pEntity);
+			OnLeaveGrid(msg.pEntity);
 		}
 			break;
-		case EGRID_ADD_TYPE::ADD_TELEPORT:
+		case 3://EGRID_MSG_TYPE::GRID_MSG_TELEPORT:
 		{
 			OnTeleport(msg.pEntity);
 		}
@@ -180,8 +180,7 @@ void CGrid::EntityJobRun()
 		}
 	}
 }
-
-void CGrid::OnEnterZone(CEntity* pEntity)
+void CGrid::OnEnterGrid(CEntity* pEntity)
 {
 	AddPlayer(pEntity);
 	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
@@ -192,11 +191,10 @@ void CGrid::OnEnterZone(CEntity* pEntity)
 	}
 
 	pTile->AddPlayer(pEntity);
-	
-	SendInitAOITile(pTile->GetCoord(), pEntity);	
-}
 
-void CGrid::OnLeaveZone(CEntity* pEntity)
+	SendInitAOITile(pTile->GetCoord(), pEntity);
+}
+void CGrid::OnLeaveGrid(CEntity* pEntity)
 {
 	RemovePlayer(pEntity);
 	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
@@ -211,19 +209,7 @@ void CGrid::OnLeaveZone(CEntity* pEntity)
 }
 
 void CGrid::OnTeleport(CEntity* pEntity)
-{
-	AddPlayer(pEntity);
-	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
-	if (pTile == nullptr)
-	{
-		g_LogGame.ELog("ERROR Teleport");
-		return;
-	}
-	pTile->AddPlayer(pEntity);
-	st_STC_Teleport res;
-	res.ret = 0;
-	res.pos = pEntity->GetPosition();
-	((CPlayer*)pEntity)->SendPacket(res);
+{	
 }
 
 void CGrid::Init(int id, CMainWorld* pParent)
@@ -295,7 +281,6 @@ bool CGrid::AddPlayer(CEntity* pEntity)
 	if (!m_vecPlayer.AddEntity(pEntity))
 		return false;
 
-	((CPlayer*)pEntity)->AddRef();
 	return true;
 }
 
@@ -305,7 +290,6 @@ bool CGrid::RemovePlayer(CEntity* pEntity)
 		return false;
 	
 	m_vecMove.RemoveEntity(pEntity);
-	((CPlayer*)pEntity)->ReleaseRef();
 
 	return true;
 }

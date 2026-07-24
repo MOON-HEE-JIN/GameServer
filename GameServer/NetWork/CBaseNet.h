@@ -6,6 +6,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <queue>
 
 #include "CSession.h"
 
@@ -26,13 +27,18 @@ private:
 	HANDLE CICP;
 	HANDLE m_hAceeptThread;
 	HANDLE* m_hWorkerThread;
+	HANDLE m_hSessionFreeThread;
+
 	unsigned short m_Port;
 	int m_iRunWorkerThreadCount;
+	int m_iDeleteTimeDelay;
 
 	std::vector<CSession*> m_vecSessionManager;
 	std::vector<SESSION_HANDLE> m_vecSessionFreeKey;
+	std::queue<CSession*> m_vecSessionFree;
 
 	CRITICAL_SECTION cs_SessionFreeKey;
+	CRITICAL_SECTION cs_SessionFree;
 
 	std::atomic<int> m_iAcceptSocketCount;
 	std::atomic<int> m_iConnectSessionCount;				// 현재 연결중인 세션
@@ -51,6 +57,8 @@ protected:
 	virtual bool OnClientJoin(CSession* pSession) { return true; };
 	virtual void OnDisconnect(CSession* pSession) {};
 	virtual void OnRecv(CSession* pSession, int type, CPacket& packet);
+
+	void PushSessionFree(CSession* pSession);
 public:
 	void LockSessionFreeKey() { EnterCriticalSection(&cs_SessionFreeKey); };
 	void UnLockSessionFreeKey() { LeaveCriticalSection(&cs_SessionFreeKey); };
@@ -63,7 +71,10 @@ private:
 	virtual int AcceptRun();
 	static unsigned __stdcall WorkerThread(void* arg);		// recv, send Thread
 	virtual int WorkerRun();
+	static unsigned __stdcall SessionFreeThread(void* arg);	// Session Free Thread
+	int SessionFreeRun();
 protected:
+	HANDLE GetCICPHandle() { return CICP; };
 	int GetRecvOverlappedCount() { return m_iRecvOverlappedCount.load(); };
 	int GetSendOverlappedCount() { return m_iSendOverlapeedCount.load(); };
 	int GetRecvOverlappedSize() { return m_iRecvOverlappedSize.load(); }
@@ -75,5 +86,6 @@ protected:
 
 	void StartServer(CBaseNet* ptr);
 	void WaitStopServer();
+	void TryDisConnectSession(const SESSION_HANDLE& key);
 	void ServerShutDown();	
 };

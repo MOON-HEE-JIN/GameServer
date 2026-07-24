@@ -11,6 +11,12 @@
 
 #define HEADER_SIZE sizeof(st_Header)
 
+#ifdef __DEBUG__
+#define SESSION_DELETE_DELAY 5 * 1000
+#else
+#define SESSION_DELETE_DELAY 1 * 1000
+#endif // __DEBUG__
+
 
 CBaseNet::CBaseNet()
 {
@@ -47,6 +53,7 @@ int CBaseNet::Init(int Port, int RunWorkerThreadCount)
 		return ret;
 
 	InitializeCriticalSection(&cs_SessionFreeKey);
+	InitializeCriticalSection(&cs_SessionFree);
 
 	m_vecSessionManager.resize(MAX_CONNECT_COUNT);
 	for (int i = 0; i < MAX_CONNECT_COUNT; i++)
@@ -135,20 +142,18 @@ void CBaseNet::OnRecv(CSession* pSession, int type, CPacket& packet)
 	
 }
 
+void CBaseNet::PushSessionFree(CSession* pSession)
+{
+	EnterCriticalSection(&cs_SessionFree);
+	{
+		m_vecSessionFree.push(pSession);
+	}
+	LeaveCriticalSection(&cs_SessionFree);
+}
+
 void CBaseNet::DisConnect(CSession* pSession)
 {
-	if (!pSession->OnStartDisconnect())
-		return;
-
-	OnDisconnect(pSession);
-
-	pSession->OnDisconnect();
-	LockSessionFreeKey();
-	{
-		m_vecSessionFreeKey.push_back(SESSION_HANDLE(pSession->GetConnectHandle(), pSession->GetConnectGen()));
-	}
-	UnLockSessionFreeKey();
-	m_iConnectSessionCount.fetch_sub(1);
+	PushSessionFree(pSession);
 }
 
 void CBaseNet::Recv(CSession* pSession, int type, CPacket& packet)
@@ -232,6 +237,12 @@ unsigned __stdcall CBaseNet::WorkerThread(void* arg)
 
 int CBaseNet::WorkerRun()
 {
+#ifdef __DEBUG__
+	static LONG d_DiscountCount = 0;
+	static LONG d_RecvDiscountCount = 0;
+	static LONG d_SendDiscountCount = 0;
+#endif // __DEBUG__
+
 	int ret;
 	CSession* pSession = nullptr;
 	DWORD transfrerred;
@@ -243,7 +254,6 @@ int CBaseNet::WorkerRun()
 		transfrerred = 0;
 		OVERLAPPED* overlapped = nullptr;
 		ret = GetQueuedCompletionStatus(CICP, &transfrerred, &pKey, &overlapped, INFINITE);
-
 
 		if (pKey == KEY_SHUTDOWN_WAKE)
 			continue;
@@ -268,7 +278,11 @@ int CBaseNet::WorkerRun()
 					* WSAENOTSOCKET(10038) : nonsocket 에 대한 소켓 작업
 					printf("WorkerThread GQCS Error %d\n", err);
 					*/
+					g_LogServer.ELog("[Recv GQCS Error = %d]", err);
 				}
+#ifdef __DEBUG__
+				InterlockedAdd(&d_RecvDiscountCount, 1);
+#endif // __DEBUG__
 				pSession->CloseSocket();
 			}
 			else
@@ -330,7 +344,11 @@ int CBaseNet::WorkerRun()
 					* WSAENOTSOCKET(10038) : nonsocket 에 대한 소켓 작업
 					printf("WorkerThread GQCS Error %d\n", err);
 					*/
+					g_LogServer.ELog("[Send GQCS Error = %d]", err);
 				}
+#ifdef __DEBUG__
+				InterlockedAdd(&d_SendDiscountCount, 1);
+#endif // __DEBUG__
 				pSession->CloseSocket();
 			}
 			else
@@ -343,7 +361,51 @@ int CBaseNet::WorkerRun()
 		if (pSession->GetIOCnt() == 0 && pSession->GetRefCnt() == 0 && pSession->GetBoolbCloseing())
 		{
 			DisConnect(pSession);
+#ifdef __DEBUG__
+			InterlockedAdd(&d_DiscountCount, 1);
+#endif // __DEBUG__
 		}
+	}
+
+	return 0;
+}
+
+unsigned __stdcall CBaseNet::SessionFreeThread(void* arg)
+{
+	CBaseNet* pThis = static_cast<CBaseNet*>(arg);
+	pThis->SessionFreeRun();
+	return 0;
+}
+
+int CBaseNet::SessionFreeRun()
+{
+	while (m_bRun)
+	{
+		CSession* pSession = nullptr;
+
+		EnterCriticalSection(&cs_SessionFree);
+		{
+			if (!m_vecSessionFree.empty())
+			{
+				pSession = m_vecSessionFree.front();
+				int nTime = GetTickCount();
+				if (nTime > m_iDeleteTimeDelay + 30 * 1000)
+				{
+					OnDisconnect(pSession);
+
+					pSession->OnDisconnect();
+					LockSessionFreeKey();
+					{
+						m_vecSessionFreeKey.push_back(SESSION_HANDLE(pSession->GetConnectHandle(), pSession->GetConnectGen()));
+					}
+					UnLockSessionFreeKey();
+					m_iConnectSessionCount.fetch_sub(1);
+
+					m_vecSessionFree.pop();
+				}
+			}
+		}
+		LeaveCriticalSection(&cs_SessionFree);
 	}
 
 	return 0;
@@ -359,12 +421,20 @@ void CBaseNet::StartServer(CBaseNet* ptr)
 	{
 		m_hWorkerThread[i] = (HANDLE)_beginthreadex(NULL, 0, WorkerThread, ptr, 0, NULL);
 	}
+	m_hSessionFreeThread = (HANDLE)_beginthreadex(NULL, 0, SessionFreeThread, ptr, 0, NULL);
 }
 
 void CBaseNet::WaitStopServer()
 {
 	WaitForSingleObject(m_hAceeptThread, INFINITE);
 	WaitForMultipleObjects(OVERALP_CREATE_THREAD, m_hWorkerThread, true, INFINITE);
+}
+
+void CBaseNet::TryDisConnectSession(const SESSION_HANDLE& key)
+{
+	OVERLAPPED* overlapped = nullptr;
+	
+	PostQueuedCompletionStatus(CICP, 0, KEY_TRYDISCONNECT_WAKE, NULL);
 }
 
 void CBaseNet::ServerShutDown()

@@ -182,43 +182,23 @@ void CZoneBasic::Process()
 bool CZoneBasic::EnterZone(CPlayer* pPlayer)
 {
 	pPlayer->SetZoneID(GetChannel(), GetZoneID());
-	TryChangeZone(pPlayer->GetSessionHandle(), GetProcID());
+	if(!TryChangeZone(pPlayer->GetSessionHandle(), GetProcID())) 
+		return false;
 
-	pPlayer->SetZoneVectorIndex(static_cast<int>(m_vecPlayers.size()));
-	m_vecPlayers.push_back(pPlayer);
+	m_vecEntitys.AddEntity(pPlayer);
 
 	pPlayer->SetZone(this);
 
-	pPlayer->AddRef();
 	OnEnterZone(pPlayer);
 	return true;
 }
 
 bool CZoneBasic::LeaveZone(CPlayer* pPlayer)
 {
-	if (pPlayer == nullptr || m_vecPlayers.empty())
+	if (pPlayer == nullptr)
 		return false;
 
-	// 마지막 Player Index
-	const int leaveIndex = pPlayer->GetZoneVectorIndex();
-	if (leaveIndex < 0 || leaveIndex >= static_cast<int>(m_vecPlayers.size()))
-		return false;
-
-	pPlayer->ReleaseRef();
-	// 마지막 플레이어 가져오기
-	CPlayer* ePlayer = m_vecPlayers.back();
-
-	// 마지막 플레이어 와 같지 않다면 교체
-	if (ePlayer != pPlayer)
-	{
-		// 교체
-		m_vecPlayers[leaveIndex] = ePlayer;
-		ePlayer->SetZoneVectorIndex(leaveIndex);
-	}
-
-	m_vecPlayers.pop_back();
-
-	
+	m_vecEntitys.RemoveEntity(pPlayer);
 	// 존 떠날때 이벤트
 	OnLeaveZone(pPlayer);
 	return true;
@@ -258,12 +238,17 @@ bool CZoneBasic::TryEnterZone()
 
 void CZoneBasic::SendZoneCast(CPacket* pPacket, CPlayer* pPlayer)
 {
-	int nLoop = static_cast<int>(m_vecPlayers.size());
+	int nLoop = m_vecEntitys.GetCount();
+	const std::vector<CEntity*>& m_vecPlayers = m_vecEntitys.GetVector();
 	for (int i = 0; i < nLoop; i++)
 	{
 		if (m_vecPlayers[i] == pPlayer)
 			continue;
 
-		m_vecPlayers[i]->SendPacket(pPacket);
+		CPlayer* pSendPlayer = dynamic_cast<CPlayer*>(m_vecPlayers[i]);
+		if (pSendPlayer == nullptr)
+			continue;
+
+		pSendPlayer->SendPacket(pPacket);
 	}
 }

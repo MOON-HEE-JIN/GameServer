@@ -56,7 +56,6 @@ void CNetServer::OnDisconnect(CSession* pSession)
 	if (pPlayer != nullptr)
 	{
 		pPlayer->SetRelease();
-		pPlayer->ReleaseRef();
 		ZONE_CHANGE_JOB z(GetTickCount(), eZONESTATUS::RELEASE, pPlayer->GetID()
 			, pPlayer->GetChannel(), pPlayer->GetZoneID()
 			, pPlayer->GetChannel(), pPlayer->GetZoneID()
@@ -152,6 +151,7 @@ bool TryChangeZone(const SESSION_HANDLE& key, int ProcID)
 	if (!pSession->GetBoolConnect() || pSession->GetConnectGen() != key.Gen || pSession->GetBoolbCloseing())
 	{
 		pSession->SubRef();
+		//g_Net.TryDisConnectSession(key);
 		return false;
 	}
 
@@ -166,8 +166,6 @@ bool TrySend(const SESSION_HANDLE& key, CPacket* pPacket)
 	if (pSession == nullptr)
 		return false;
 
-	SESSION_HANDLE CurKey = pSession->GetConnectKey();
-	
 	// 연결 및 재사용 횟수 체크
 	if (!pSession->GetBoolConnect()) return false;
 	if (pSession->GetConnectGen() != key.Gen) return false;
@@ -177,6 +175,7 @@ bool TrySend(const SESSION_HANDLE& key, CPacket* pPacket)
 	if (!pSession->GetBoolConnect() || pSession->GetConnectGen() != key.Gen || pSession->GetBoolbCloseing())
 	{
 		pSession->SubRef();
+		
 		return false;
 	}
 
@@ -227,9 +226,17 @@ CPlayer* CNetServer::AllocPlayer(int& outPlayerHandle)
 	return nullptr;
 }
 
+void CNetServer::TryDisConnect(const SESSION_HANDLE& key)
+{
+	CSession* pSession = g_Net.GetSession(key);
+	if (pSession == nullptr)
+		return;
+	TryDisConnectSession(key);
+}
+
 void CNetServer::FreePlayer(CPlayer* pPlayer)
 {
-	pPlayer->ReleaseRef();
+	pPlayer->ReleaseVarRef();
 }
 
 void CNetServer::AddPlayerHandle(int handle)

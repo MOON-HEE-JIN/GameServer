@@ -5,8 +5,8 @@
 
 void CPlayer::Init(SESSION_HANDLE sessionID, int handle, int Channel, int Zone)
 {
-	m_iRef.store(1);
-
+	m_iVarRef.store(0);
+	
 	m_SessionHandle = sessionID;
 	m_PlayerHandle = handle;
 	m_iChannel = Channel;
@@ -15,6 +15,8 @@ void CPlayer::Init(SESSION_HANDLE sessionID, int handle, int Channel, int Zone)
 	m_bRelease.store(false);
 
 	m_iGridID = -1;
+
+	AddVarRef();
 }
 
 void CPlayer::Clear()
@@ -31,22 +33,29 @@ void CPlayer::Clear()
 	m_bRelease.store(false);
 }
 
-void CPlayer::AddRef()
+void CPlayer::AddVarRef()
 {
-	m_iRef.fetch_add(1);
+	m_iVarRef.fetch_add(1);
+	AddRef();
 }
 
-void CPlayer::ReleaseRef()
+void CPlayer::ReleaseVarRef()
 {
-	m_iRef.fetch_sub(1);
+	m_iVarRef.fetch_sub(1);
+	if (m_iVarRef.load() < 0)
+	{
+		g_LogRef.ELog("Player Handle %d ReleaseVarRef Error", GetID());
+	}
 
-	if (m_iRef.load() > 0)
-		return;
+	ReleaseRef();
+}
 
+void CPlayer::OnRelease()
+{
 	int key = GetID();
 	Clear();
 	g_Net.AddPlayerHandle(key);
-	
+
 	g_LogGame.DLog("Player Handle %d ReleaseRef", key);
 }
 

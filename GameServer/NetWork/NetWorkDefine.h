@@ -8,8 +8,9 @@
 #define MAX_CONNECT_COUNT 100000
 
 static constexpr ULONG_PTR KEY_SEND_WAKE = 1;
-static constexpr ULONG_PTR KEY_DISCONNECT_WAKE = 2;
+static constexpr ULONG_PTR KEY_TRYDISCONNECT_WAKE = 2;
 static constexpr ULONG_PTR KEY_SHUTDOWN_WAKE = 3;
+
 typedef struct st_ObjectHandle 
 {
 	int Handle;

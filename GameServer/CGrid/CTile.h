@@ -28,8 +28,8 @@ private:
 
 	CLQueue<st_TileJob> m_queue;
 
-	CEntityVector m_vecPlayer{ EIndexType::VECTOR_INDEX_TILE };
-	CEntityVector m_vecMonster{ EIndexType::VECTOR_INDEX_TILE };
+	CEntityVector m_vecPlayer;
+	CEntityVector m_vecMonster;
 
 	int m_iDebugLogTime;
 	int m_iDebugLogDelayTime = 2 * 1000;

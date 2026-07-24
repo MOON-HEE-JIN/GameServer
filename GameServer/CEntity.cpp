@@ -2,10 +2,11 @@
 #include "ZoneManager/CZoneManager.h"
 #include "./CUtill/CUtill.h"
 #include "Stub/StructDef.h"
-
+#include "Log/CLog.h"
 CEntity::CEntity()
 {
-    m_vecIndex.resize(EIndexType::VECTOR_INDEX_END);
+    m_iRef.store(0);
+	m_iMagRef.store(0);
 }
 
 void CEntity::Reset()
@@ -16,15 +17,14 @@ void CEntity::Reset()
     m_OwnerZone.store(0);			                			// 처리 Zone 에 대한 id
     m_eZoneStatus = eZONESTATUS::NONE;							// 현재 Zone 에 서 의 상태
 
-    for (int i = 0; i < EIndexType::VECTOR_INDEX_END; i++)
-    {
-        m_vecIndex[i] = -1;
-    }
     m_fMoveSpeed = 5.0f;
     m_stPosition.Zero();
     m_stGoalPosition.Zero();
     m_stDirVector.Zero();
     m_eMoveState = eMOVESTATE::STOPPED;
+
+    m_iRef.store(0);
+    m_iMagRef.store(0);
 }
 
 bool CEntity::MoveUpdate()
@@ -103,20 +103,35 @@ bool CEntity::MoveUpdate()
     return false;
 }
 
-int CEntity::GetVectorIndex(int type)
+void CEntity::ReleaseRef()
 {
-    if (type >= EIndexType::VECTOR_INDEX_END)
-        return -1;
-    return m_vecIndex[type];
+    m_iRef.fetch_sub(1);
+
+	if (m_iRef.load() < 0)
+    {
+        g_LogRef.ELog("Entity Type %d ReleaseRef Error", m_nEntityType);
+    }
+
+    if (m_iRef.load() <= 0)
+        OnRelease();
 }
 
-bool CEntity::SetVectorIndex(int type, int value)
+void CEntity::AddMagRef()
 {
-    if (type >= EIndexType::VECTOR_INDEX_END)
-        return false;
-    
-    m_vecIndex[type] = value;
-    return true;
+	m_iMagRef.fetch_add(1);
+    AddRef();
+}
+
+void CEntity::ReleaseMagRef()
+{
+	m_iMagRef.fetch_sub(1);
+
+	if (m_iMagRef.load() < 0)
+    {
+        g_LogRef.ELog("Entity Type %d ReleaseMagRef Error", m_nEntityType);
+    }
+
+    ReleaseRef();
 }
 
 int CEntity::MoveStart(st_Vector3F goal, st_Vector3F dir)

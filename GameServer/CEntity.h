@@ -9,14 +9,22 @@ class CEntity
 public:
 	CEntity();
 	~CEntity() {}
+private:
+	/*
+	* m_iRef 사용처
+	* - OnClientJoin 에서 1 로 시작 FreePlayer 에서 -1
+	* - ReqEnterLoginZone +1 이유 순서 Leave -> Enter +1 을 하지 않으면 바로 종료
+	* - EnterZone 에서 +1, LeaveZone 에서 -1
+	* - Grid AddPlayer +1, RemovePlayer -1
+	*/
+	std::atomic<int> m_iRef;
+	std::atomic<int> m_iMagRef;
 protected:
 	int m_nEntityType = 0;
 
 	int m_iChannel;
 	std::atomic<int> m_OwnerZone;						// 처리 Zone 에 대한 id
 	eZONESTATUS m_eZoneStatus;							// 현재 Zone 에 서 의 상태
-
-	std::vector<int> m_vecIndex;
 
 	float m_fMoveSpeed = 5.0f;
 	
@@ -34,18 +42,15 @@ protected:
 public:
 	bool MoveUpdate();
 
+protected:
+	int GetRef() { return m_iRef.load(); }
+	void AddRef() { m_iRef.fetch_add(1); }
+	void ReleaseRef();
+	virtual void OnRelease() { delete this; };
 public:
-	int GetVectorIndex(int type);
-	int GetZoneVectorIndex() { return m_vecIndex[EIndexType::VECTOR_INDEX_ZONE]; };
-	int GetGridVectorIndex() { return m_vecIndex[EIndexType::VECTOR_INDEX_GRID]; };
-	int GetTileVectorIndex() { return m_vecIndex[EIndexType::VECTOR_INDEX_TILE]; };
-	int GetMoveVectorIndex() { return m_vecIndex[EIndexType::VECTOR_INDEX_MOVE]; };
+	void AddMagRef();
+	void ReleaseMagRef();
 
-	bool SetVectorIndex(int type, int value);
-	void SetZoneVectorIndex(int value) { m_vecIndex[EIndexType::VECTOR_INDEX_ZONE] = value; };
-	void SetGridVectorIndex(int value) { m_vecIndex[EIndexType::VECTOR_INDEX_GRID] = value; };
-	void SetTileVectorIndex(int value) { m_vecIndex[EIndexType::VECTOR_INDEX_TILE] = value; };
-	void SetMoveVectorIndex(int value) { m_vecIndex[EIndexType::VECTOR_INDEX_MOVE] = value; };
 public:
 	int GetChannel() { return m_iChannel; }
 	int GetZoneID() { return m_OwnerZone.load(); }

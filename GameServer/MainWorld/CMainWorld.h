@@ -5,6 +5,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#include <memory>
 #include <vector>
 
 #include "../MemoryManager/CLockFreeQueue_FromGPT.h"
@@ -42,8 +43,8 @@ private:
 	int m_iTileCountH;
 	int m_iAllTileCount;
 
-	std::vector<CGrid*> m_vecGrids;
-	std::vector<CTile*> m_vecTiles;
+	std::vector<std::unique_ptr<CGrid>> m_vecGrids;
+	std::vector<std::unique_ptr<CTile>> m_vecTiles;
 
 	static unsigned __stdcall WorkerThread(void* arg);
 protected:

@@ -6,16 +6,13 @@
 #include "../GameServerEnumDef.h"
 #include "../CUtill/CEntityManagmentVector.h"
 
-#include <unordered_map>
-#include <set>
-
 class CMainWorld;
 class CTile;
 
 struct st_GridJob
 {
 	int type;
-	int EntityID;
+	CEntity* pEntity;
 };
 
 class CGrid
@@ -44,10 +41,8 @@ private:
 	void EntityMoveRun();
 	void EntityJobRun();
 
-	void OnEnterGrid(int entityID);
-	void OnLeaveGrid(int entityID);
-
-	void OnTeleport(int entityID);
+	void OnEnterGrid(CEntity* pEntity);
+	void OnLeaveGrid(CEntity* pEntity);
 
 	bool AddPlayer(CEntity* pEntity);
 	bool RemovePlayer(CEntity* pEntity);
@@ -61,10 +56,10 @@ public:
 	int GetRunID() { return m_iRunID; }
 	void SetRunID(int value) { m_iRunID = value; };
 
-	void RemoveForTeleport(CEntity* pEntity) { OnLeaveGrid(pEntity->GetID()); };
+	void RemoveForTeleport(CEntity* pEntity) { OnLeaveGrid(pEntity); };
 
 	void EnqueueProcJob(PROC_MSG& msg);
-	void EnqueueEntityJob(int type, int entityID);
+	void EnqueueEntityJob(int type, CEntity* pEntity);
 
 	void AddMoveVector(CEntity* pEntity);
 	void RemoveMoveVector(CEntity* pEntity);

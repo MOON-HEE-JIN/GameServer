@@ -6,7 +6,6 @@
 #include "../CUtill/CPacket.h"
 #include "NetWorkDefine.h"
 #include <atomic>
-#include <vector>
 class CSession
 {
 public:
@@ -31,7 +30,7 @@ private:
 	std::atomic<bool> bConnect;
 	std::atomic<int> RefCnt;
 	std::atomic<bool> bFreeFlag;
-	int m_iFreeTime;
+	ULONGLONG m_iFreeTime;
 private:
 	std::atomic<SESSION_HANDLE> m_ConnectKey;
 	int m_ConnectPlayerHandle;	// 접속한 플레이어 ID
@@ -40,7 +39,7 @@ public:
 	int IncrementIOCnt() { return InterlockedIncrement(&IOCnt); }
 	int DecrementIOCnt() { return InterlockedDecrement(&IOCnt); }
 	bool AddRef();
-	void SubRef() { RefCnt.fetch_sub(1); }
+	int SubRef();
 
 	void ChangeSendFlag(bool b) { bSendFlag.exchange(b);}
 
@@ -68,12 +67,16 @@ public:
 	bool SetProcID(int ProcID);
 
 	bool TryPushFreeVector();
+	bool CanQueueFree()
+	{
+		return bCloseing.load() && GetIOCnt() == 0 && GetRefCnt() == 0;
+	}
 public:
 	void OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key);
 
 	void OnDisconnect();
 
-	int GetFreeTime() { return m_iFreeTime; }
+	ULONGLONG GetFreeTime() { return m_iFreeTime; }
 public:
 	void CloseSocket();
 	void SendPacket(CPacket* _pPacket);

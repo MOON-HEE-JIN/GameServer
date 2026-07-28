@@ -2,8 +2,6 @@
 
 //#include "CMemoryPool.h"
 
-#include <map>
-#include <set>
 #include <vector>
 
 #include "CBaseNet.h"
@@ -22,8 +20,8 @@ private:
 
 	std::atomic<int> m_iPlayerConnectCount;
 
-	int m_iLogDelayTime;
-	int m_iLogTime;
+	ULONGLONG m_iLogDelayTime;
+	ULONGLONG m_iLogTime;
 protected:
 	bool OnClientJoin(CSession* pSession) override;
 	void OnDisconnect(CSession* pSession) override;
@@ -38,6 +36,7 @@ public:
 	int ShutDown();
 public:
 	CPlayer* GetPlayer(int handle);
+	CPlayer* GetPlayer(int handle, const SESSION_HANDLE& sessionHandle);
 	int GetPlayerCount() { return m_iPlayerConnectCount.load(); }
 
 	CPlayer* AllocPlayer(int& outPlayerHandle);

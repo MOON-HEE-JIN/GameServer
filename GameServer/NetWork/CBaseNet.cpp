@@ -20,15 +20,66 @@
 
 CBaseNet::CBaseNet()
 {
+	m_bRun.store(false);
+	m_slisten = INVALID_SOCKET;
+	CICP = NULL;
+	m_hAceeptThread = NULL;
+	m_hWorkerThread = nullptr;
+	m_hSessionFreeThread = NULL;
+	m_hSessionFreeEvent = NULL;
+	m_bCriticalSectionsInitialized = false;
+	m_bWsaInitialized = false;
+
 	m_iConnectSessionCount.store(0);
-	
-	m_iTotalConnectSessionCount = 0;
-	m_iAcceptSocketCount = 0;
 
 	m_iRecvOverlappedCount.store(0);
 	m_iSendOverlapeedCount.store(0);
 	m_iRecvOverlappedSize.store(0);
 	m_iSendOverlappedSize.store(0);
+}
+
+CBaseNet::~CBaseNet()
+{
+	if (m_bRun.load())
+		ServerShutDown();
+
+	if (m_hAceeptThread != NULL || m_hWorkerThread != nullptr || m_hSessionFreeThread != NULL)
+		WaitStopServer();
+
+	for (CSession* pSession : m_vecSessionManager)
+		delete pSession;
+	m_vecSessionManager.clear();
+
+	if (m_hSessionFreeEvent != NULL)
+	{
+		CloseHandle(m_hSessionFreeEvent);
+		m_hSessionFreeEvent = NULL;
+	}
+
+	if (CICP != NULL)
+	{
+		CloseHandle(CICP);
+		CICP = NULL;
+	}
+
+	if (m_slisten != INVALID_SOCKET)
+	{
+		closesocket(m_slisten);
+		m_slisten = INVALID_SOCKET;
+	}
+
+	if (m_bCriticalSectionsInitialized)
+	{
+		DeleteCriticalSection(&cs_SessionFreeKey);
+		DeleteCriticalSection(&cs_SessionFree);
+		m_bCriticalSectionsInitialized = false;
+	}
+
+	if (m_bWsaInitialized)
+	{
+		WSACleanup();
+		m_bWsaInitialized = false;
+	}
 }
 
 int CBaseNet::Init(int Port, int RunWorkerThreadCount)
@@ -43,6 +94,7 @@ int CBaseNet::Init(int Port, int RunWorkerThreadCount)
 	{
 		return WSAGetLastError();
 	}
+	m_bWsaInitialized = true;
 
 	CICP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, OVERLAP_RUN_THREAD);
 	if (CICP == NULL)
@@ -54,6 +106,11 @@ int CBaseNet::Init(int Port, int RunWorkerThreadCount)
 
 	InitializeCriticalSection(&cs_SessionFreeKey);
 	InitializeCriticalSection(&cs_SessionFree);
+	m_bCriticalSectionsInitialized = true;
+
+	m_hSessionFreeEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if (m_hSessionFreeEvent == NULL)
+		return GetLastError();
 
 	m_vecSessionManager.resize(MAX_CONNECT_COUNT);
 	for (int i = 0; i < MAX_CONNECT_COUNT; i++)
@@ -150,11 +207,27 @@ void CBaseNet::PushSessionFree(CSession* pSession)
 			m_vecSessionFree.push(pSession);
 	}
 	LeaveCriticalSection(&cs_SessionFree);
+
+	// 이미 큐에 있더라도 I/O/Ref가 마지막으로 해제된 시점에 Free Thread를 깨운다.
+	SetEvent(m_hSessionFreeEvent);
+}
+
+void CBaseNet::TrySessionFree(CSession* pSession)
+{
+	if (pSession == nullptr || !pSession->CanQueueFree())
+		return;
+
+	PushSessionFree(pSession);
 }
 
 void CBaseNet::DisConnect(CSession* pSession)
 {
-	PushSessionFree(pSession);
+	if (pSession == nullptr)
+		return;
+
+	// 먼저 추가 I/O와 Ref 획득을 차단하고, 모든 사용이 끝난 뒤에만 재사용 큐로 보낸다.
+	pSession->CloseSocket();
+	TrySessionFree(pSession);
 }
 
 void CBaseNet::Recv(CSession* pSession, int type, CPacket& packet)
@@ -188,7 +261,7 @@ int CBaseNet::AcceptRun()
 	SOCKET client_sock;
 	HANDLE IOretval;
 
-	while (m_bRun)
+	while (m_bRun.load())
 	{
 		addrlen = sizeof(clientaddr);
 		client_sock = accept(m_slisten, (SOCKADDR*)&clientaddr, &addrlen);
@@ -199,8 +272,6 @@ int CBaseNet::AcceptRun()
 			g_LogServer.ELog("[Accept Error = %d", ret);
 			continue;
 		}
-		m_iAcceptSocketCount.fetch_add(1);
-
 		CSession* pSession = OnSessionAccept(client_sock);
 		if (pSession == nullptr)
 		{
@@ -249,7 +320,7 @@ int CBaseNet::WorkerRun()
 	DWORD transfrerred;
 
 	ULONG_PTR pKey;
-	while (m_bRun)
+	while (m_bRun.load())
 	{
 		pSession = nullptr;
 		transfrerred = 0;
@@ -359,13 +430,11 @@ int CBaseNet::WorkerRun()
 			pSession->DecrementIOCnt();
 		}
 
-		if (pSession->GetIOCnt() == 0 && pSession->GetRefCnt() == 0 && pSession->GetBoolbCloseing())
-		{
-			DisConnect(pSession);
+		TrySessionFree(pSession);
 #ifdef __DEBUG__
+		if (pSession->CanQueueFree())
 			InterlockedAdd(&d_DiscountCount, 1);
 #endif // __DEBUG__
-		}
 	}
 
 	return 0;
@@ -380,33 +449,48 @@ unsigned __stdcall CBaseNet::SessionFreeThread(void* arg)
 
 int CBaseNet::SessionFreeRun()
 {
-	while (m_bRun)
+	while (m_bRun.load())
 	{
 		CSession* pSession = nullptr;
+		DWORD nWaitTime = INFINITE;
 
 		EnterCriticalSection(&cs_SessionFree);
 		{
 			if (!m_vecSessionFree.empty())
 			{
-				pSession = m_vecSessionFree.front();
-				int nTime = GetTickCount();
-				if (nTime > pSession->GetFreeTime() + SESSION_DELETE_DELAY)
+				CSession* pFront = m_vecSessionFree.front();
+				ULONGLONG nElapsed = GetTickCount64() - pFront->GetFreeTime();
+				if (nElapsed >= SESSION_DELETE_DELAY && pFront->CanQueueFree())
 				{
-					OnDisconnect(pSession);
-
-					pSession->OnDisconnect();
-					LockSessionFreeKey();
-					{
-						m_vecSessionFreeKey.push_back(SESSION_HANDLE(pSession->GetConnectHandle(), pSession->GetConnectGen()));
-					}
-					UnLockSessionFreeKey();
-					m_iConnectSessionCount.fetch_sub(1);
-
+					pSession = pFront;
 					m_vecSessionFree.pop();
+				}
+				else if (nElapsed < SESSION_DELETE_DELAY)
+				{
+					nWaitTime = static_cast<DWORD>(SESSION_DELETE_DELAY - nElapsed);
 				}
 			}
 		}
 		LeaveCriticalSection(&cs_SessionFree);
+
+		if (pSession != nullptr)
+		{
+			SESSION_HANDLE key = pSession->GetConnectKey();
+
+			// 사용자 객체 연결을 먼저 끊고 Session 상태를 초기화한다.
+			OnDisconnect(pSession);
+			pSession->OnDisconnect();
+
+			LockSessionFreeKey();
+			{
+				m_vecSessionFreeKey.push_back(key);
+			}
+			UnLockSessionFreeKey();
+			m_iConnectSessionCount.fetch_sub(1);
+			continue;
+		}
+
+		WaitForSingleObject(m_hSessionFreeEvent, nWaitTime);
 	}
 
 	return 0;
@@ -414,7 +498,7 @@ int CBaseNet::SessionFreeRun()
 
 void CBaseNet::StartServer(CBaseNet* ptr)
 {
-	m_bRun = true;
+	m_bRun.store(true);
 
 	m_hAceeptThread = (HANDLE)_beginthreadex(NULL, 0, AceeptThread, ptr, 0, NULL);
 	m_hWorkerThread = new HANDLE[m_iRunWorkerThreadCount];
@@ -427,23 +511,57 @@ void CBaseNet::StartServer(CBaseNet* ptr)
 
 void CBaseNet::WaitStopServer()
 {
-	WaitForSingleObject(m_hAceeptThread, INFINITE);
-	WaitForMultipleObjects(OVERALP_CREATE_THREAD, m_hWorkerThread, true, INFINITE);
+	if (m_hAceeptThread != NULL)
+	{
+		WaitForSingleObject(m_hAceeptThread, INFINITE);
+		CloseHandle(m_hAceeptThread);
+		m_hAceeptThread = NULL;
+	}
+
+	if (m_hWorkerThread != nullptr)
+	{
+		for (int i = 0; i < m_iRunWorkerThreadCount; i++)
+		{
+			if (m_hWorkerThread[i] != NULL)
+			{
+				WaitForSingleObject(m_hWorkerThread[i], INFINITE);
+				CloseHandle(m_hWorkerThread[i]);
+			}
+		}
+		delete[] m_hWorkerThread;
+		m_hWorkerThread = nullptr;
+	}
+
+	if (m_hSessionFreeThread != NULL)
+	{
+		WaitForSingleObject(m_hSessionFreeThread, INFINITE);
+		CloseHandle(m_hSessionFreeThread);
+		m_hSessionFreeThread = NULL;
+	}
 }
 
 void CBaseNet::TryDisConnectSession(const SESSION_HANDLE& key)
 {
-	OVERLAPPED* overlapped = nullptr;
-	
-	PostQueuedCompletionStatus(CICP, 0, KEY_TRYDISCONNECT_WAKE, NULL);
+	CSession* pSession = GetSession(key);
+	if (pSession == nullptr || pSession->GetConnectGen() != key.Gen)
+		return;
+
+	TrySessionFree(pSession);
 }
 
 void CBaseNet::ServerShutDown()
 {
-	m_bRun = false;
+	if (!m_bRun.exchange(false))
+		return;
 
-	closesocket(m_slisten);
+	if (m_slisten != INVALID_SOCKET)
+	{
+		closesocket(m_slisten);
+		m_slisten = INVALID_SOCKET;
+	}
 
-	for (int i = 0; i < OVERALP_CREATE_THREAD; i++)
+	for (int i = 0; i < m_iRunWorkerThreadCount; i++)
 		PostQueuedCompletionStatus(CICP, 0, KEY_SHUTDOWN_WAKE, NULL);
+
+	SetEvent(m_hSessionFreeEvent);
 }

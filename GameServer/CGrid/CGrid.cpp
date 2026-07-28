@@ -29,9 +29,6 @@ void CGrid::EntityMoveRun()
 	for (int i = 0; i < Loop; i++)
 	{
 		bool ret = vec[i]->MoveUpdate();
-		
-		// true. 이동이 완료된 상태
-		vecCompleteMove.push_back(vec[i]);
 
 		// 여기서 Tile 을 바꿔줘야하나 아니면 CEntity::MoveComplete 에서 Tile 의 위치를 바꿔줘야하나?
 		// 중요한건 Tile 을 바꿀려면 Tile 을 알고 있는 CMainWorld 을 알고 있어야함
@@ -157,39 +154,37 @@ void CGrid::EntityJobRun()
 	st_GridJob msg;
 	while (m_queueEntity.POP(msg))
 	{
+		CEntity* pEntity = msg.pEntity;
+		if (pEntity == nullptr)
+			continue;
+
 		switch (msg.type)
 		{
 		case EGRID_MSG_TYPE::GRID_MSG_ENTER:
 		{
-			OnEnterGrid(msg.EntityID);
+			OnEnterGrid(pEntity);
 		}
 			break;
 		case EGRID_MSG_TYPE::GRID_MSG_LEAVE:
 		{
-			OnLeaveGrid(msg.EntityID);
+			OnLeaveGrid(pEntity);
 		}
 			break;
 		case 3://EGRID_MSG_TYPE::GRID_MSG_TELEPORT:
 		{
-			//OnTeleport(msg.EntityID);
 		}
 			break;
 		default:
 			g_LogGame.ELog("ERROR msg Change Grid type: %d", msg.type);
 			break;
 		}
+
+		// EnqueueEntityJob 에서 획득한 작업 참조를 반환한다.
+		pEntity->ReleaseQueRef();
 	}
 }
-void CGrid::OnEnterGrid(int entityID)
+void CGrid::OnEnterGrid(CEntity* pEntity)
 {
-	CEntity* pEntity = g_Net.GetPlayer(entityID);
-	if (pEntity == nullptr)
-	{
-		g_LogGame.ELog("ERROR EnterZone");
-		return;
-	}
-
-	AddPlayer(pEntity);
 	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
 	if (pTile == nullptr)
 	{
@@ -197,28 +192,38 @@ void CGrid::OnEnterGrid(int entityID)
 		return;
 	}
 
-	pTile->AddPlayer(pEntity);
+	if (!AddPlayer(pEntity))
+	{
+		g_LogGame.ELog("ERROR Duplicate EnterGrid Entity:%d", pEntity->GetID());
+		return;
+	}
+
+	if (!pTile->AddPlayer(pEntity))
+	{
+		RemovePlayer(pEntity);
+		g_LogGame.ELog("ERROR Duplicate EnterTile Entity:%d", pEntity->GetID());
+		return;
+	}
 
 	SendInitAOITile(pTile->GetCoord(), pEntity);
 }
-void CGrid::OnLeaveGrid(int entityID)
+void CGrid::OnLeaveGrid(CEntity* pEntity)
 {
-	CEntity* pEntity = g_Net.GetPlayer(entityID);
-	if (pEntity == nullptr)
-	{
-		g_LogGame.ELog("ERROR EnterZone");
-		return;
-	}
-	RemovePlayer(pEntity);
+	bool bGridRemoved = RemovePlayer(pEntity);
+
 	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
 	if (pTile == nullptr)
 	{
 		g_LogGame.ELog("ERROR LeaveZone");
 		return;
 	}
-	pTile->RemovePlayer(pEntity);
 
-	SendRemoveAOITile(pTile->GetCoord(), pEntity);
+	bool bTileRemoved = pTile->RemovePlayer(pEntity);
+
+	if (bGridRemoved || bTileRemoved)
+		SendRemoveAOITile(pTile->GetCoord(), pEntity);
+	else
+		g_LogGame.ELog("ERROR LeaveGrid Entity:%d", pEntity->GetID());
 }
 
 void CGrid::Init(int id, CMainWorld* pParent)
@@ -239,9 +244,14 @@ void CGrid::EnqueueProcJob(PROC_MSG& msg)
 	m_queueProc.Enqueue(msg);
 }
 
-void CGrid::EnqueueEntityJob(int type, int entityID)
+void CGrid::EnqueueEntityJob(int type, CEntity* pEntity)
 {
-	m_queueEntity.Push({ type, entityID });
+	if (pEntity == nullptr)
+		return;
+
+	// 큐에서 처리될 때까지 Player 재사용을 막는다.
+	pEntity->AddQueRef();
+	m_queueEntity.Push({ type, pEntity });
 }
 
 void CGrid::AddMoveVector(CEntity* pEntity)
@@ -259,7 +269,7 @@ void CGrid::Update()
 	PROC_MSG job;
 	while (m_queueProc.TryDequeue(job))
 	{
-		CPlayer* pPlayer = g_Net.GetPlayer(job.PlayerHandle);
+		CPlayer* pPlayer = g_Net.GetPlayer(job.PlayerHandle, job.SessionHandle);
 		if (pPlayer == nullptr)
 			continue;
 		if (pPlayer->GetZoneStatus() != eZONESTATUS::STABLE)
@@ -323,9 +333,9 @@ void CGrid::SendInitAOITile(COORDINATE& pivot, CEntity* pEntity)
 				continue;
 
 			// 시야 안으로 들어 왔음을 알림
-			pAOITile->Enqueue(ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI, pEntity->GetID());
+			pAOITile->Enqueue(ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI, pEntity);
 			// 시야 안으로 들어온 플레이어 에 대한 정보를 알림
-			pAOITile->Enqueue(ETILE_JOB_TYPE::BROADCAST_ENTITY_INFO, pEntity->GetID());
+			pAOITile->Enqueue(ETILE_JOB_TYPE::BROADCAST_ENTITY_INFO, pEntity);
 		}
 	}
 }
@@ -340,7 +350,7 @@ void CGrid::SendRemoveAOITile(COORDINATE& pivot, CEntity* pEntity)
 			if (pAOITile == nullptr)
 				continue;
 
-			pAOITile->Enqueue(ETILE_JOB_TYPE::BROADCAST_ENTITY_REMOVE, pEntity->GetID());
+			pAOITile->Enqueue(ETILE_JOB_TYPE::BROADCAST_ENTITY_REMOVE, pEntity);
 		}
 	}
 }

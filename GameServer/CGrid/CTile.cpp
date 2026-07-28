@@ -1,7 +1,6 @@
 ﻿#include "CTile.h"
 
 #include <Windows.h>
-#include "../NetWork/CNetServer.h"
 #include "../Log/CLog.h"
 #include "../CPlayer.h"
 
@@ -11,27 +10,19 @@ void CTile::TileJobRun()
 	m_queue.PopVector(vec);
 	for (st_TileJob& job : vec)
 	{
+		CEntity* pEntity = job.pEntity;
+		if (pEntity == nullptr)
+			continue;
+
 		switch (job.type)
 		{
 		case ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI:
 		{
-			CEntity* pEntity = g_Net.GetPlayer(job.EntityID);
-			if (pEntity == nullptr)
-			{
-				g_LogGame.ELog("ERROR NOTIFY_TILE_ENTER_AOI");
-				continue;
-			}
 			NotifyEntityTileEnterAOI(pEntity);
 		}
 			break;
 		case ETILE_JOB_TYPE::BROADCAST_ENTITY_INFO:
 		{
-			CEntity* pEntity = g_Net.GetPlayer(job.EntityID);
-			if (pEntity == nullptr)
-			{
-				g_LogGame.ELog("ERROR NOTIFY_TILE_ENTER_AOI");
-				continue;
-			}
 			st_STC_AoiInPlayer res;
 			res.info.ID = pEntity->GetID();
 			res.info.pos = pEntity->GetPosition();
@@ -45,12 +36,6 @@ void CTile::TileJobRun()
 			break;
 		case ETILE_JOB_TYPE::BROADCAST_ENTITY_REMOVE:
 		{
-			CEntity* pEntity = g_Net.GetPlayer(job.EntityID);
-			if (pEntity == nullptr)
-			{
-				g_LogGame.ELog("ERROR NOTIFY_TILE_ENTER_AOI");
-				continue;
-			}
 			st_STC_AoiOutPlayer res;
 			res.ID = pEntity->GetID();
 
@@ -63,6 +48,9 @@ void CTile::TileJobRun()
 		default:
 			break;
 		}
+
+		// Enqueue 에서 획득한 작업 참조를 반환한다.
+		pEntity->ReleaseQueRef();
 	}
 }
 
@@ -77,9 +65,13 @@ void CTile::Init(COORDINATE coord, st_Vector3F start, st_Vector3F end)
 }
 
 
-void CTile::Enqueue(int type, int entityID)
+void CTile::Enqueue(int type, CEntity* pEntity)
 {
-	m_queue.Push({ type, entityID });
+	if (pEntity == nullptr)
+		return;
+
+	pEntity->AddQueRef();
+	m_queue.Push({ type, pEntity });
 }
 
 bool CTile::AddPlayer(CEntity* pEntity)
@@ -113,14 +105,6 @@ bool CTile::RemovePlayer(CEntity* pEntity)
 void CTile::Update()
 {
 	TileJobRun();
-	if (m_iDebugLogTime + m_iDebugLogDelayTime < GetTickCount())
-	{
-		if (m_iActive.load() > 0)
-		{
-			//g_LogGame.DLog("Log Tile[%d,%d] ActiveCount : %d", m_Coord.X, m_Coord.Z, m_iActive.load());
-		}
-		m_iDebugLogTime = GetTickCount();
-	}
 }
 
 void CTile::NotifyEntityTileEnterAOI(CEntity* pEntity)

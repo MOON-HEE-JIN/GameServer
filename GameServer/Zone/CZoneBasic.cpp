@@ -5,6 +5,19 @@
 #include "../Stub/EnumDef.h"
 #include "../Log/CLog.h"
 
+namespace
+{
+	class CZoneJobRef
+	{
+	public:
+		explicit CZoneJobRef(CPlayer* pPlayer) : m_pPlayer(pPlayer) {}
+		~CZoneJobRef() { m_pPlayer->ReleaseMagRef(); }
+
+	private:
+		CPlayer* m_pPlayer;
+	};
+}
+
 CZoneBasic::CZoneBasic(int channel, int ZoneID, int ProcID, int Maximum)
 	: CZoneBase(channel, ZoneID, ProcID, Maximum)
 {
@@ -26,10 +39,10 @@ void CZoneBasic::ChangeZoneProcess()
 
 	while (m_queue.TryDequeue(job))
 	{
-		m_vecChangeZoneJobDebug.push_back(job);
-		CPlayer* pPlayer = g_Net.GetPlayer(job.handle);
+		CPlayer* pPlayer = job.pPlayer;
 		if (pPlayer == nullptr)
 			continue;
+		CZoneJobRef jobRef(pPlayer);
 
 		// Player 가 종료 중 이라면 관련 없는 패킷 전부 Drop
 		if (pPlayer->GetRelease() && job.type != eZONESTATUS::RELEASE)
@@ -38,7 +51,6 @@ void CZoneBasic::ChangeZoneProcess()
 		}
 
 		ZONE_CHANGE_JOB req = job;
-		req.time = GetTickCount();
 
 		switch (job.type)
 		{
@@ -75,7 +87,7 @@ void CZoneBasic::ChangeZoneProcess()
 					// 여기서 Leave 를 처리해도 되지만 규칙성을 위해서 넣어준다
 					req.type = eZONESTATUS::LEAVE;
 					req.ack = false;
-					m_queue.Enqueue(req);
+					Enqueue(req);
 				}
 				else
 				{
@@ -210,9 +222,10 @@ bool CZoneBasic::LeaveZone(CPlayer* pPlayer)
 
 bool CZoneBasic::Enqueue(ZONE_CHANGE_JOB& job)
 {
-	if (!m_bActive.load())
+	if (!m_bActive.load() || job.pPlayer == nullptr)
 		return false;
 
+	job.pPlayer->AddMagRef();
 	m_queue.Enqueue(std::move(job));
 	return true;
 }

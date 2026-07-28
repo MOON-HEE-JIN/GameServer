@@ -3,8 +3,6 @@
 
 //#include "CMemoryPool.h"
 
-#include <map>
-#include <set>
 #include <vector>
 #include <queue>
 
@@ -14,7 +12,7 @@ class CBaseNet
 {
 public:
 	CBaseNet();
-	~CBaseNet() {};
+	~CBaseNet();
 
 protected:
 	int Init(int Port, int RunWorkerThreadCount);
@@ -22,12 +20,15 @@ protected:
 private:
 	int ListenSocket(unsigned short _port, SOCKET& out);
 private:
-	bool m_bRun;
+	std::atomic<bool> m_bRun;
 	SOCKET m_slisten;
 	HANDLE CICP;
 	HANDLE m_hAceeptThread;
 	HANDLE* m_hWorkerThread;
 	HANDLE m_hSessionFreeThread;
+	HANDLE m_hSessionFreeEvent;
+	bool m_bCriticalSectionsInitialized;
+	bool m_bWsaInitialized;
 
 	unsigned short m_Port;
 	int m_iRunWorkerThreadCount;
@@ -39,9 +40,7 @@ private:
 	CRITICAL_SECTION cs_SessionFreeKey;
 	CRITICAL_SECTION cs_SessionFree;
 
-	std::atomic<int> m_iAcceptSocketCount;
 	std::atomic<int> m_iConnectSessionCount;				// 현재 연결중인 세션
-	std::atomic<int> m_iTotalConnectSessionCount;			// 총 연결 횟수
 
 	
 	std::atomic<int> m_iRecvOverlappedCount;
@@ -58,11 +57,12 @@ protected:
 	virtual void OnRecv(CSession* pSession, int type, CPacket& packet);
 
 	void PushSessionFree(CSession* pSession);
+	void TrySessionFree(CSession* pSession);
 public:
 	void LockSessionFreeKey() { EnterCriticalSection(&cs_SessionFreeKey); };
 	void UnLockSessionFreeKey() { LeaveCriticalSection(&cs_SessionFreeKey); };
 
-	bool GetRun() { return m_bRun; };
+	bool GetRun() { return m_bRun.load(); };
 	CSession* GetSession(const SESSION_HANDLE& key);
 
 private:

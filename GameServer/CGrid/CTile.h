@@ -8,31 +8,25 @@
 struct st_TileJob
 {
 	int type;
-	int EntityID;
+	CEntity* pEntity;
 };
 
 class CTile
 {
 public:
-	CTile() {};
+	CTile() : m_iActive(0), m_iManagementID(-1) {};
 	~CTile() {};
 
 private:
 	std::atomic<int> m_iActive;
 	int m_iManagementID;
 	COORDINATE m_Coord;
-	int m_iTileSize;
-
 	st_Vector3F m_StartPos;
 	st_Vector3F m_EndPos;
 
 	CLQueue<st_TileJob> m_queue;
 
 	CEntityVector m_vecPlayer;
-	CEntityVector m_vecMonster;
-
-	int m_iDebugLogTime;
-	int m_iDebugLogDelayTime = 2 * 1000;
 
 private:
 	void TileJobRun();
@@ -43,7 +37,7 @@ private:
 public:
 	void Init(COORDINATE coord, st_Vector3F start, st_Vector3F end);
 
-	void Enqueue(int type, int entityID);
+	void Enqueue(int type, CEntity* pEntity);
 	bool AddPlayer(CEntity* pEntity);
 	bool RemovePlayer(CEntity* pEntity);
 

@@ -3,7 +3,7 @@
 #include "../GameServerDef.h"
 
 #include <vector>
-#include <map>
+#include <unordered_map>
 
 class CEntityVector
 {
@@ -13,7 +13,7 @@ public:
 
 private:
 	std::vector<CEntity*> m_vec;
-	std::map<CEntity*, int> m_map;
+	std::unordered_map<CEntity*, int> m_map;
 
 public:
 	const std::vector<CEntity*>& GetVector() { return m_vec; }
@@ -22,10 +22,13 @@ public:
 
 	bool AddEntity(CEntity* pEntity)
 	{
+		if (pEntity == nullptr || m_map.find(pEntity) != m_map.end())
+			return false;
+
 		int index = static_cast<int>(m_vec.size());
 
 		m_vec.push_back(pEntity);
-		m_map[pEntity] = index;
+		m_map.emplace(pEntity, index);
 
 		pEntity->AddMagRef();
 		return true;
@@ -35,12 +38,13 @@ public:
 		if (m_vec.empty())
 			return false;
 
-		if (m_map.find(pEntity) == m_map.end())
+		auto it = m_map.find(pEntity);
+		if (it == m_map.end())
 			return false;
 
-		int index = m_map[pEntity];
+		int index = it->second;
 		
-		if (m_vec[index] != pEntity)
+		if (index < 0 || index >= static_cast<int>(m_vec.size()) || m_vec[index] != pEntity)
 			return false;
 
 		int lastIndex = static_cast<int>(m_vec.size()) - 1;
@@ -53,10 +57,11 @@ public:
 			m_map[pEnd] = index;
 		}
 
-		pEntity->ReleaseMagRef();
-		
 		m_vec.pop_back();
-		m_map.erase(pEntity);
+		m_map.erase(it);
+
+		// 컨테이너 상태를 먼저 정리한 뒤 소유 참조를 반환한다.
+		pEntity->ReleaseMagRef();
 
 		return true;
 	}

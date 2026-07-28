@@ -107,9 +107,11 @@ void CEntity::ReleaseRef()
 {
     int ref = m_iRef.fetch_sub(1);
 
-	if (m_iRef.load() < 0)
+	if (ref <= 0)
     {
+		m_iRef.fetch_add(1);
         g_LogRef.ELog("Entity Type %d ReleaseRef Error", m_nEntityType);
+		return;
     }
 
 	// 감소 전 참조카운트가 1이면 OnRelease 호출
@@ -125,11 +127,33 @@ void CEntity::AddMagRef()
 
 void CEntity::ReleaseMagRef()
 {
-	m_iMagRef.fetch_sub(1);
+	int ref = m_iMagRef.fetch_sub(1);
 
-	if (m_iMagRef.load() < 0)
+	if (ref <= 0)
     {
+		m_iMagRef.fetch_add(1);
         g_LogRef.ELog("Entity Type %d ReleaseMagRef Error", m_nEntityType);
+		return;
+    }
+
+    ReleaseRef();
+}
+
+void CEntity::AddQueRef()
+{
+    m_iQueRef.fetch_add(1);
+    AddRef();
+}
+
+void CEntity::ReleaseQueRef()
+{
+    int ref = m_iQueRef.fetch_sub(1);
+
+    if (ref <= 0)
+    {
+        m_iQueRef.fetch_add(1);
+        g_LogRef.ELog("Entity Type %d ReleaseQueRef Error", m_nEntityType);
+        return;
     }
 
     ReleaseRef();

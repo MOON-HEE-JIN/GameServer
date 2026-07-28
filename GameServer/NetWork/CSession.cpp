@@ -5,7 +5,7 @@
 #include "../ZoneManager/CZoneManager.h"
 CSession::CSession()
 {
-	sock = 0;
+	sock = INVALID_SOCKET;
 	
 	InitializeCriticalSection(&m_csSendQ);
 
@@ -17,8 +17,11 @@ CSession::CSession()
 
 	bSendFlag = false;
 
-	bConnect = true;
+	bCloseing = true;
+	bConnect = false;
+	RefCnt = 0;
 	bFreeFlag = false;
+	m_iFreeTime = 0;
 
 	IOCnt = 0;
 
@@ -53,7 +56,7 @@ bool CSession::TryPushFreeVector()
 {
 	if (bFreeFlag.exchange(true) == false)
 	{
-		m_iFreeTime = GetTickCount();
+		m_iFreeTime = GetTickCount64();
 		return true;
 	}
 	return false;
@@ -76,12 +79,12 @@ void CSession::OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key)
 	bCloseing = false;
 	RefCnt = 0;
 	bFreeFlag = false;
+	m_iFreeTime = 0;
 }
 
 void CSession::OnDisconnect()
 {
 	bSendFlag = false;
-	bFreeFlag = false;
 
 	RecvOverlap = { 0 };
 	SendOverlap = { 0 };
@@ -107,6 +110,19 @@ bool CSession::AddRef()
 		RefCnt.fetch_sub(1);
 	}
 	return false;
+}
+
+int CSession::SubRef()
+{
+	int ref = RefCnt.fetch_sub(1);
+	if (ref <= 0)
+	{
+		RefCnt.fetch_add(1);
+		g_LogRef.ELog("Session Handle %d ReleaseRef Error", GetConnectHandle());
+		return -1;
+	}
+
+	return ref - 1;
 }
 
 void CSession::CloseSocket()

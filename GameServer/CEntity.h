@@ -19,6 +19,7 @@ private:
 	*/
 	std::atomic<int> m_iRef;
 	std::atomic<int> m_iMagRef;
+	std::atomic<int> m_iQueRef;
 protected:
 	int m_nEntityType = 0;
 
@@ -50,7 +51,8 @@ protected:
 public:
 	void AddMagRef();
 	void ReleaseMagRef();
-
+	void AddQueRef();
+	void ReleaseQueRef();
 public:
 	int GetChannel() { return m_iChannel; }
 	int GetZoneID() { return m_OwnerZone.load(); }

@@ -7,7 +7,7 @@ void CPlayer::Init(SESSION_HANDLE sessionID, int handle, int Channel, int Zone)
 {
 	m_iVarRef.store(0);
 	
-	m_SessionHandle = sessionID;
+	m_SessionHandle.store(sessionID);
 	m_PlayerHandle = handle;
 	m_iChannel = Channel;
 	m_OwnerZone = Zone;
@@ -23,7 +23,7 @@ void CPlayer::Clear()
 {
 	Reset();
 
-	m_SessionHandle = { -1, 0 };
+	m_SessionHandle.store(SESSION_HANDLE(-1, 0));
 	m_PlayerHandle = -1;
 	m_iChannel = 0;
 	m_OwnerZone = 0;
@@ -41,10 +41,12 @@ void CPlayer::AddVarRef()
 
 void CPlayer::ReleaseVarRef()
 {
-	m_iVarRef.fetch_sub(1);
-	if (m_iVarRef.load() < 0)
+	int ref = m_iVarRef.fetch_sub(1);
+	if (ref <= 0)
 	{
+		m_iVarRef.fetch_add(1);
 		g_LogRef.ELog("Player Handle %d ReleaseVarRef Error", GetID());
+		return;
 	}
 
 	ReleaseRef();
@@ -67,7 +69,7 @@ void CPlayer::SetRelease()
 
 void CPlayer::SendPacket(CPacket* pPacket)
 {
-	TrySend(m_SessionHandle, pPacket);
+	TrySend(m_SessionHandle.load(), pPacket);
 }
 
 bool CPlayer::Teleport(st_Vector3F pos)

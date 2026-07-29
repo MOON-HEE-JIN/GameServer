@@ -137,8 +137,8 @@ void CMainWorld::OnEnterZone(CPlayer* pPlayer)
 		return;
 	}
 	CGrid* pCGrid = GetGrid(GridID);
-	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_ENTER, pPlayer);
-
+	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_SPAWN, pPlayer);
+	
 	//g_LogGame.ILog("Enter %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
 

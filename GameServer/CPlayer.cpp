@@ -7,6 +7,7 @@ void CPlayer::Init(SESSION_HANDLE sessionID, int handle, int Channel, int Zone)
 {
 	m_iVarRef.store(0);
 	
+	m_nEntityType = eENTITY_TYPE::ENTITY_PLAYER;
 	m_SessionHandle.store(sessionID);
 	m_PlayerHandle = handle;
 	m_iChannel = Channel;

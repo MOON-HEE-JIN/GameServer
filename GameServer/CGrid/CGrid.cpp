@@ -160,6 +160,11 @@ void CGrid::EntityJobRun()
 
 		switch (msg.type)
 		{
+		case EGRID_MSG_TYPE::GRID_MSG_SPAWN:
+		{
+			OnSpawnGrid(pEntity);
+		}
+		break;
 		case EGRID_MSG_TYPE::GRID_MSG_ENTER:
 		{
 			OnEnterGrid(pEntity);
@@ -168,10 +173,6 @@ void CGrid::EntityJobRun()
 		case EGRID_MSG_TYPE::GRID_MSG_LEAVE:
 		{
 			OnLeaveGrid(pEntity);
-		}
-			break;
-		case 3://EGRID_MSG_TYPE::GRID_MSG_TELEPORT:
-		{
 		}
 			break;
 		default:
@@ -183,6 +184,26 @@ void CGrid::EntityJobRun()
 		pEntity->ReleaseQueRef();
 	}
 }
+
+void CGrid::OnSpawnGrid(CEntity* pEntity)
+{
+	OnEnterGrid(pEntity);
+	if (pEntity->GetEntityType() == eENTITY_TYPE::ENTITY_PLAYER)
+	{
+		CPlayer* pPlayer = (CPlayer*)pEntity;
+		// 새로운 Zone 에 입장 완료
+		pEntity->SetZoneStatus(eZONESTATUS::STABLE);
+		{
+			st_STC_ChangeZone pack;
+			pack.ret = 0;
+			pack.channel = pPlayer->GetChannel();
+			pack.zone = pPlayer->GetZoneID();
+
+			pPlayer->SendPacket(pack);
+		}
+	}
+}
+
 void CGrid::OnEnterGrid(CEntity* pEntity)
 {
 	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());

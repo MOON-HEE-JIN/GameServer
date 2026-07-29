@@ -11,7 +11,7 @@ CEntity::CEntity()
 
 void CEntity::Reset()
 {
-    m_nEntityType = 0;
+    m_nEntityType = eENTITY_TYPE::ENTITY_NONE;
 
     m_iChannel = 0;
     m_OwnerZone.store(0);			                			// 처리 Zone 에 대한 id
@@ -185,7 +185,7 @@ void CEntity::MoveComplete()
     
     switch (m_nEntityType)
     {
-    case 0:
+    case eENTITY_TYPE::ENTITY_PLAYER:
         res.ID = ((CPlayer*)this)->GetID();
         break;
     default:

@@ -120,17 +120,6 @@ void CZoneBasic::ChangeZoneProcess()
 			if (job.ack)
 			{
 				EnterZone(pPlayer);
-
-				// 새로운 Zone 에 입장 완료
-				pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
-				{
-					st_STC_ChangeZone pack;
-					pack.ret = 0;
-					pack.channel = job.toID;
-					pack.zone = job.toZone;
-
-					pPlayer->SendPacket(pack);
-				}
 			}
 			else
 			{

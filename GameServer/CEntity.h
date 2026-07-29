@@ -54,6 +54,7 @@ public:
 	void AddQueRef();
 	void ReleaseQueRef();
 public:
+	int GetEntityType() { return m_nEntityType; }
 	int GetChannel() { return m_iChannel; }
 	int GetZoneID() { return m_OwnerZone.load(); }
 	virtual int GetID() = 0;

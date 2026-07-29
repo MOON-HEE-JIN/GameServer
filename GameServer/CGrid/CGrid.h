@@ -41,6 +41,7 @@ private:
 	void EntityMoveRun();
 	void EntityJobRun();
 
+	void OnSpawnGrid(CEntity* pEntity);
 	void OnEnterGrid(CEntity* pEntity);
 	void OnLeaveGrid(CEntity* pEntity);
 

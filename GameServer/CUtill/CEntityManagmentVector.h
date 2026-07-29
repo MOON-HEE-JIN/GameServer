@@ -57,6 +57,7 @@ public:
 			m_map[pEnd] = index;
 		}
 
+		m_iCount--;
 		m_vec.pop_back();
 		m_map.erase(it);
 

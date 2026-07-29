@@ -45,12 +45,12 @@ public:
 
 	bool LeaveZone(CPlayer* pPlayer);
 
-	void PushZoneMoveVector(CEntity* pEntity);
+	bool PushZoneMoveVector(CEntity* pEntity);
 	void PopZoneMoveVector(CEntity* pEntity);
 
 	CZoneBasic* GetZone(int Channel, int ZoneID);
 public:
-	void SendZone(int Channel, int Zone, CPacket* pPacket, CPlayer* pPlayer = nullptr);
+	void SendZone(int Channel, int Zone, CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer = nullptr);
 public:
 	ULONGLONG m_iLogDelayTime = 1 * 1000;
 	ULONGLONG m_iLogTime = 0;

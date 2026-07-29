@@ -51,7 +51,14 @@ public:
 		pack << value;
 		SendPacket(&pack);
 	}
-
+	void BroadCast(CPacket* pPacket);
+	template<typename T>
+	void BroadCast(T& value)
+	{
+		CPacket pack;
+		pack << value;
+		BroadCast(&pack);
+	}
 public:
 	//Teleport
 	bool Teleport(st_Vector3F pos);

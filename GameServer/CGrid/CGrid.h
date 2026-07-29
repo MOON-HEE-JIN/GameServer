@@ -15,6 +15,12 @@ struct st_GridJob
 	CEntity* pEntity;
 };
 
+struct st_GridChange
+{
+	CEntity* pEntity;
+	CGrid* pGrid;
+};
+
 class CGrid
 {
 public:
@@ -62,8 +68,9 @@ public:
 	void EnqueueProcJob(PROC_MSG& msg);
 	void EnqueueEntityJob(int type, CEntity* pEntity);
 
-	void AddMoveVector(CEntity* pEntity);
+	bool AddMoveVector(CEntity* pEntity);
 	void RemoveMoveVector(CEntity* pEntity);
 
+	void ProcessPacket();
 	void Update();
 };

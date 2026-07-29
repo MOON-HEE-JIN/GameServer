@@ -137,11 +137,6 @@ void CZoneBasic::ChangeZoneProcess()
 			if (job.ack)
 			{
 				bool bRet = LeaveZone(pPlayer);
-
-				// OwnerZone 에서 Player Free 처리 || 아무 Zone 에서 관리하지 않음
-				//CNetServer::DecrementPlayerCount();
-				g_Net.FreePlayer(pPlayer);
-
 				// ToZone 에서 관리 vector 전에 Release 되었을때
 				if (bRet)
 				{
@@ -155,13 +150,7 @@ void CZoneBasic::ChangeZoneProcess()
 			}
 			else
 			{
-				if (LeaveZone(pPlayer))
-				{
-					// OwnerZone 에서 Player Free 처리
-					//CNetServer::DecrementPlayerCount();
-					g_Net.FreePlayer(pPlayer);
-				}
-				else
+				if (!LeaveZone(pPlayer))
 				{
 					// 해당 Zone 에서 관리하지 않음
 					req.ack = true;
@@ -242,7 +231,7 @@ bool CZoneBasic::TryEnterZone()
 	return GetCurCnt() < GetMaximum();
 }
 
-void CZoneBasic::SendZoneCast(CPacket* pPacket, CPlayer* pPlayer)
+void CZoneBasic::BoradCast(CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer)
 {
 	int nLoop = m_vecEntitys.GetCount();
 	const std::vector<CEntity*>& m_vecPlayers = m_vecEntitys.GetVector();

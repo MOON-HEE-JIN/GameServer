@@ -124,12 +124,12 @@ void CZoneManager::StartMainWorld()
 	}
 }
 
-void CZoneManager::SendZone(int Channel, int Zone, CPacket* pPacket, CPlayer* pPlayer)
+void CZoneManager::SendZone(int Channel, int Zone, CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer)
 {
 	if (!IsValidChannelZone(Channel, Zone))
 		return;
 
-	m_mapZones[Zone][Channel]->SendZoneCast(pPacket, pPlayer);
+	m_mapZones[Zone][Channel]->BoradCast(pPacket, pivot, pPlayer);
 }
 
 bool CZoneManager::ReqEnterLoginZone(CPlayer* pPlayer)
@@ -280,15 +280,15 @@ bool CZoneManager::LeaveZone(CPlayer* pPlayer)
 	return m_mapZones[zoneID][channel]->LeaveZone(pPlayer);
 }
 
-void CZoneManager::PushZoneMoveVector(CEntity* pEntity)
+bool CZoneManager::PushZoneMoveVector(CEntity* pEntity)
 {
 	int channel = pEntity->GetChannel();
 	int zone = pEntity->GetZoneID();
 
 	if (!IsValidChannelZone(channel, zone))
-		return;
+		return false;
 
-	m_mapZones[zone][channel]->PushMoveVector(pEntity);
+	return m_mapZones[zone][channel]->PushMoveVector(pEntity);
 }
 
 void CZoneManager::PopZoneMoveVector(CEntity* pEntity)
@@ -299,7 +299,7 @@ void CZoneManager::PopZoneMoveVector(CEntity* pEntity)
 	if (!IsValidChannelZone(channel, zone))
 		return;
 
-	CZone* pZone = (CZone*)m_mapZones[zone][channel];
+	CZoneBasic* pZone = (CZoneBasic*)m_mapZones[zone][channel];
 	pZone->PopMoveVector(pEntity);
 }
 

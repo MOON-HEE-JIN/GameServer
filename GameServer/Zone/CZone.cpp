@@ -15,7 +15,7 @@ CZone::~CZone()
 }
 
 
-void CZone::PushMoveVector(CEntity* pEntity)
+bool CZone::PushMoveVector(CEntity* pEntity)
 {
 	m_vecEntityMoveVector.AddEntity(pEntity);
 }

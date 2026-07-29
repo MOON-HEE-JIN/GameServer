@@ -55,7 +55,9 @@ public:
 	void MessageRouting(std::vector<PROC_MSG>& vec);
 	virtual bool Teleport(CPlayer* pPlayer, st_Vector3F pos) override;
 	virtual void Process() override {};
-	virtual void PushMoveVector(CEntity* pEntity) override;
+	virtual bool PushMoveVector(CEntity* pEntity) override;
+	virtual void PopMoveVector(CEntity* pEntity) override;
+	virtual void BoradCast(CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer = nullptr) override;
 	virtual bool SendZoneInfo(CPlayer* pPlayer) override;
 	void Run(int id);
 	void Start();

@@ -5,8 +5,7 @@
 #include "Log/CLog.h"
 CEntity::CEntity()
 {
-    m_iRef.store(0);
-	m_iMagRef.store(0);
+    Reset();
 }
 
 void CEntity::Reset()
@@ -43,61 +42,12 @@ bool CEntity::MoveUpdate()
     if (remaindist <= speeddist)
     {
         m_stPosition = m_stGoalPosition;
-		//MoveComplete();
+		MoveComplete();
         return true;
     }
     else
     {
 		m_stPosition += st_Vector3F(speedDx, speedDy, speedDz);
-    }
-
-    if (m_stDirVector.X > 0)
-    {
-        if (m_stPosition.X > m_stGoalPosition.X)
-        {
-            int a = 100;
-            a++;
-        }
-    }
-    else
-    {
-        if (m_stPosition.X < m_stGoalPosition.X)
-        {
-            int a = 100;
-            a++;
-        }
-    }
-    if (m_stDirVector.Y > 0)
-    {
-        if (m_stPosition.Y > m_stGoalPosition.Y)
-        {
-            int a = 100;
-            a++;
-        }
-    }
-    else
-    {
-        if (m_stPosition.Y < m_stGoalPosition.Y)
-        {
-            int a = 100;
-            a++;
-        }
-    }
-    if (m_stDirVector.Z > 0)
-    {
-        if (m_stPosition.Z > m_stGoalPosition.Z)
-        {
-            int a = 100;
-            a++;
-        }
-    }
-    else
-    {
-        if (m_stPosition.Z < m_stGoalPosition.Z)
-        {
-            int a = 100;
-            a++;
-        }
     }
 
     return false;
@@ -167,17 +117,28 @@ int CEntity::MoveStart(st_Vector3F goal, st_Vector3F dir)
 
     }
 
+    // 움직이는중 방향 변경
+    if (GetMoveVectorIndex() != -1)
+    {
+		m_stGoalPosition = goal;
+        m_stDirVector = dir;
+        return 0;
+    }
+
     m_eMoveState = eMOVESTATE::MOVEING;
     m_stGoalPosition = goal;
     m_stDirVector = dir;
-    
-    g_ZoneManager.PushZoneMoveVector(this);
+
+    if (!g_ZoneManager.PushZoneMoveVector(this))
+        return ERROR_CODE::ERROR_INDEX;
 
     return 0;
 }
 
 void CEntity::MoveComplete()
 {
+    m_eMoveState = eMOVESTATE::STOPPED;
+
     st_STC_MoveStop res;
     res.pos = m_stPosition;
     res.type = m_nEntityType;
@@ -195,17 +156,11 @@ void CEntity::MoveComplete()
     pack << res;
     
 	// Zone Broadcast
-    g_ZoneManager.SendZone(GetChannel(), GetZoneID(), &pack);
+    g_ZoneManager.SendZone(GetChannel(), GetZoneID(), &pack, GetTilePos());
 }
 
 int CEntity::MoveStop(st_Vector3F pos)
 {
-    // 움직일수 없는 상태인지 체크
-    if (0)
-    {
-
-    }
-
     m_eMoveState = eMOVESTATE::STOPPED;
 
     g_ZoneManager.PopZoneMoveVector(this);

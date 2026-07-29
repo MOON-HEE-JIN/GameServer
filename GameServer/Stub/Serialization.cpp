@@ -312,6 +312,24 @@ int Serialization (char* buffer, st_STC_ObserverConnect& value)
 	return iSize;
 }
 
+int Serialization (char* buffer, st_STC_OtherMoveStart& value)
+{
+	int hSize = 0;
+	st_Header header;
+	int iSize = sizeof(st_Header);
+	memcpy(buffer + iSize, &value.type, sizeof(value.type));
+	iSize += sizeof(value.type);
+	memcpy(buffer + iSize, &value.ID, sizeof(value.ID));
+	iSize += sizeof(value.ID);
+	iSize += Serialization(buffer + iSize, value.pos);
+	iSize += Serialization(buffer + iSize, value.dir);
+
+	header.type = GAME::OTHERMOVESTART;
+	header.size = iSize - sizeof(st_Header);
+	Serialization(buffer, header);
+	return iSize;
+}
+
 int Serialization (char* buffer, st_STC_Teleport& value)
 {
 	int hSize = 0;
@@ -554,6 +572,18 @@ int UnSerialization (char* buffer, st_STC_ObserverConnect& value)
 	int iSize = 0;
 	memcpy(&value.ret, buffer + iSize, sizeof(value.ret));
 	iSize += sizeof(value.ret);
+	return iSize;
+}
+
+int UnSerialization (char* buffer, st_STC_OtherMoveStart& value)
+{
+	int iSize = 0;
+	memcpy(&value.type, buffer + iSize, sizeof(value.type));
+	iSize += sizeof(value.type);
+	memcpy(&value.ID, buffer + iSize, sizeof(value.ID));
+	iSize += sizeof(value.ID);
+	iSize += UnSerialization(buffer + iSize, value.pos);
+	iSize += UnSerialization(buffer + iSize, value.dir);
 	return iSize;
 }
 

@@ -65,6 +65,8 @@ public:
 	st_Vector3F GetGoalPosition() { return m_stGoalPosition; }
 	st_Vector3F GetDirVector() { return m_stDirVector; }
 	float GetMoveSpeed() { return m_fMoveSpeed; }
+	int GetMoveState() { return m_eMoveState; }
+	int GetType() { return m_nEntityType; }
 
 	void SetZoneID(int channel, int zone) { m_iChannel = channel;  m_OwnerZone.store(zone); };
 	void SetZoneStatus(eZONESTATUS type) { m_eZoneStatus = type; }

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 namespace ERROR_CODE 
  {
@@ -11,6 +11,8 @@ namespace ERROR_CODE
 		ZONE_ID,					//존 아이디 오류
 		NOT_EQUAL_POSITION,					//위치 가 다르다
 		ZONE_CHANEING,					//
+		ERROR_MOVE_ING,					//이동중
+		ERROR_INDEX,
 	};
 };
 

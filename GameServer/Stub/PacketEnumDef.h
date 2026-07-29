@@ -15,6 +15,7 @@ namespace GAME
 		MOVESTOP,					//8
 		CHANGEINGZONE,					//9
 		TELEPORT,					//10
+		OTHERMOVESTART,					//다른 객체 움직임 시작
 	};
 };
 

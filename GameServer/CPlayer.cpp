@@ -73,6 +73,11 @@ void CPlayer::SendPacket(CPacket* pPacket)
 	TrySend(m_SessionHandle.load(), pPacket);
 }
 
+void CPlayer::BroadCast(CPacket* pPacket)
+{
+	g_ZoneManager.SendZone(GetChannel(), GetZoneID(), pPacket, GetTilePos(), this);
+}
+
 bool CPlayer::Teleport(st_Vector3F pos)
 {
 	st_Vector3F originPos = m_stPosition;

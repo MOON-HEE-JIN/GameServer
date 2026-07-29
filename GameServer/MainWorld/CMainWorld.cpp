@@ -3,7 +3,7 @@
 #include "../NetWork/CNetServer.h"
 #include "../Stub/EnumDef.h"
 #include "../Log/CLog.h"
-
+#include "../CUtill/CUtill.h"
 // 
 	// MainWorld 당 MAX_MAINWORLD_THREAD_COUNT == 4 Thread 담당
 	// MainWorld 를 MAX_MAINWORLD_THREAD_COUNT * MAX_MAINWORLD_THREAD_COUNT 로 나눈다
@@ -227,14 +227,49 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 	return true;
 }
 
-void CMainWorld::PushMoveVector(CEntity* pEntity)
+bool CMainWorld::PushMoveVector(CEntity* pEntity)
 {
 	CGrid* pCurGrid = GetGrid(pEntity->GetGridID());
 	
 	if (pCurGrid == nullptr)
-		return;
+		return false;
+
+	if (!pCurGrid->AddMoveVector(pEntity))
+		return false;
 	
-	pCurGrid->AddMoveVector(pEntity);
+	g_LogGame.DLog("Push MoveVector EntityID : %d, GridID : %d", pEntity->GetID(), pEntity->GetGridID());
+	return true;
+}
+
+void CMainWorld::PopMoveVector(CEntity* pEntity)
+{
+	CGrid* pCurGrid = GetGrid(pEntity->GetGridID());
+
+	if (pCurGrid == nullptr)
+		return;
+
+	pCurGrid->RemoveMoveVector(pEntity);
+
+	g_LogGame.DLog("Pop MoveVector EntityID : %d, GridID : %d", pEntity->GetID(), pEntity->GetGridID());
+}
+
+void CMainWorld::BoradCast(CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer)
+{
+	// 해당 Player 에게 해당 Grid 에 있는 Player 들의 정보 보내기
+	for (int z = -AOI_VIEW_COUNT; z <= AOI_VIEW_COUNT; z++)
+	{
+		for (int x = -AOI_VIEW_COUNT; x <= AOI_VIEW_COUNT; x++)
+		{
+			CTile* pAOITile = GetTile({ pivot.X + x, pivot.Z + z });
+			if (pAOITile == nullptr)
+				continue;
+
+			if (pAOITile->GetActiveCount() == 0)
+				continue;
+
+			pAOITile->EnqueueBroadCast(pPlayer, pPacket);
+		}
+	}
 }
 
 bool CMainWorld::SendZoneInfo(CPlayer* pPlayer)
@@ -248,12 +283,42 @@ void CMainWorld::Run(int id)
 	std::vector<CGrid*> vec = m_vecThreadRunGrids[id];
 	int Loop = static_cast<int>(vec.size());
 	int ret = 0;
+	
+	double accumulatedtime = 0.0f;
+	double lasttime = CUtil::GetQPCNowTime();
+
 	while (m_bActive)
 	{
 		ret = WaitForSingleObject(m_hExit, 1);
 
+		if (ret == WAIT_OBJECT_0)
+			break;
+	
 		for (int i = 0; i < Loop; i++)
-			vec[i]->Update();
+			vec[i]->ProcessPacket();
+
+		// 지연 시간 누적
+		double nowtime = CUtil::GetQPCNowTime();
+		double frame = nowtime - lasttime;
+		lasttime = nowtime;
+
+		accumulatedtime += frame;
+
+		int nLoop = 0;
+		while (accumulatedtime >= FIXED_DELTA && nLoop < MAX_FRAME_LOOP_COUNT)
+		{
+			for (int i = 0; i < Loop; i++)
+				vec[i]->Update();
+
+			accumulatedtime -= FIXED_DELTA;
+			nLoop++;
+		}
+
+		// 너무 많은 frame 이 쌓인다면 쌓인 frame 처리하느라 더 지연 최대 frame 만큼만 돌리기
+		if (nLoop == MAX_FRAME_LOOP_COUNT)
+		{
+			accumulatedtime = 0.0f;
+		}
 	}
 }
 

@@ -15,12 +15,6 @@ struct st_GridJob
 	CEntity* pEntity;
 };
 
-struct st_GridChange
-{
-	CEntity* pEntity;
-	CGrid* pGrid;
-};
-
 class CGrid
 {
 public:

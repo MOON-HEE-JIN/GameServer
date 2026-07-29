@@ -17,7 +17,7 @@ CZone::~CZone()
 
 bool CZone::PushMoveVector(CEntity* pEntity)
 {
-	m_vecEntityMoveVector.AddEntity(pEntity);
+	return m_vecEntityMoveVector.AddEntity(pEntity);
 }
 
 void CZone::PopMoveVector(CEntity* pEntity)
@@ -37,7 +37,7 @@ void CZone::Process()
 
 void CZone::ZoneEntityMoveProcess()
 {
-	int nLoop = m_vecEntityMoveVector.GetCount();
+	int nLoop = m_vecEntityMoveVector.GetSize();
 	const std::vector<CEntity*>& vec = m_vecEntityMoveVector.GetVector();
 	std::vector<CEntity*> vecCompleteMove;
 	int eraseCnt = 0;

@@ -18,7 +18,7 @@ private:
 public:
 	const std::vector<CEntity*>& GetVector() { return m_vec; }
 
-	int GetCount() { return static_cast<int>(m_vec.size()); }
+	int GetSize() { return static_cast<int>(m_vec.size()); }
 
 	bool AddEntity(CEntity* pEntity)
 	{
@@ -57,7 +57,6 @@ public:
 			m_map[pEnd] = index;
 		}
 
-		m_iCount--;
 		m_vec.pop_back();
 		m_map.erase(it);
 

@@ -57,6 +57,7 @@ CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
 		{
 			m_vecTiles[H * m_iTileCountW + W] = std::make_unique<CTile>();
 			m_vecTiles[H * m_iTileCountW + W]->Init(
+				this,
 				{ W,H },
 				{ static_cast<float>(W * DEFAULT_TILE_SIZE), 0, static_cast<float>(H * DEFAULT_TILE_SIZE) },
 				{ static_cast<float>(W * DEFAULT_TILE_SIZE + DEFAULT_TILE_SIZE), 0, static_cast<float>(H * DEFAULT_TILE_SIZE + DEFAULT_TILE_SIZE) });

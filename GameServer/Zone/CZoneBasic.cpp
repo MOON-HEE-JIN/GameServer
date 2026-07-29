@@ -233,7 +233,7 @@ bool CZoneBasic::TryEnterZone()
 
 void CZoneBasic::BoradCast(CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer)
 {
-	int nLoop = m_vecEntitys.GetCount();
+	int nLoop = m_vecEntitys.GetSize();
 	const std::vector<CEntity*>& m_vecPlayers = m_vecEntitys.GetVector();
 	for (int i = 0; i < nLoop; i++)
 	{

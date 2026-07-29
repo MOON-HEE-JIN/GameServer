@@ -18,11 +18,12 @@ void CTile::TileJobRun()
 		switch (job.type)
 		{
 		case ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI:
-		{
 			NotifyEntityTileEnterAOI(pEntity);
-		}
 			break;
-		case ETILE_JOB_TYPE::BROADCAST_ENTITY_INFO:
+		case ETILE_JOB_TYPE::NOTIFY_TILE_REMOVE_AOI:
+			NotifyEntityTileLeaveAOI(job.pEntity);
+			break;
+		case ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_OBJ:
 		{
 			st_STC_AoiInPlayer res;
 			res.info.ID = pEntity->GetID();
@@ -35,7 +36,7 @@ void CTile::TileJobRun()
 			Broadcast(&cPacket, pEntity);
 		}
 			break;
-		case ETILE_JOB_TYPE::BROADCAST_ENTITY_REMOVE:
+		case ETILE_JOB_TYPE::NOTIFY_TILE_REMOVE_OBJ:
 		{
 			st_STC_AoiOutPlayer res;
 			res.ID = pEntity->GetID();
@@ -45,9 +46,6 @@ void CTile::TileJobRun()
 
 			Broadcast(&cPacket, pEntity);
 		}
-		case ETILE_JOB_TYPE::NOTIFY_TILE_REMOVE_AOI:
-			NotifyEntityTileLeaveAOI(job.pEntity);
-			break;
 		case ETILE_JOB_TYPE::WRONG_ENTITY_REMOVE:
 			RemovePlayer(job.pEntity);
 			break;
@@ -67,6 +65,7 @@ void CTile::TileBroadCast()
 	for (st_TileBroadCast& job : vec)
 	{
 		Broadcast(&job.packet, job.pEntity);
+		job.pEntity->ReleaseQueRef();
 	}
 }
 
@@ -83,6 +82,7 @@ void CTile::Init(CMainWorld* parent, COORDINATE coord, st_Vector3F start, st_Vec
 
 void CTile::EnqueueJob(int type, CEntity* pEntity)
 {
+	pEntity->AddQueRef();
 	m_queue.Push({ type, pEntity});
 }
 
@@ -92,7 +92,7 @@ void CTile::EnqueueBroadCast(CEntity* pEntity, CPacket* Packet)
 		return;
 
 	pEntity->AddQueRef();
-	m_queue.Push({ type, pEntity });
+	m_queueBroadCast.Push({ pEntity, *Packet });
 }
 
 bool CTile::AddPlayer(CEntity* pEntity)

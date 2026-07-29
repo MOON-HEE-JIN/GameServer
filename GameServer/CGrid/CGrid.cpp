@@ -181,7 +181,7 @@ void CGrid::EntityMoveRun()
 				g_LogGame.ELog("ERROR Change Thread GridID : %d", pNewTile->GetManagementGrid());
 				continue;
 			}
-			m_vecChangeThreadMove.push_back({ vec[i], pNewGrid });
+			//m_vecChangeThreadMove.push_back({ vec[i], pNewGrid });
 		}
 	}
 
@@ -190,13 +190,14 @@ void CGrid::EntityMoveRun()
 	{
 		RemoveMoveVector(vecCompleteMove[i]);
 	}
-
+	/*
 	Loop = static_cast<int>(m_vecChangeThreadMove.size());
 	for (int i = 0; i < Loop; i++)
 	{
 		RemovePlayer(m_vecChangeThreadMove[i].pEntity);
 		m_vecChangeThreadMove[i].pGrid->EnqueueEntityJob(EGRID_ADD_TYPE::CHANGE_THREAD_REQUEST, m_vecChangeThreadMove[i].pEntity);
 	}
+	*/
 }
 
 void CGrid::EntityJobRun()
@@ -224,18 +225,6 @@ void CGrid::EntityJobRun()
 		{
 			OnLeaveGrid(pEntity);
 		}
-			break;
-		case EGRID_ADD_TYPE::CHANGE_THREAD_REQUEST:
-		{
-			OnChangeThread(msg.pEntity);
-		}
-			break;
-		case EGRID_ADD_TYPE::CHANGE_THREAD_REQUEST_NO:
-		{
-			AddPlayer(msg.pEntity);
-		}
-			break;
-		case EGRID_ADD_TYPE::CHANGE_THREAD_REQUEST_OK:
 			break;
 		default:
 			g_LogGame.ELog("ERROR msg Change Grid type: %d", msg.type);

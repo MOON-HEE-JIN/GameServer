@@ -204,21 +204,25 @@ void CGrid::EntityJobRun()
 	st_GridJob msg;
 	while (m_queueEntity.POP(msg))
 	{
+		CEntity* pEntity = msg.pEntity;
+		if (pEntity == nullptr)
+			continue;
+
 		switch (msg.type)
 		{
-		case EGRID_ADD_TYPE::ENTER_ZONE:
+		case EGRID_MSG_TYPE::GRID_MSG_SPAWN:
 		{
-			OnEnterZone(msg.pEntity);
+			OnSpawnGrid(pEntity);
+		}
+		break;
+		case EGRID_MSG_TYPE::GRID_MSG_ENTER:
+		{
+			OnEnterGrid(pEntity);
 		}
 			break;
-		case EGRID_ADD_TYPE::LEAVE_ZONE:
+		case EGRID_MSG_TYPE::GRID_MSG_LEAVE:
 		{
-			OnLeaveZone(msg.pEntity);
-		}
-			break;
-		case EGRID_ADD_TYPE::ADD_TELEPORT:
-		{
-			OnTeleport(msg.pEntity);
+			OnLeaveGrid(pEntity);
 		}
 			break;
 		case EGRID_ADD_TYPE::CHANGE_THREAD_REQUEST:
@@ -237,12 +241,33 @@ void CGrid::EntityJobRun()
 			g_LogGame.ELog("ERROR msg Change Grid type: %d", msg.type);
 			break;
 		}
+
+		// EnqueueEntityJob 에서 획득한 작업 참조를 반환한다.
+		pEntity->ReleaseQueRef();
 	}
 }
 
-void CGrid::OnEnterZone(CEntity* pEntity)
+void CGrid::OnSpawnGrid(CEntity* pEntity)
 {
-	AddPlayer(pEntity);
+	OnEnterGrid(pEntity);
+	if (pEntity->GetEntityType() == eENTITY_TYPE::ENTITY_PLAYER)
+	{
+		CPlayer* pPlayer = (CPlayer*)pEntity;
+		// 새로운 Zone 에 입장 완료
+		pEntity->SetZoneStatus(eZONESTATUS::STABLE);
+		{
+			st_STC_ChangeZone pack;
+			pack.ret = 0;
+			pack.channel = pPlayer->GetChannel();
+			pack.zone = pPlayer->GetZoneID();
+
+			pPlayer->SendPacket(pack);
+		}
+	}
+}
+
+void CGrid::OnEnterGrid(CEntity* pEntity)
+{
 	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
 	if (pTile == nullptr)
 	{
@@ -250,67 +275,38 @@ void CGrid::OnEnterZone(CEntity* pEntity)
 		return;
 	}
 
-	pTile->AddPlayer(pEntity);
-	
-	SendInitAOITile(pTile->GetCoord(), pEntity);	
-}
+	if (!AddPlayer(pEntity))
+	{
+		g_LogGame.ELog("ERROR Duplicate EnterGrid Entity:%d", pEntity->GetID());
+		return;
+	}
 
-void CGrid::OnLeaveZone(CEntity* pEntity)
+	if (!pTile->AddPlayer(pEntity))
+	{
+		RemovePlayer(pEntity);
+		g_LogGame.ELog("ERROR Duplicate EnterTile Entity:%d", pEntity->GetID());
+		return;
+	}
+
+	SendInitAOITile(pTile->GetCoord(), pEntity);
+}
+void CGrid::OnLeaveGrid(CEntity* pEntity)
 {
-	RemovePlayer(pEntity);
+	bool bGridRemoved = RemovePlayer(pEntity);
+
 	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
 	if (pTile == nullptr)
 	{
 		g_LogGame.ELog("ERROR LeaveZone");
 		return;
 	}
-	pTile->RemovePlayer(pEntity);
 
-	SendRemoveAOITile(pTile->GetCoord(), pEntity);
-}
+	bool bTileRemoved = pTile->RemovePlayer(pEntity);
 
-void CGrid::OnTeleport(CEntity* pEntity)
-{
-	AddPlayer(pEntity);
-	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
-	if (pTile == nullptr)
-	{
-		g_LogGame.ELog("ERROR Teleport");
-		return;
-	}
-	pTile->AddPlayer(pEntity);
-	
-	SendInitAOITile(pTile->GetCoord(), pEntity);
-}
-
-void CGrid::OnChangeThread(CEntity* pEntity)
-{
-	int PreGridID = pEntity->GetGridID();
-	AddPlayer(pEntity);
-	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
-	if (pTile == nullptr)
-	{
-		if (PreGridID != pEntity->GetGridID())
-		{
-			CGrid* pPreGrid = m_parent->GetGrid(PreGridID);
-			pPreGrid->EnqueueEntityJob(EGRID_ADD_TYPE::CHANGE_THREAD_REQUEST_NO, pEntity);
-		}
-		g_LogGame.ELog("ERROR ChangeThread");
-		return;
-	}
-	pTile->AddPlayer(pEntity);
-	g_LogGame.DLog("이동 으로 인한 다른 Thread 간 의 Tile 변경");
-
-	if (PreGridID != pEntity->GetGridID())
-	{
-		CGrid* pPreGrid = m_parent->GetGrid(PreGridID);
-		pPreGrid->EnqueueEntityJob(EGRID_ADD_TYPE::CHANGE_THREAD_REQUEST_OK, pEntity);
-	}
-
-	if (pEntity->GetMoveState() == eMOVESTATE::STOPPED)
-		return;
-
-	AddMoveVector(pEntity);
+	if (bGridRemoved || bTileRemoved)
+		SendRemoveAOITile(pTile->GetCoord(), pEntity);
+	else
+		g_LogGame.ELog("ERROR LeaveGrid Entity:%d", pEntity->GetID());
 }
 
 void CGrid::Init(int id, CMainWorld* pParent)
@@ -333,6 +329,11 @@ void CGrid::EnqueueProcJob(PROC_MSG& msg)
 
 void CGrid::EnqueueEntityJob(int type, CEntity* pEntity)
 {
+	if (pEntity == nullptr)
+		return;
+
+	// 큐에서 처리될 때까지 Player 재사용을 막는다.
+	pEntity->AddQueRef();
 	m_queueEntity.Push({ type, pEntity });
 }
 
@@ -351,7 +352,7 @@ void CGrid::ProcessPacket()
 	PROC_MSG job;
 	while (m_queueProc.TryDequeue(job))
 	{
-		CPlayer* pPlayer = g_Net.GetPlayer(job.PlayerHandle);
+		CPlayer* pPlayer = g_Net.GetPlayer(job.PlayerHandle, job.SessionHandle);
 		if (pPlayer == nullptr)
 			continue;
 		if (pPlayer->GetZoneStatus() != eZONESTATUS::STABLE)
@@ -386,7 +387,6 @@ bool CGrid::AddPlayer(CEntity* pEntity)
 	if (!m_vecPlayer.AddEntity(pEntity))
 		return false;
 
-	((CPlayer*)pEntity)->AddRef();
 	return true;
 }
 
@@ -396,7 +396,6 @@ bool CGrid::RemovePlayer(CEntity* pEntity)
 		return false;
 	
 	m_vecMove.RemoveEntity(pEntity);
-	((CPlayer*)pEntity)->ReleaseRef();
 
 	return true;
 }

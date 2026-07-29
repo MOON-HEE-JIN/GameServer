@@ -29,6 +29,8 @@ CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
 {
 	m_bMainWorld = true;
 	m_hExit = CreateEvent(NULL, TRUE, FALSE, NULL);
+	for (int i = 0; i < MAX_MAINWORLD_THREAD_COUNT; i++)
+		m_vecThreads[i] = NULL;
 
 	m_iWidth = 1024;
 	m_iHeight = 1024;
@@ -39,25 +41,27 @@ CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
 	m_iAllTileCount = m_iTileCountH * m_iTileCountW;
 
 	// Tile 을 관리할 Grid
-	m_Grids = new CGrid[MAX_MANAGENTMENT_GRID_COUNT];
-
+	m_vecGrids.resize(MAX_MANAGENTMENT_GRID_COUNT);
 	for (int i = 0; i < MAX_MANAGENTMENT_GRID_COUNT; i++)
-		m_Grids[i].Init(i, this);
+	{
+		m_vecGrids[i] = std::make_unique<CGrid>();
+		m_vecGrids[i]->Init(i, this);
+	}
 
 	// MainWorld Tile 로 나누기
-	m_Tiles = new CTile[m_iAllTileCount];
+	m_vecTiles.resize(m_iAllTileCount);
 
 	for (int H = 0; H < m_iTileCountH; H++)
 	{
 		for (int W = 0; W < m_iTileCountW; W++)
 		{
-			m_Tiles[H * m_iTileCountW + W].Init(
-				this,
+			m_vecTiles[H * m_iTileCountW + W] = std::make_unique<CTile>();
+			m_vecTiles[H * m_iTileCountW + W]->Init(
 				{ W,H },
 				{ static_cast<float>(W * DEFAULT_TILE_SIZE), 0, static_cast<float>(H * DEFAULT_TILE_SIZE) },
 				{ static_cast<float>(W * DEFAULT_TILE_SIZE + DEFAULT_TILE_SIZE), 0, static_cast<float>(H * DEFAULT_TILE_SIZE + DEFAULT_TILE_SIZE) });
-		
-			m_Grids[H % MAX_MANAGENTMENT_GRID_COUNT].OnRegisterTile(&m_Tiles[H * m_iTileCountW + W]);
+
+			m_vecGrids[H % MAX_MANAGENTMENT_GRID_COUNT]->OnRegisterTile(m_vecTiles[H * m_iTileCountW + W].get());
 		}
 	}
 
@@ -78,14 +82,22 @@ CMainWorld::~CMainWorld()
 {
 	m_bActive = false;
 
+	SetEvent(m_hExit);
 	for (int i = 0; i < MAX_MAINWORLD_THREAD_COUNT; i++)
 	{
-		SetEvent(m_hExit);
+		if (m_vecThreads[i] != NULL)
+		{
+			WaitForSingleObject(m_vecThreads[i], INFINITE);
+			CloseHandle(m_vecThreads[i]);
+			m_vecThreads[i] = NULL;
+		}
 	}
 
-	WaitForMultipleObjects(MAX_MAINWORLD_THREAD_COUNT, m_vecThreads, true, INFINITE);
-
-	delete[] m_Grids;
+	if (m_hExit != NULL)
+	{
+		CloseHandle(m_hExit);
+		m_hExit = NULL;
+	}
 }
 
 unsigned __stdcall CMainWorld::WorkerThread(void* arg)
@@ -100,33 +112,62 @@ unsigned __stdcall CMainWorld::WorkerThread(void* arg)
 
 void CMainWorld::OnEnterZone(CPlayer* pPlayer)
 {
-	CTile* pTile = GetTile(pPlayer->GetPosition());
-	CGrid* pCGrid = GetGrid(pTile->GetManagementGrid());
+	if (pPlayer == nullptr)
+		return;
 
-	if (pCGrid == nullptr)
+	CTile* pTile = GetTile(pPlayer->GetPosition());
+	if (pTile == nullptr)
+	{
+		g_LogGame.ELog("ERROR Enter Main World Invalid Position");
+		return;
+	}
+
+	COORDINATE tilePos = pPlayer->GetTilePos();
+
+	if (pTile->GetCoord() != tilePos)
+	{
+		g_LogGame.ELog("ERROR Enter Main World TilePos");
+	}
+
+	int GridID = pTile->GetManagementGrid();
+
+	if (!IsValidGridID(GridID))
 	{
 		g_LogGame.ELog("ERROR Enter Main World");
 		return;
 	}
-	
-	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ENTER_ZONE, pPlayer);
+	CGrid* pCGrid = GetGrid(GridID);
+	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_SPAWN, pPlayer);
 	
 	//g_LogGame.ILog("Enter %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
 
 void CMainWorld::OnLeaveZone(CPlayer* pPlayer)
 {
-	CTile* pTile = GetTile(pPlayer->GetPosition());
-	CGrid* pCGrid = GetGrid(pTile->GetManagementGrid());
+	if (pPlayer == nullptr)
+		return;
 
-	if (pCGrid == nullptr)
+	CTile* pTile = GetTile(pPlayer->GetPosition());
+	if (pTile == nullptr)
 	{
-		g_LogGame.ELog("ERROR Leave Main World");
+		g_LogGame.ELog("ERROR Leave Main World Invalid Position");
 		return;
 	}
 
-	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::LEAVE_ZONE, pPlayer);
+	COORDINATE tilePos = pPlayer->GetTilePos();
 	
+	if (pTile->GetCoord() != tilePos)
+	{
+		g_LogGame.ELog("ERROR Enter Main World TilePos");
+	}
+	
+	int GridID = pTile->GetManagementGrid();
+	if (!IsValidGridID(GridID))
+		return;
+
+	CGrid* pCGrid = GetGrid(GridID);
+	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_LEAVE, pPlayer);
+
 	//g_LogGame.ILog("Leave %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
 
@@ -135,7 +176,7 @@ void CMainWorld::MessageRouting(std::vector<PROC_MSG>& vec)
 	int Loop = static_cast<int>(vec.size());
 	for (int i = 0; i < Loop; i++)
 	{
-		CPlayer* pPlayer = g_Net.GetPlayer(vec[i].PlayerHandle);
+		CPlayer* pPlayer = g_Net.GetPlayer(vec[i].PlayerHandle, vec[i].SessionHandle);
 		if (pPlayer == nullptr)
 			continue;
 
@@ -152,7 +193,7 @@ void CMainWorld::MessageRouting(std::vector<PROC_MSG>& vec)
 
 bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 {
-	// 추후 Teleporty 관련 조건 체크
+	// 추후 Teleport 관련 조건 체크
 	if (0)
 	{
 		g_LogGame.ELog("ERROR Teleport");
@@ -160,32 +201,29 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 	}
 
 	CTile* pNewTile = GetTile(pos);
-	
-	g_LogGame.DLog("REQ Teleport Pos [%f, %f, %f]  NewTile [%d, %d]", pos.X, pos.Y, pos.Z, pNewTile->GetCoord().X, pNewTile->GetCoord().Z);
 
 	if (pNewTile == nullptr)
 		return false;
 
+	g_LogGame.DLog("REQ Teleport Pos [%f, %f, %f]  NewTile [%d, %d]", pos.X, pos.Y, pos.Z, pNewTile->GetCoord().X, pNewTile->GetCoord().Z);
+
 	CGrid* pCurGrid = GetGrid(pPlayer->GetGridID());
 	CGrid* pNewGrid = GetGrid(pNewTile->GetManagementGrid());
+	if (pCurGrid == nullptr || pNewGrid == nullptr)
+		return false;
 
-	CTile* pCurTile = GetTile(pPlayer->GetPosition());
-
-	// 좌표 변경 전에 지워주기
-	pCurGrid->DirectRemovePlayer(pPlayer);
-	pCurTile->RemovePlayer(pPlayer);
+	// 순서를 위해서 먼저 삭제 후 이동
+	pCurGrid->RemoveForTeleport(pPlayer);
 	
-	// 시야 범위 밖으로 나갔다는 패킷 뿌려주기
-	st_STC_AoiOutPlayer AoiOutPlayer;
-	AoiOutPlayer.ID = pPlayer->GetID();
-	CPacket AoiOutPacket;
-	AoiOutPacket << AoiOutPlayer;
-	BoradCast(&AoiOutPacket, pCurTile->GetCoord(), pPlayer);
-
 	pPlayer->SetPosition(pos);
 
-	pNewGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ADD_TELEPORT, pPlayer);
-	
+	pNewGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_ENTER, pPlayer);
+
+	st_STC_Teleport res;
+	res.ret = 0;
+	res.pos = pos;
+	pPlayer->SendPacket(res);
+
 	return true;
 }
 
@@ -291,8 +329,8 @@ void CMainWorld::Start()
 	int runid = 0;
 	for (int i = 0; i < MAX_MANAGENTMENT_GRID_COUNT; i++)
 	{
-		m_Grids[i].SetRunID(runid);
-		m_vecThreadRunGrids[runid++].push_back(&m_Grids[i]);
+		m_vecGrids[i]->SetRunID(runid);
+		m_vecThreadRunGrids[runid++].push_back(m_vecGrids[i].get());
 		if (runid >= MAX_MAINWORLD_THREAD_COUNT)
 			runid = 0;
 	}
@@ -316,8 +354,8 @@ CTile* CMainWorld::GetTile(st_Vector3F pos)
 		return nullptr;
 
 	COORDINATE coord = {static_cast<int>(pos.X) / DEFAULT_TILE_SIZE, static_cast<int>(pos.Z) / DEFAULT_TILE_SIZE };
-	
-	return &m_Tiles[coord.Z * m_iTileCountW + coord.X];
+
+	return m_vecTiles[coord.Z * m_iTileCountW + coord.X].get();
 }
 
 CTile* CMainWorld::GetTile(const COORDINATE& coord)
@@ -325,7 +363,7 @@ CTile* CMainWorld::GetTile(const COORDINATE& coord)
 	if (coord.Z < 0 || coord.Z >= m_iTileCountH || coord.X < 0 || coord.X >= m_iTileCountW)
 		return nullptr;
 
-	return &m_Tiles[coord.Z * m_iTileCountW + coord.X];
+	return m_vecTiles[coord.Z * m_iTileCountW + coord.X].get();
 }
 
 CGrid* CMainWorld::GetGrid(int id)
@@ -333,6 +371,6 @@ CGrid* CMainWorld::GetGrid(int id)
 	if(id < 0 || id >= MAX_MANAGENTMENT_GRID_COUNT)
 		return nullptr;
 
-	return &m_Grids[id];
+	return m_vecGrids[id].get();
 }
 

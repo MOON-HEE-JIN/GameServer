@@ -52,12 +52,11 @@ bool CNetServer::OnClientJoin(CSession* pSession)
 
 void CNetServer::OnDisconnect(CSession* pSession)
 {
-	CPlayer* pPlayer = g_PlayerManager[pSession->GetConnectPlayerHandle()];
+	CPlayer* pPlayer = GetPlayer(pSession->GetConnectPlayerHandle());
 	if (pPlayer != nullptr)
 	{
 		pPlayer->SetRelease();
-		pPlayer->ReleaseRef();
-		ZONE_CHANGE_JOB z(GetTickCount(), eZONESTATUS::RELEASE, pPlayer->GetID()
+		ZONE_CHANGE_JOB z(eZONESTATUS::RELEASE, pPlayer
 			, pPlayer->GetChannel(), pPlayer->GetZoneID()
 			, pPlayer->GetChannel(), pPlayer->GetZoneID()
 			, 0, 0);
@@ -72,18 +71,12 @@ void CNetServer::OnRecv(CSession* pSession, int type, CPacket& packet)
 	if (pid < 0 || pid >= ProcThreadCnt)
 	{
 		g_LogServer.ELog("Invalid ProcID on recv. Session:%d ProcID:%d", pSession->GetConnectHandle(), pid);
-
-		pSession->CloseSocket();
-
-		if (pSession->GetIOCnt() == 0 && pSession->GetRefCnt() == 0 && pSession->GetBoolbCloseing())
-		{
-			DisConnect(pSession);
-		}
-
+		DisConnect(pSession);
 		return;
 	}
 
-	g_ProcJobQueue[pid].Enqueue({ pSession->GetConnectPlayerHandle(),type, packet });
+	g_ProcJobQueue[pid].Enqueue(
+		{ pSession->GetConnectKey(), pSession->GetConnectPlayerHandle(), type, packet });
 }
 
 int CNetServer::Initializer(int Port, int RunWorkerThreadCount)
@@ -97,7 +90,7 @@ int CNetServer::Initializer(int Port, int RunWorkerThreadCount)
 	g_PlayerManager.resize(MAX_CONNECT_COUNT);
 	for (int i = 0; i < MAX_CONNECT_COUNT; i++)
 		g_PlayerManager[i] = nullptr;
-	g_PlayerHandleManager.resize(MAX_CONNECT_COUNT);
+	g_PlayerHandleManager.reserve(MAX_CONNECT_COUNT);
 	for (int i = 0; i < MAX_CONNECT_COUNT; i++)
 	{
 		g_PlayerHandleManager.push_back(MAX_CONNECT_COUNT - 1 - i);
@@ -151,12 +144,14 @@ bool TryChangeZone(const SESSION_HANDLE& key, int ProcID)
 
 	if (!pSession->GetBoolConnect() || pSession->GetConnectGen() != key.Gen || pSession->GetBoolbCloseing())
 	{
-		pSession->SubRef();
+		if (pSession->SubRef() == 0)
+			g_Net.TryDisConnect(key);
 		return false;
 	}
 
 	bool bRet = pSession->SetProcID(ProcID);
-	pSession->SubRef();
+	if (pSession->SubRef() == 0)
+		g_Net.TryDisConnect(key);
 	return bRet;
 }
 
@@ -166,8 +161,6 @@ bool TrySend(const SESSION_HANDLE& key, CPacket* pPacket)
 	if (pSession == nullptr)
 		return false;
 
-	SESSION_HANDLE CurKey = pSession->GetConnectKey();
-	
 	// 연결 및 재사용 횟수 체크
 	if (!pSession->GetBoolConnect()) return false;
 	if (pSession->GetConnectGen() != key.Gen) return false;
@@ -176,12 +169,14 @@ bool TrySend(const SESSION_HANDLE& key, CPacket* pPacket)
 	
 	if (!pSession->GetBoolConnect() || pSession->GetConnectGen() != key.Gen || pSession->GetBoolbCloseing())
 	{
-		pSession->SubRef();
+		if (pSession->SubRef() == 0)
+			g_Net.TryDisConnect(key);
 		return false;
 	}
 
 	pSession->SendPacket(pPacket);
-	pSession->SubRef();
+	if (pSession->SubRef() == 0)
+		g_Net.TryDisConnect(key);
 
 	return true;
 }
@@ -193,6 +188,17 @@ CPlayer* CNetServer::GetPlayer(int handle)
 		return nullptr;
 
 	return g_PlayerManager[handle];
+}
+
+CPlayer* CNetServer::GetPlayer(int handle, const SESSION_HANDLE& sessionHandle)
+{
+	CPlayer* pPlayer = GetPlayer(handle);
+	if (pPlayer == nullptr || pPlayer->GetRelease())
+		return nullptr;
+	if (pPlayer->GetSessionHandle() != sessionHandle)
+		return nullptr;
+
+	return pPlayer;
 }
 
 CPlayer* CNetServer::AllocPlayer(int& outPlayerHandle)
@@ -227,9 +233,14 @@ CPlayer* CNetServer::AllocPlayer(int& outPlayerHandle)
 	return nullptr;
 }
 
+void CNetServer::TryDisConnect(const SESSION_HANDLE& key)
+{
+	TryDisConnectSession(key);
+}
+
 void CNetServer::FreePlayer(CPlayer* pPlayer)
 {
-	pPlayer->ReleaseRef();
+	pPlayer->ReleaseVarRef();
 }
 
 void CNetServer::AddPlayerHandle(int handle)
@@ -244,7 +255,8 @@ void CNetServer::AddPlayerHandle(int handle)
 
 void CNetServer::NetLog()
 {
-	if (m_iLogTime + m_iLogDelayTime < GetTickCount())
+	ULONGLONG nNow = GetTickCount64();
+	if (nNow - m_iLogTime >= m_iLogDelayTime)
 	{
 		g_LogServer.ILog("================\n \
 			IO Count  Recv : %d[%d], Send : %d[%d]\n \
@@ -255,7 +267,7 @@ void CNetServer::NetLog()
 		ResetRecvOverlappedLog();
 		ResetSendOverlappedLog();
 
-		m_iLogTime = GetTickCount();
+		m_iLogTime = nNow;
 	}
 }
 
@@ -265,8 +277,6 @@ void CNetServer::PlayerDisConnect(const SESSION_HANDLE& key)
 	if (pSession == nullptr)
 		return ;
 
-	SESSION_HANDLE CurKey = pSession->GetConnectKey();
-
 	// 연결 및 재사용 횟수 체크
 	if (!pSession->GetBoolConnect()) return ;
 	if (pSession->GetConnectGen() != key.Gen) return ;
@@ -275,7 +285,8 @@ void CNetServer::PlayerDisConnect(const SESSION_HANDLE& key)
 	
 	DisConnect(pSession);
 
-	pSession->SubRef();
+	if (pSession->SubRef() == 0)
+		TryDisConnect(key);
 
 	return ;
 }

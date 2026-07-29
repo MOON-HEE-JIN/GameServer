@@ -6,9 +6,6 @@
 #include "../GameServerEnumDef.h"
 #include "../CUtill/CEntityManagmentVector.h"
 
-#include <unordered_map>
-#include <set>
-
 class CMainWorld;
 class CTile;
 
@@ -44,17 +41,15 @@ private:
 	// Grid 가 Player 을 관리할 필요가 있나??
 	// 필요 없을거 같은데
 	// 추후 확인후 삭제 해야함
-	CEntityVector m_vecPlayer{ EIndexType::VECTOR_INDEX_GRID };
-	CEntityVector m_vecMove{ EIndexType::VECTOR_INDEX_MOVE };
-	std::vector<st_GridChange> m_vecChangeThreadMove;
+	CEntityVector m_vecPlayer;
+	CEntityVector m_vecMove;
 
 	void EntityMoveRun();
 	void EntityJobRun();
 
-	void OnEnterZone(CEntity* pEntity);
-	void OnLeaveZone(CEntity* pEntity);
-	void OnTeleport(CEntity* pEntity);
-	void OnChangeThread(CEntity* pEntity);
+	void OnSpawnGrid(CEntity* pEntity);
+	void OnEnterGrid(CEntity* pEntity);
+	void OnLeaveGrid(CEntity* pEntity);
 
 	bool AddPlayer(CEntity* pEntity);
 	bool RemovePlayer(CEntity* pEntity);
@@ -68,8 +63,7 @@ public:
 	int GetRunID() { return m_iRunID; }
 	void SetRunID(int value) { m_iRunID = value; };
 
-	bool DirectAddPlayer(CEntity* pEntity) { return AddPlayer(pEntity); }
-	bool DirectRemovePlayer(CEntity* pEntity) { return RemovePlayer(pEntity); }
+	void RemoveForTeleport(CEntity* pEntity) { OnLeaveGrid(pEntity); };
 
 	void EnqueueProcJob(PROC_MSG& msg);
 	void EnqueueEntityJob(int type, CEntity* pEntity);

@@ -2,30 +2,28 @@
 #include "ZoneManager/CZoneManager.h"
 #include "./CUtill/CUtill.h"
 #include "Stub/StructDef.h"
-#include "Stub/EnumDef.h"
+#include "Log/CLog.h"
 CEntity::CEntity()
 {
-    m_vecIndex.resize(EIndexType::VECTOR_INDEX_END);
     Reset();
 }
 
 void CEntity::Reset()
 {
-    m_nEntityType = 0;
+    m_nEntityType = eENTITY_TYPE::ENTITY_NONE;
 
     m_iChannel = 0;
     m_OwnerZone.store(0);			                			// 처리 Zone 에 대한 id
     m_eZoneStatus = eZONESTATUS::NONE;							// 현재 Zone 에 서 의 상태
 
-    for (int i = 0; i < EIndexType::VECTOR_INDEX_END; i++)
-    {
-        m_vecIndex[i] = -1;
-    }
     m_fMoveSpeed = 5.0f;
     m_stPosition.Zero();
     m_stGoalPosition.Zero();
     m_stDirVector.Zero();
     m_eMoveState = eMOVESTATE::STOPPED;
+
+    m_iRef.store(0);
+    m_iMagRef.store(0);
 }
 
 bool CEntity::MoveUpdate()
@@ -55,20 +53,60 @@ bool CEntity::MoveUpdate()
     return false;
 }
 
-int CEntity::GetVectorIndex(int type)
+void CEntity::ReleaseRef()
 {
-    if (type >= EIndexType::VECTOR_INDEX_END)
-        return -1;
-    return m_vecIndex[type];
+    int ref = m_iRef.fetch_sub(1);
+
+	if (ref <= 0)
+    {
+		m_iRef.fetch_add(1);
+        g_LogRef.ELog("Entity Type %d ReleaseRef Error", m_nEntityType);
+		return;
+    }
+
+	// 감소 전 참조카운트가 1이면 OnRelease 호출
+    if (ref == 1)
+        OnRelease();
 }
 
-bool CEntity::SetVectorIndex(int type, int value)
+void CEntity::AddMagRef()
 {
-    if (type >= EIndexType::VECTOR_INDEX_END)
-        return false;
-    
-    m_vecIndex[type] = value;
-    return true;
+	m_iMagRef.fetch_add(1);
+    AddRef();
+}
+
+void CEntity::ReleaseMagRef()
+{
+	int ref = m_iMagRef.fetch_sub(1);
+
+	if (ref <= 0)
+    {
+		m_iMagRef.fetch_add(1);
+        g_LogRef.ELog("Entity Type %d ReleaseMagRef Error", m_nEntityType);
+		return;
+    }
+
+    ReleaseRef();
+}
+
+void CEntity::AddQueRef()
+{
+    m_iQueRef.fetch_add(1);
+    AddRef();
+}
+
+void CEntity::ReleaseQueRef()
+{
+    int ref = m_iQueRef.fetch_sub(1);
+
+    if (ref <= 0)
+    {
+        m_iQueRef.fetch_add(1);
+        g_LogRef.ELog("Entity Type %d ReleaseQueRef Error", m_nEntityType);
+        return;
+    }
+
+    ReleaseRef();
 }
 
 int CEntity::MoveStart(st_Vector3F goal, st_Vector3F dir)
@@ -108,8 +146,8 @@ void CEntity::MoveComplete()
     
     switch (m_nEntityType)
     {
-    case 0:
-        res.ID = GetID();
+    case eENTITY_TYPE::ENTITY_PLAYER:
+        res.ID = ((CPlayer*)this)->GetID();
         break;
     default:
         break;

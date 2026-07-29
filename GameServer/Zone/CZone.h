@@ -6,6 +6,7 @@
 
 #include "../Zone/CZoneBasic.h"
 #include "../Zone/ZoneDefines.h"
+#include "../CUtill/CEntityManagmentVector.h"
 
 class CZone : public CZoneBasic
 {
@@ -21,7 +22,7 @@ protected:
 	std::vector<st_TriggerVolume> m_vecTriggerVolume;	// Zone 의 TriggerVolume 정보
 	std::unordered_map<int, std::vector<st_TriggerVolumeParam>> m_mapTriggerVolumeParams;	// <TriggerId, TriggerVolumeParam Vector>
 
-	std::vector<CEntity*> m_vecEntityMoveVector;			// 움직임 전용 Update Vector
+	CEntityVector m_vecEntityMoveVector;			// 움직임 전용 Update Vector
 public:
 	virtual void Process() override;
 private:

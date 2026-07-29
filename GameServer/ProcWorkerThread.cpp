@@ -169,7 +169,7 @@ void CProcWorker::Proc()
     PROC_MSG job;
 	while (m_ProcJobQueue->TryDequeue(job))
     {
-        CPlayer* pPlayer = g_Net.GetPlayer(job.PlayerHandle);
+        CPlayer* pPlayer = g_Net.GetPlayer(job.PlayerHandle, job.SessionHandle);
         if (pPlayer == nullptr)
             continue;
         if (pPlayer->GetZoneStatus() != eZONESTATUS::STABLE)
@@ -194,7 +194,7 @@ void CProcWorker::ProxyProc()
     while (m_ProcJobQueue->TryDequeue(job))
     {
         
-        CPlayer* pPlayer = g_Net.GetPlayer(job.PlayerHandle);
+        CPlayer* pPlayer = g_Net.GetPlayer(job.PlayerHandle, job.SessionHandle);
         if (pPlayer == nullptr)
             continue;
         if (pPlayer->GetZoneStatus() != eZONESTATUS::STABLE)
@@ -257,7 +257,7 @@ void CProcWorker::DeletePlayerProcess()
 void CProcWorker::InitZoneVector()
 {
     g_ZoneManager.InitProcZoneVector(m_ProcID, m_vecZone);
-    m_ZoneCnt = m_vecZone.size();
+    m_ZoneCnt = static_cast<int>(m_vecZone.size());
 
     for (int i = 0; i < m_ZoneCnt; i++)
     {

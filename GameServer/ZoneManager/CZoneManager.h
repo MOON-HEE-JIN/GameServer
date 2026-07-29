@@ -52,8 +52,8 @@ public:
 public:
 	void SendZone(int Channel, int Zone, CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer = nullptr);
 public:
-	int m_iLogDelayTime = 1 * 1000;
-	int m_iLogTime = 0;
+	ULONGLONG m_iLogDelayTime = 1 * 1000;
+	ULONGLONG m_iLogTime = 0;
 	void Log();
 
 };

@@ -22,7 +22,7 @@ struct st_TileBroadCast
 class CTile
 {
 public:
-	CTile() {};
+	CTile() : m_iActive(0), m_iManagementID(-1) {};
 	~CTile() {};
 
 private:
@@ -31,19 +31,13 @@ private:
 	std::atomic<int> m_iActive;
 	int m_iManagementID;
 	COORDINATE m_Coord;
-	int m_iTileSize;
-
 	st_Vector3F m_StartPos;
 	st_Vector3F m_EndPos;
 
 	CLQueue<st_TileJob> m_queue;
 	CLQueue<st_TileBroadCast> m_queueBroadCast;
 
-	CEntityVector m_vecPlayer{ EIndexType::VECTOR_INDEX_TILE };
-	CEntityVector m_vecMonster{ EIndexType::VECTOR_INDEX_TILE };
-
-	int m_iDebugLogTime;
-	int m_iDebugLogDelayTime = 2 * 1000;
+	CEntityVector m_vecPlayer;
 
 private:
 	void TileJobRun();

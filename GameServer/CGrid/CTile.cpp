@@ -11,11 +11,40 @@ void CTile::TileJobRun()
 	m_queue.PopVector(vec);
 	for (st_TileJob& job : vec)
 	{
+		CEntity* pEntity = job.pEntity;
+		if (pEntity == nullptr)
+			continue;
+
 		switch (job.type)
 		{
 		case ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI:
-			NotifyEntityTileEnterAOI(job.pEntity);
+		{
+			NotifyEntityTileEnterAOI(pEntity);
+		}
 			break;
+		case ETILE_JOB_TYPE::BROADCAST_ENTITY_INFO:
+		{
+			st_STC_AoiInPlayer res;
+			res.info.ID = pEntity->GetID();
+			res.info.pos = pEntity->GetPosition();
+			res.info.speed = pEntity->GetMoveSpeed();
+
+			CPacket cPacket;
+			cPacket << res;
+
+			Broadcast(&cPacket, pEntity);
+		}
+			break;
+		case ETILE_JOB_TYPE::BROADCAST_ENTITY_REMOVE:
+		{
+			st_STC_AoiOutPlayer res;
+			res.ID = pEntity->GetID();
+
+			CPacket cPacket;
+			cPacket << res;
+
+			Broadcast(&cPacket, pEntity);
+		}
 		case ETILE_JOB_TYPE::NOTIFY_TILE_REMOVE_AOI:
 			NotifyEntityTileLeaveAOI(job.pEntity);
 			break;
@@ -25,6 +54,9 @@ void CTile::TileJobRun()
 		default:
 			break;
 		}
+
+		// Enqueue 에서 획득한 작업 참조를 반환한다.
+		pEntity->ReleaseQueRef();
 	}
 }
 
@@ -56,10 +88,11 @@ void CTile::EnqueueJob(int type, CEntity* pEntity)
 
 void CTile::EnqueueBroadCast(CEntity* pEntity, CPacket* Packet)
 {
-	CPacket localPacket;
-	localPacket.PutData(Packet->GetReadBuffPtr(), Packet->GetDataSize());
+	if (pEntity == nullptr)
+		return;
 
-	m_queueBroadCast.Push({ pEntity, localPacket });
+	pEntity->AddQueRef();
+	m_queue.Push({ type, pEntity });
 }
 
 bool CTile::AddPlayer(CEntity* pEntity)
@@ -69,7 +102,6 @@ bool CTile::AddPlayer(CEntity* pEntity)
 	{
 		m_iActive.fetch_add(1);
 		pEntity->SetTilePos(m_Coord);
-		((CPlayer*)pEntity)->AddRef();
 		
 		g_LogGame.DLog("Enter Tile[%d,%d] ActiveCount : %d", m_Coord.X, m_Coord.Z, m_iActive.load());
 #ifdef __DEBUG__
@@ -89,7 +121,6 @@ bool CTile::RemovePlayer(CEntity* pEntity)
 	if (ret)
 	{
 		m_iActive.fetch_sub(1);
-		((CPlayer*)pEntity)->ReleaseRef();
 		g_LogGame.DLog("Leave Tile[%d,%d] ActiveCount : %d", m_Coord.X, m_Coord.Z, m_iActive.load());
 #ifdef __DEBUG__
 		int PlayerCount = m_vecPlayer.GetSize();
@@ -117,16 +148,6 @@ bool CTile::RemovePlayer(CEntity* pEntity)
 void CTile::Update()
 {
 	TileJobRun();
-	TileBroadCast();
-
-	if (m_iDebugLogTime + m_iDebugLogDelayTime < GetTickCount())
-	{
-		if (m_iActive.load() > 0)
-		{
-			//g_LogGame.DLog("Log Tile[%d,%d] ActiveCount : %d", m_Coord.X, m_Coord.Z, m_iActive.load());
-		}
-		m_iDebugLogTime = GetTickCount();
-	}
 }
 
 void CTile::NotifyEntityTileEnterAOI(CEntity* pEntity)

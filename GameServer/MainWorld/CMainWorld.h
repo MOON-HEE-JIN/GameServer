@@ -5,6 +5,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#include <memory>
 #include <vector>
 
 #include "../MemoryManager/CLockFreeQueue_FromGPT.h"
@@ -29,9 +30,10 @@ public:
 
 private:
 	std::string m_strName = "MainWorld";
-	
+
 	st_ThreadParam params[MAX_MAINWORLD_THREAD_COUNT];
 	HANDLE m_vecThreads[MAX_MAINWORLD_THREAD_COUNT];
+	
 	std::vector<std::vector<CGrid*>> m_vecThreadRunGrids;
 	HANDLE m_hExit;
 
@@ -41,8 +43,8 @@ private:
 	int m_iTileCountH;
 	int m_iAllTileCount;
 
-	CTile* m_Tiles;
-	CGrid* m_Grids;
+	std::vector<std::unique_ptr<CGrid>> m_vecGrids;
+	std::vector<std::unique_ptr<CTile>> m_vecTiles;
 
 	static unsigned __stdcall WorkerThread(void* arg);
 protected:
@@ -70,5 +72,7 @@ public:
 	CTile* GetTile(st_Vector3F pos);
 	CTile* GetTile(const COORDINATE& coord);
 	CGrid* GetGrid(int id);
+
+	bool IsValidGridID(int id) { return (id >= 0 && id < MAX_MANAGENTMENT_GRID_COUNT); }
 };
 

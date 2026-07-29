@@ -6,7 +6,6 @@
 #include "../CUtill/CPacket.h"
 #include "NetWorkDefine.h"
 #include <atomic>
-#include <vector>
 class CSession
 {
 public:
@@ -20,20 +19,18 @@ private:
 
 	DWORD IOCnt;
 	std::atomic<bool> bSendFlag;
-	DWORD UseFlag;
 	OVERLAPPED SendOverlap;
 	OVERLAPPED RecvOverlap;
 
-	CRITICAL_SECTION cs;
 	CRITICAL_SECTION m_csSendQ;
 
 	// 접속 종료중인지
 	std::atomic<bool> bCloseing;
-	// 세션의 사용 완전	종료 플래그
-	std::atomic<bool> bDisconnecting;
 	// 접속 상태 플래그
 	std::atomic<bool> bConnect;
 	std::atomic<int> RefCnt;
+	std::atomic<bool> bFreeFlag;
+	ULONGLONG m_iFreeTime;
 private:
 	std::atomic<SESSION_HANDLE> m_ConnectKey;
 	int m_ConnectPlayerHandle;	// 접속한 플레이어 ID
@@ -42,7 +39,7 @@ public:
 	int IncrementIOCnt() { return InterlockedIncrement(&IOCnt); }
 	int DecrementIOCnt() { return InterlockedDecrement(&IOCnt); }
 	bool AddRef();
-	void SubRef() { RefCnt.fetch_sub(1); }
+	int SubRef();
 
 	void ChangeSendFlag(bool b) { bSendFlag.exchange(b);}
 
@@ -68,12 +65,18 @@ public:
 
 	void SetConnectPlayerHandle(int playerID) { m_ConnectPlayerHandle = playerID; }
 	bool SetProcID(int ProcID);
+
+	bool TryPushFreeVector();
+	bool CanQueueFree()
+	{
+		return bCloseing.load() && GetIOCnt() == 0 && GetRefCnt() == 0;
+	}
 public:
 	void OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key);
-	
-	bool OnStartDisconnect();
+
 	void OnDisconnect();
 
+	ULONGLONG GetFreeTime() { return m_iFreeTime; }
 public:
 	void CloseSocket();
 	void SendPacket(CPacket* _pPacket);

@@ -12,7 +12,9 @@ static PacketProc proc;
 
 CGrid::CGrid()
 {
-	m_iTileCount = 0;
+	// 매 Tick 사용하는 완료/전환 버퍼를 재사용해 이동 Entity 수에 따른 반복 할당을 줄인다.
+	m_vecCompleteMove.reserve(128);
+	m_vecGridTransfer.reserve(32);
 }
 
 CGrid::~CGrid()
@@ -23,16 +25,17 @@ CGrid::~CGrid()
 void CGrid::EntityMoveRun()
 {
 	const std::vector<CEntity*>& vec = m_vecMove.GetVector();
-	int Loop = static_cast<int>(vec.size());
+	int Loop = m_vecMove.GetSize();
 
-	std::vector<CEntity*> vecCompleteMove;
+	m_vecCompleteMove.clear();
+	m_vecGridTransfer.clear();
 	for (int i = 0; i < Loop; i++)
 	{
 		bool ret = vec[i]->MoveUpdate();
 		
 		// true. 이동이 완료된 상태
 		if(ret)
-			vecCompleteMove.push_back(vec[i]);
+			m_vecCompleteMove.push_back(vec[i]);
 
 		// Move 완료 여부와 상관 없이 Tile, Grid Update
 		COORDINATE curTilePos = vec[i]->GetTilePos();
@@ -44,6 +47,11 @@ void CGrid::EntityMoveRun()
 		// Tile 변경
 		CTile* pCurTile = m_parent->GetTile(curTilePos);
 		CTile* pNewTile = m_parent->GetTile(newTilePos);
+		if (pCurTile == nullptr || pNewTile == nullptr)
+		{
+			g_LogGame.ELog("ERROR Change Tile Entity:%d", vec[i]->GetID());
+			continue;
+		}
 
 		COORDINATE diff = newTilePos - curTilePos;
 
@@ -160,18 +168,17 @@ void CGrid::EntityMoveRun()
 			}
 		}
 
-		// Tile 이 변경 된 상태 관리 주체를 변경 해야 한다
-		// 현재 Grid, Tile 에서 제거
-		// 새로운 Grid, Tile 에 추가
-
-		// 더이상 해당 Tile 에서 관리 하지 않음
-		pCurTile->RemovePlayer(vec[i]);
-
 		// 같은 Grid 에서 관리 할때
 		if (pCurTile->GetManagementGrid() == pNewTile->GetManagementGrid())
 		{
-			g_LogGame.DLog("이동 으로 인한 같은 Thread 내 의 Tile 변경");
-			pNewTile->AddPlayer(vec[i]);
+			// 같은 Grid의 Tile 변경은 현재 Thread에서 제거와 등록을 원자적인 순서로 처리한다.
+			if (!pCurTile->RemovePlayer(vec[i]))
+				continue;
+			if (!pNewTile->AddPlayer(vec[i]))
+			{
+				pCurTile->AddPlayer(vec[i]);
+				g_LogGame.ELog("ERROR Change Tile Rollback Entity:%d", vec[i]->GetID());
+			}
 		}
 		else
 		{
@@ -181,23 +188,38 @@ void CGrid::EntityMoveRun()
 				g_LogGame.ELog("ERROR Change Thread GridID : %d", pNewTile->GetManagementGrid());
 				continue;
 			}
-			//m_vecChangeThreadMove.push_back({ vec[i], pNewGrid });
+			// 다른 Grid 전환은 순회 종료 후 기존 Move Vector를 안전하게 수정하도록 지연한다.
+			m_vecGridTransfer.push_back({ vec[i], pNewGrid, pCurTile, curTilePos });
 		}
 	}
 
-	Loop = static_cast<int>(vecCompleteMove.size());
+	Loop = static_cast<int>(m_vecCompleteMove.size());
 	for (int i = 0; i < Loop; i++)
 	{
-		RemoveMoveVector(vecCompleteMove[i]);
+		RemoveMoveVector(m_vecCompleteMove[i]);
 	}
-	/*
-	Loop = static_cast<int>(m_vecChangeThreadMove.size());
+
+	Loop = static_cast<int>(m_vecGridTransfer.size());
 	for (int i = 0; i < Loop; i++)
 	{
-		RemovePlayer(m_vecChangeThreadMove[i].pEntity);
-		m_vecChangeThreadMove[i].pGrid->EnqueueEntityJob(EGRID_ADD_TYPE::CHANGE_THREAD_REQUEST, m_vecChangeThreadMove[i].pEntity);
+		st_GridTransfer& transfer = m_vecGridTransfer[i];
+		if (transfer.pEntity->GetEntityType() == eENTITY_TYPE::ENTITY_PLAYER &&
+			static_cast<CPlayer*>(transfer.pEntity)->GetRelease())
+			continue;
+
+		if (!transfer.pSourceTile->RemovePlayer(transfer.pEntity))
+		{
+			continue;
+		}
+		if (!RemovePlayer(transfer.pEntity))
+		{
+			transfer.pSourceTile->AddPlayer(transfer.pEntity);
+			continue;
+		}
+
+		transfer.pNewGrid->PushEntityJob(
+			EGRID_MSG_TYPE::GRID_MSG_TRANSFER_IN, transfer.pEntity, m_iID, transfer.SourceTile);
 	}
-	*/
 }
 
 void CGrid::EntityJobRun()
@@ -226,6 +248,23 @@ void CGrid::EntityJobRun()
 			OnLeaveGrid(pEntity);
 		}
 			break;
+		case EGRID_MSG_TYPE::GRID_MSG_TRANSFER_IN:
+		{
+			if (!OnTransferGrid(pEntity))
+			{
+				CGrid* pSourceGrid = m_parent->GetGrid(msg.SourceGridID);
+				if (pSourceGrid != nullptr)
+					pSourceGrid->EnqueueEntityJob(
+						EGRID_MSG_TYPE::GRID_MSG_TRANSFER_ROLLBACK,
+						pEntity, msg.SourceGridID, msg.SourceTile);
+			}
+		}
+			break;
+		case EGRID_MSG_TYPE::GRID_MSG_TRANSFER_ROLLBACK:
+		{
+			OnTransferRollback(pEntity, msg.SourceTile);
+		}
+			break;
 		default:
 			g_LogGame.ELog("ERROR msg Change Grid type: %d", msg.type);
 			break;
@@ -238,7 +277,10 @@ void CGrid::EntityJobRun()
 
 void CGrid::OnSpawnGrid(CEntity* pEntity)
 {
-	OnEnterGrid(pEntity);
+	// Grid와 Tile 등록이 모두 성공한 경우에만 Spawn 완료 상태를 공개한다.
+	if (!OnEnterGrid(pEntity))
+		return;
+
 	if (pEntity->GetEntityType() == eENTITY_TYPE::ENTITY_PLAYER)
 	{
 		CPlayer* pPlayer = (CPlayer*)pEntity;
@@ -255,47 +297,103 @@ void CGrid::OnSpawnGrid(CEntity* pEntity)
 	}
 }
 
-void CGrid::OnEnterGrid(CEntity* pEntity)
+bool CGrid::OnEnterGrid(CEntity* pEntity)
 {
 	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
-	if (pTile == nullptr)
+	if (pTile == nullptr || pTile->GetManagementGrid() != m_iID)
 	{
-		g_LogGame.ELog("ERROR EnterZone");
-		return;
+		g_LogGame.ELog("ERROR EnterZone Grid:%d", m_iID);
+		return false;
 	}
 
 	if (!AddPlayer(pEntity))
 	{
 		g_LogGame.ELog("ERROR Duplicate EnterGrid Entity:%d", pEntity->GetID());
-		return;
+		return false;
 	}
 
 	if (!pTile->AddPlayer(pEntity))
 	{
 		RemovePlayer(pEntity);
 		g_LogGame.ELog("ERROR Duplicate EnterTile Entity:%d", pEntity->GetID());
-		return;
+		return false;
 	}
 
 	SendInitAOITile(pTile->GetCoord(), pEntity);
+	return true;
 }
+
 void CGrid::OnLeaveGrid(CEntity* pEntity)
 {
-	bool bGridRemoved = RemovePlayer(pEntity);
-
-	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
+	// 현재 위치가 아닌 저장된 TilePos를 사용해 실제 소유 Tile에서 제거한다.
+	COORDINATE tilePos = pEntity->GetTilePos();
+	CTile* pTile = m_parent->GetTile(tilePos);
+	bool bTileRemoved = false;
 	if (pTile == nullptr)
 	{
-		g_LogGame.ELog("ERROR LeaveZone");
-		return;
+		pTile = m_parent->GetTile(pEntity->GetPosition());
 	}
 
-	bool bTileRemoved = pTile->RemovePlayer(pEntity);
+	if (pTile != nullptr)
+		bTileRemoved = pTile->RemovePlayer(pEntity);
 
-	if (bGridRemoved || bTileRemoved)
+	bool bGridRemoved = RemovePlayer(pEntity);
+
+	if ((bGridRemoved || bTileRemoved) && pTile != nullptr)
 		SendRemoveAOITile(pTile->GetCoord(), pEntity);
 	else
 		g_LogGame.ELog("ERROR LeaveGrid Entity:%d", pEntity->GetID());
+}
+
+bool CGrid::OnTransferGrid(CEntity* pEntity)
+{
+	if (pEntity->GetEntityType() == eENTITY_TYPE::ENTITY_PLAYER &&
+		static_cast<CPlayer*>(pEntity)->GetRelease())
+		return true;
+
+	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
+	if (pTile == nullptr || pTile->GetManagementGrid() != m_iID)
+		return false;
+
+	if (!AddPlayer(pEntity))
+		return false;
+
+	if (!pTile->AddPlayer(pEntity))
+	{
+		RemovePlayer(pEntity);
+		return false;
+	}
+
+	// 이동 중인 Entity는 대상 Grid의 Move Vector까지 함께 인계한다.
+	if (pEntity->GetMoveState() != eMOVESTATE::STOPPED)
+		AddMoveVector(pEntity);
+
+	return true;
+}
+
+void CGrid::OnTransferRollback(CEntity* pEntity, const COORDINATE& sourceTile)
+{
+	if (pEntity->GetEntityType() == eENTITY_TYPE::ENTITY_PLAYER &&
+		static_cast<CPlayer*>(pEntity)->GetRelease())
+		return;
+
+	CTile* pTile = m_parent->GetTile(sourceTile);
+	if (pTile == nullptr || pTile->GetManagementGrid() != m_iID)
+		return;
+
+	bool bGridAdded = AddPlayer(pEntity);
+	bool bTileAdded = bGridAdded && pTile->AddPlayer(pEntity);
+	if (!bTileAdded)
+	{
+		if (bGridAdded)
+			RemovePlayer(pEntity);
+		g_LogGame.ELog("ERROR Transfer Rollback Entity:%d", pEntity->GetID());
+		return;
+	}
+
+	// 대상 Grid 등록 실패 시 원본 Grid의 관리 상태와 Move Vector를 복원한다.
+	if (pEntity->GetMoveState() != eMOVESTATE::STOPPED)
+		AddMoveVector(pEntity);
 }
 
 void CGrid::Init(int id, CMainWorld* pParent)
@@ -306,7 +404,6 @@ void CGrid::Init(int id, CMainWorld* pParent)
 
 void CGrid::OnRegisterTile(CTile* pTile)
 {
-	m_iTileCount++;
 	m_vecTiles.push_back(pTile);
 	pTile->OnReigsterGrid(m_iID);
 }
@@ -316,14 +413,19 @@ void CGrid::EnqueueProcJob(PROC_MSG& msg)
 	m_queueProc.Enqueue(msg);
 }
 
-void CGrid::EnqueueEntityJob(int type, CEntity* pEntity)
+void CGrid::PushEntityJob(int type, CEntity* pEntity, int sourceGridID, const COORDINATE& sourceTile)
+{
+	pEntity->AddQueRef();
+	m_queueEntity.Push({ type, pEntity, sourceGridID, sourceTile });
+}
+
+void CGrid::EnqueueEntityJob(
+	int type, CEntity* pEntity, int sourceGridID, const COORDINATE& sourceTile)
 {
 	if (pEntity == nullptr)
 		return;
 
-	// 큐에서 처리될 때까지 Player 재사용을 막는다.
-	pEntity->AddQueRef();
-	m_queueEntity.Push({ type, pEntity });
+	PushEntityJob(type, pEntity, sourceGridID, sourceTile);
 }
 
 bool CGrid::AddMoveVector(CEntity* pEntity)
@@ -363,19 +465,18 @@ void CGrid::Update()
 	EntityJobRun();
 	EntityMoveRun();
 
-	for (int i = 0; i < m_iTileCount; i++)
-	{
-		m_vecTiles[i]->Update();
-	}
+	// 등록 Tile 개수는 vector 자체를 기준으로 순회해 중복 카운트 상태를 제거한다.
+	for (CTile* pTile : m_vecTiles)
+		pTile->Update();
 }
 
 bool CGrid::AddPlayer(CEntity* pEntity)
 {
-	pEntity->SetGridID(m_iID);
-	
 	if (!m_vecPlayer.AddEntity(pEntity))
 		return false;
 
+	// Grid 컨테이너 등록 성공 후에만 외부에서 조회하는 소유 GridID를 갱신한다.
+	pEntity->SetGridID(m_iID);
 	return true;
 }
 
@@ -385,6 +486,8 @@ bool CGrid::RemovePlayer(CEntity* pEntity)
 		return false;
 	
 	m_vecMove.RemoveEntity(pEntity);
+	// 소유 Grid 제거 후 패킷 라우팅이 이전 Grid로 되돌아가지 않도록 ID를 비운다.
+	pEntity->SetGridID(-1);
 
 	return true;
 }

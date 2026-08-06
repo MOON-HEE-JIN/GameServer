@@ -7,9 +7,10 @@
 
 void CTile::TileJobRun()
 {
-	std::vector<st_TileJob> vec;
-	m_queue.PopVector(vec);
-	for (st_TileJob& job : vec)
+	// 매 Tick마다 vector를 다시 할당하지 않도록 Tile 전용 작업 버퍼를 재사용한다.
+	m_vecJobBuffer.clear();
+	m_queue.PopVector(m_vecJobBuffer);
+	for (st_TileJob& job : m_vecJobBuffer)
 	{
 		CEntity* pEntity = job.pEntity;
 		if (pEntity == nullptr)
@@ -24,28 +25,11 @@ void CTile::TileJobRun()
 			NotifyEntityTileLeaveAOI(job.pEntity);
 			break;
 		case ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_OBJ:
-		{
-			st_STC_AoiInPlayer res;
-			res.info.ID = pEntity->GetID();
-			res.info.pos = pEntity->GetPosition();
-			res.info.speed = pEntity->GetMoveSpeed();
-
-			CPacket cPacket;
-			cPacket << res;
-
-			Broadcast(&cPacket, pEntity);
-		}
+			NotifyEntityTileEnterObj(pEntity);
 			break;
 		case ETILE_JOB_TYPE::NOTIFY_TILE_REMOVE_OBJ:
-		{
-			st_STC_AoiOutPlayer res;
-			res.ID = pEntity->GetID();
-
-			CPacket cPacket;
-			cPacket << res;
-
-			Broadcast(&cPacket, pEntity);
-		}
+			NotifyEntityTileLeaveObj(pEntity);
+			break;
 		case ETILE_JOB_TYPE::WRONG_ENTITY_REMOVE:
 			RemovePlayer(job.pEntity);
 			break;
@@ -60,38 +44,45 @@ void CTile::TileJobRun()
 
 void CTile::TileBroadCast()
 {
-	std::vector<st_TileBroadCast> vec;
-	m_queueBroadCast.PopVector(vec);
-	for (st_TileBroadCast& job : vec)
+	// Broadcast 큐를 매 Tick 소비해 패킷과 선택적 제외 Entity Ref를 함께 반환한다.
+	m_vecBroadCastBuffer.clear();
+	m_queueBroadCast.PopVector(m_vecBroadCastBuffer);
+	for (st_TileBroadCast& job : m_vecBroadCastBuffer)
 	{
 		Broadcast(&job.packet, job.pEntity);
-		job.pEntity->ReleaseQueRef();
+		if (job.pEntity != nullptr)
+			job.pEntity->ReleaseQueRef();
 	}
 }
 
-void CTile::Init(CMainWorld* parent, COORDINATE coord, st_Vector3F start, st_Vector3F end)
+void CTile::Init(CMainWorld* parent, COORDINATE coord)
 {
 	m_parent = parent;
 	m_Coord = coord;
 
-	m_StartPos = start;
-	m_EndPos = end;
-
-	//g_LogGame.DLog("Create Tile[%d,%d] size[%d,%d]", coordX, coordZ, tilew, tileh);
+	// 일반적인 소규모 작업은 추가 할당 없이 처리하도록 초기 용량을 확보한다.
+	m_vecJobBuffer.reserve(32);
+	m_vecBroadCastBuffer.reserve(32);
 }
 
 void CTile::EnqueueJob(int type, CEntity* pEntity)
 {
+	if (pEntity == nullptr)
+		return;
+
+	// Tile 작업이 처리될 때까지 대상 Entity의 재사용을 Queue Ref로 차단한다.
 	pEntity->AddQueRef();
 	m_queue.Push({ type, pEntity});
 }
 
 void CTile::EnqueueBroadCast(CEntity* pEntity, CPacket* Packet)
 {
-	if (pEntity == nullptr)
+	if (Packet == nullptr)
 		return;
 
-	pEntity->AddQueRef();
+	// nullptr은 제외 대상이 없는 전체 Broadcast이므로 Entity Ref만 조건부로 획득한다.
+	if (pEntity != nullptr)
+		pEntity->AddQueRef();
 	m_queueBroadCast.Push({ pEntity, *Packet });
 }
 
@@ -138,7 +129,9 @@ bool CTile::RemovePlayer(CEntity* pEntity)
 		{
 			g_LogGame.ELog("Error Wrong Tile Remove");
 			CTile* pTile = m_parent->GetTile(curTilePos);
-			pTile->EnqueueJob(ETILE_JOB_TYPE::WRONG_ENTITY_REMOVE, pEntity);
+			// 저장된 Tile이 유효할 때만 잘못 전달된 제거 작업을 실제 소유 Tile로 넘긴다.
+			if (pTile != nullptr && pTile != this)
+				pTile->EnqueueJob(ETILE_JOB_TYPE::WRONG_ENTITY_REMOVE, pEntity);
 		}
 	}
 
@@ -148,6 +141,7 @@ bool CTile::RemovePlayer(CEntity* pEntity)
 void CTile::Update()
 {
 	TileJobRun();
+	TileBroadCast();
 }
 
 void CTile::NotifyEntityTileEnterAOI(CEntity* pEntity)
@@ -156,8 +150,6 @@ void CTile::NotifyEntityTileEnterAOI(CEntity* pEntity)
 	int Loop = static_cast<int>(vec.size());
 
 	st_STC_AoiInPlayers res;
-	res.Loop1;
-	res.info;
 	ZeroMemory(&res, sizeof(res));
 	int index = 0;
 	for (int i = 0; i < Loop; i++)
@@ -190,8 +182,6 @@ void CTile::NotifyEntityTileLeaveAOI(CEntity* pEntity)
 	int Loop = static_cast<int>(vec.size());
 
 	st_STC_AoiOutPlayers res;
-	res.Loop1;
-	res.info;
 	ZeroMemory(&res, sizeof(res));
 	int index = 0;
 	for (int i = 0; i < Loop; i++)
@@ -218,6 +208,30 @@ void CTile::NotifyEntityTileLeaveAOI(CEntity* pEntity)
 	}
 }
 
+void CTile::NotifyEntityTileEnterObj(CEntity* pEntity)
+{
+	st_STC_AoiInPlayer res;
+	res.info.ID = pEntity->GetID();
+	res.info.pos = pEntity->GetPosition();
+	res.info.speed = pEntity->GetMoveSpeed();
+
+	CPacket cPacket;
+	cPacket << res;
+
+	Broadcast(&cPacket, pEntity);
+}
+
+void CTile::NotifyEntityTileLeaveObj(CEntity* pEntity)
+{
+	st_STC_AoiOutPlayer res;
+	res.ID = pEntity->GetID();
+
+	CPacket cPacket;
+	cPacket << res;
+
+	Broadcast(&cPacket, pEntity);
+}
+
 void CTile::Broadcast(CPacket* pPacket, CEntity* pEntity)
 {
 	const std::vector<CEntity*>& vec = m_vecPlayer.GetVector();
@@ -233,5 +247,5 @@ void CTile::Broadcast(CPacket* pPacket, CEntity* pEntity)
 		((CPlayer*)vec[i])->SendPacket(pPacket);
 	}
 
-	g_LogServer.DLog("Tile[%d,%d] Broadcast Packet Size : %d TileCount : %d", m_Coord.X, m_Coord.Z, pPacket->GetDataSize(), Loop);
+	//g_LogServer.DLog("Tile[%d,%d] Broadcast Packet Size : %d TileCount : %d", m_Coord.X, m_Coord.Z, pPacket->GetDataSize(), Loop);
 }

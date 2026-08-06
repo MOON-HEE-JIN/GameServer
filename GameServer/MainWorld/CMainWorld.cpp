@@ -55,14 +55,13 @@ CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
 	{
 		for (int W = 0; W < m_iTileCountW; W++)
 		{
-			m_vecTiles[H * m_iTileCountW + W] = std::make_unique<CTile>();
-			m_vecTiles[H * m_iTileCountW + W]->Init(
-				this,
-				{ W,H },
-				{ static_cast<float>(W * DEFAULT_TILE_SIZE), 0, static_cast<float>(H * DEFAULT_TILE_SIZE) },
-				{ static_cast<float>(W * DEFAULT_TILE_SIZE + DEFAULT_TILE_SIZE), 0, static_cast<float>(H * DEFAULT_TILE_SIZE + DEFAULT_TILE_SIZE) });
+			int tileID = H * m_iTileCountW + W;
+			m_vecTiles[tileID] = std::make_unique<CTile>();
+			m_vecTiles[tileID]->Init(this, { W,H });
 
-			m_vecGrids[H % MAX_MANAGENTMENT_GRID_COUNT]->OnRegisterTile(m_vecTiles[H * m_iTileCountW + W].get());
+			// 인접한 Z Tile을 연속 Grid 대역에 배치해 Thread 간 Grid 전환 횟수를 줄인다.
+			int GridID = (H * MAX_MANAGENTMENT_GRID_COUNT) / m_iTileCountH;
+			m_vecGrids[GridID]->OnRegisterTile(m_vecTiles[tileID].get());
 		}
 	}
 
@@ -123,13 +122,6 @@ void CMainWorld::OnEnterZone(CPlayer* pPlayer)
 		return;
 	}
 
-	COORDINATE tilePos = pPlayer->GetTilePos();
-
-	if (pTile->GetCoord() != tilePos)
-	{
-		g_LogGame.ELog("ERROR Enter Main World TilePos");
-	}
-
 	int GridID = pTile->GetManagementGrid();
 
 	if (!IsValidGridID(GridID))
@@ -138,6 +130,7 @@ void CMainWorld::OnEnterZone(CPlayer* pPlayer)
 		return;
 	}
 	CGrid* pCGrid = GetGrid(GridID);
+	// 최초 TilePos는 Grid 등록 과정에서 확정되므로 위치로 계산한 Grid에 Spawn을 위임한다.
 	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_SPAWN, pPlayer);
 	
 	//g_LogGame.ILog("Enter %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
@@ -148,23 +141,20 @@ void CMainWorld::OnLeaveZone(CPlayer* pPlayer)
 	if (pPlayer == nullptr)
 		return;
 
-	CTile* pTile = GetTile(pPlayer->GetPosition());
-	if (pTile == nullptr)
+	// 위치 변경 중에도 실제 소유 Grid가 제거하도록 저장된 GridID를 우선 사용한다.
+	int GridID = pPlayer->GetGridID();
+	if (!IsValidGridID(GridID))
 	{
-		g_LogGame.ELog("ERROR Leave Main World Invalid Position");
-		return;
+		CTile* pOwnedTile = GetTile(pPlayer->GetTilePos());
+		if (pOwnedTile != nullptr)
+			GridID = pOwnedTile->GetManagementGrid();
 	}
 
-	COORDINATE tilePos = pPlayer->GetTilePos();
-	
-	if (pTile->GetCoord() != tilePos)
-	{
-		g_LogGame.ELog("ERROR Enter Main World TilePos");
-	}
-	
-	int GridID = pTile->GetManagementGrid();
 	if (!IsValidGridID(GridID))
+	{
+		g_LogGame.ELog("ERROR Leave Main World Invalid Grid");
 		return;
+	}
 
 	CGrid* pCGrid = GetGrid(GridID);
 	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_LEAVE, pPlayer);
@@ -351,7 +341,8 @@ COORDINATE CMainWorld::CalCoord(st_Vector3F pos)
 
 CTile* CMainWorld::GetTile(st_Vector3F pos)
 {
-	if (pos.X < 0 || pos.X > m_iWidth || pos.Z < 0 || pos.Z > m_iHeight)
+	// 월드 최대 좌표는 마지막 Tile의 다음 경계이므로 범위에서 제외한다.
+	if (pos.X < 0 || pos.X >= m_iWidth || pos.Z < 0 || pos.Z >= m_iHeight)
 		return nullptr;
 
 	COORDINATE coord = {static_cast<int>(pos.X) / DEFAULT_TILE_SIZE, static_cast<int>(pos.Z) / DEFAULT_TILE_SIZE };

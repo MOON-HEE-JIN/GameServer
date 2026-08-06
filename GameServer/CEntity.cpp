@@ -24,8 +24,11 @@ void CEntity::Reset()
     m_stDirVector.Zero();
     m_eMoveState = eMOVESTATE::STOPPED;
 
+	m_iGridID = -1;
+	m_stTilePos = COORDINATE(-1, -1);
     m_iRef.store(0);
     m_iMagRef.store(0);
+	m_iQueRef.store(0);
 }
 
 bool CEntity::MoveUpdate()

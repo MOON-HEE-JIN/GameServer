@@ -136,11 +136,10 @@ void CZoneBasic::ChangeZoneProcess()
 			// ack == true 이전 Zone 관리가 아니라서 다시 보내는것
 			if (job.ack)
 			{
-				bool bRet = LeaveZone(pPlayer);
-				// ToZone 에서 관리 vector 전에 Release 되었을때
-				if (bRet)
+				if (LeaveZone(pPlayer))
 				{
 					//CNetServer::DecrementProcCount(m_ID);
+					g_Net.FreePlayer(pPlayer);
 					SubCount();
 				}
 				else
@@ -156,6 +155,8 @@ void CZoneBasic::ChangeZoneProcess()
 					req.ack = true;
 					EnqueueChangeJob(job.fromID, pPlayer->GetZoneID(), req);
 				}
+				else
+					g_Net.FreePlayer(pPlayer);
 			}
 		}
 		break;

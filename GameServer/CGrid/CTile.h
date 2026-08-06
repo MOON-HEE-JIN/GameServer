@@ -4,6 +4,7 @@
 #include "../CUtill/CEntityManagmentVector.h"
 #include "../CUtill/CLockQueueh.h"
 #include "../CUtill/CPacket.h"
+#include <vector>
 
 class CMainWorld;
 
@@ -31,11 +32,11 @@ private:
 	std::atomic<int> m_iActive;
 	int m_iManagementID;
 	COORDINATE m_Coord;
-	st_Vector3F m_StartPos;
-	st_Vector3F m_EndPos;
 
 	CLQueue<st_TileJob> m_queue;
 	CLQueue<st_TileBroadCast> m_queueBroadCast;
+	std::vector<st_TileJob> m_vecJobBuffer;
+	std::vector<st_TileBroadCast> m_vecBroadCastBuffer;
 
 	CEntityVector m_vecPlayer;
 
@@ -45,10 +46,13 @@ private:
 
 	void NotifyEntityTileEnterAOI(CEntity* pEntity);	// 나에게 타일 정보 생성 메시지
 	void NotifyEntityTileLeaveAOI(CEntity* pEntity);	// 나에게 타일 정보 삭제 메시지(필요한가 에 대해서 클라에서 따로 타일 관리를 하면 안되는 것인가? 생각 해보기)
+	void NotifyEntityTileEnterObj(CEntity* pEntity);	// 주위에 나 생성 메시지
+	void NotifyEntityTileLeaveObj(CEntity* pEntity);	// 주위에 나 삭제 메시지
+
 	void Broadcast(CPacket* pPacket, CEntity* pEntity = nullptr);
 
 public:
-	void Init(CMainWorld* parent, COORDINATE coord, st_Vector3F start, st_Vector3F end);
+	void Init(CMainWorld* parent, COORDINATE coord);
 
 	void EnqueueJob(int type, CEntity* pEntity);
 	void EnqueueBroadCast(CEntity* pEntity, CPacket* Packet);

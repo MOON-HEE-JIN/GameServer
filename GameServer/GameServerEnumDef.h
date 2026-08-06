@@ -43,4 +43,7 @@ enum EGRID_MSG_TYPE
 	GRID_MSG_SPAWN,
 	GRID_MSG_ENTER,
 	GRID_MSG_LEAVE,
+	// Grid 소유권 변경은 대상 Grid 등록과 실패 시 원본 Grid 복구 작업으로 나눈다.
+	GRID_MSG_TRANSFER_IN,
+	GRID_MSG_TRANSFER_ROLLBACK,
 };

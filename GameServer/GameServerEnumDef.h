@@ -13,7 +13,6 @@ enum eMOVESTATE
 {
 	STOPPED,
 	MOVEING,
-	RUNNING,
 };
 
 enum eZONESTATUS

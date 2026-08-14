@@ -21,6 +21,7 @@ namespace
 CZoneBasic::CZoneBasic(int channel, int ZoneID, int ProcID, int Maximum)
 	: CZoneBase(channel, ZoneID, ProcID, Maximum)
 {
+	m_stSpawnPos.Zero();
 }
 
 CZoneBasic::~CZoneBasic()

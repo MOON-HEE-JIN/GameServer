@@ -137,7 +137,7 @@ int CEntity::MoveStart(st_Vector3F goal, st_Vector3F dir)
     m_stDirVector = dir;
 
     if (!g_ZoneManager.PushZoneMoveVector(this))
-        return ERROR_CODE::ERROR_INDEX;
+        return ERROR_CODE::NOT_FIND_PID;
 
     return 0;
 }

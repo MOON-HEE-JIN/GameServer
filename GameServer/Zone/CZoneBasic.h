@@ -14,6 +14,7 @@ public:
 
 protected:
 	CEntityVector m_vecEntitys;
+	st_Vector3F m_stSpawnPos;
 
 	virtual void OnEnterZone(CPlayer* pPlayer) {};
 	virtual void OnLeaveZone(CPlayer* pPlayer) {};
@@ -31,6 +32,7 @@ public:
 	virtual bool LeaveZone(CPlayer* pPlayer);
 	virtual bool PushMoveVector(CEntity* pEntity) { return false; };
 	virtual void PopMoveVector(CEntity* pEntity) {};
+	virtual st_Vector3F GetSpawnPos() { return m_stSpawnPos; };
 
 	bool Enqueue(ZONE_CHANGE_JOB& job);
 	bool TryPush(CPlayer* pPlayer);

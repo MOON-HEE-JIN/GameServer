@@ -76,6 +76,9 @@ CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
 	//
 
 	m_vecThreadRunGrids.resize(MAX_MAINWORLD_THREAD_COUNT);
+
+	// 임시 Spawn 위치
+	m_stSpawnPos = { 32, 0, 32 };
 }
 
 CMainWorld::~CMainWorld()

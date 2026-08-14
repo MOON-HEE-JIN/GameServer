@@ -16,6 +16,7 @@ namespace GAME
 		CHANGEINGZONE,					//9
 		TELEPORT,					//10
 		OTHERMOVESTART,					//다른 객체 움직임 시작
+		AOI_IN_PLAYERS_MOVE,					//AOI 안에 들어온 Player Move 패킷
 	};
 };
 

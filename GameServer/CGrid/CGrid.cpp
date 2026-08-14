@@ -291,7 +291,15 @@ void CGrid::OnSpawnGrid(CEntity* pEntity)
 			pack.ret = 0;
 			pack.channel = pPlayer->GetChannel();
 			pack.zone = pPlayer->GetZoneID();
+			st_Vector3F pos = m_parent->GetSpawnPos();
+			if (pos == st_Vector3F{ 0,0,0 })
+			{
+				g_LogGame.ELog("ERROR SpawnPoint 0 0 0, Temp Pos 32 0 32");
+				pos = st_Vector3F{ 32, 0, 32 };
+			}
+			pack.spawn = pos;
 
+			pPlayer->SetPosition(pos);
 			pPlayer->SendPacket(pack);
 		}
 	}

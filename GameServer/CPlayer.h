@@ -43,6 +43,7 @@ public:
 	void SetRelease();
 	void SetZone(CZoneBase* pZone) { m_pZone = pZone; }
 public:
+	void SendPacket(CPacket& pPacket) { SendPacket(&pPacket); }
 	void SendPacket(CPacket* pPacket);
 	template<typename T>
 	void SendPacket(T& value)

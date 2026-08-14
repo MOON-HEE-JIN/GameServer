@@ -138,6 +138,16 @@ int Serialization (char* buffer, st_PlayerInfo& value)
 	return iSize;
 }
 
+int Serialization (char* buffer, st_PlayerOtherMove& value)
+{
+	int iSize = 0;
+	memcpy(buffer + iSize, &value.ID, sizeof(value.ID));
+	iSize += sizeof(value.ID);
+	iSize += Serialization(buffer + iSize, value.pos);
+	iSize += Serialization(buffer + iSize, value.dir);
+	return iSize;
+}
+
 int Serialization (char* buffer, st_STC_AoiInPlayer& value)
 {
 	int hSize = 0;
@@ -146,6 +156,24 @@ int Serialization (char* buffer, st_STC_AoiInPlayer& value)
 	iSize += Serialization(buffer + iSize, value.info);
 
 	header.type = GAME::AOI_IN_PLAYER;
+	header.size = iSize - sizeof(st_Header);
+	Serialization(buffer, header);
+	return iSize;
+}
+
+int Serialization (char* buffer, st_STC_AoiInPlayerMoves& value)
+{
+	int hSize = 0;
+	st_Header header;
+	int iSize = sizeof(st_Header);
+	memcpy(buffer + iSize, &value.Loop1, sizeof(value.Loop1));
+	iSize += sizeof(value.Loop1);
+	for(int i = 0; i < value.Loop1; ++i)
+	{
+		iSize += Serialization(buffer + iSize, value.move[i]);
+	}
+
+	header.type = GAME::AOI_IN_PLAYERS_MOVE;
 	header.size = iSize - sizeof(st_Header);
 	Serialization(buffer, header);
 	return iSize;
@@ -212,6 +240,7 @@ int Serialization (char* buffer, st_STC_ChangeZone& value)
 	iSize += sizeof(value.channel);
 	memcpy(buffer + iSize, &value.zone, sizeof(value.zone));
 	iSize += sizeof(value.zone);
+	iSize += Serialization(buffer + iSize, value.spawn);
 
 	header.type = GAME::CHANGEZONE;
 	header.size = iSize - sizeof(st_Header);
@@ -467,10 +496,32 @@ int UnSerialization (char* buffer, st_PlayerInfo& value)
 	return iSize;
 }
 
+int UnSerialization (char* buffer, st_PlayerOtherMove& value)
+{
+	int iSize = 0;
+	memcpy(&value.ID, buffer + iSize, sizeof(value.ID));
+	iSize += sizeof(value.ID);
+	iSize += UnSerialization(buffer + iSize, value.pos);
+	iSize += UnSerialization(buffer + iSize, value.dir);
+	return iSize;
+}
+
 int UnSerialization (char* buffer, st_STC_AoiInPlayer& value)
 {
 	int iSize = 0;
 	iSize += UnSerialization(buffer + iSize, value.info);
+	return iSize;
+}
+
+int UnSerialization (char* buffer, st_STC_AoiInPlayerMoves& value)
+{
+	int iSize = 0;
+	memcpy(&value.Loop1, buffer + iSize, sizeof(value.Loop1));
+	iSize += sizeof(value.Loop1);
+	for(int i = 0; i < value.Loop1; ++i)
+	{
+		iSize += UnSerialization(buffer + iSize, value.move[i]);
+	}
 	return iSize;
 }
 
@@ -515,6 +566,7 @@ int UnSerialization (char* buffer, st_STC_ChangeZone& value)
 	iSize += sizeof(value.channel);
 	memcpy(&value.zone, buffer + iSize, sizeof(value.zone));
 	iSize += sizeof(value.zone);
+	iSize += UnSerialization(buffer + iSize, value.spawn);
 	return iSize;
 }
 

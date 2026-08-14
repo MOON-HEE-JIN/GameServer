@@ -149,30 +149,51 @@ void CTile::NotifyEntityTileEnterAOI(CEntity* pEntity)
 	const std::vector<CEntity*>& vec = m_vecPlayer.GetVector();
 	int Loop = static_cast<int>(vec.size());
 
-	st_STC_AoiInPlayers res;
-	ZeroMemory(&res, sizeof(res));
+	st_STC_AoiInPlayers infos;
+	st_STC_AoiInPlayerMoves moves;
+	ZeroMemory(&infos, sizeof(infos));
+	ZeroMemory(&moves, sizeof(moves));
+
 	int index = 0;
+	int movecount = 0;
+	
 	for (int i = 0; i < Loop; i++)
 	{
 		if (vec[i] == pEntity)
 			continue;
-		res.info[index].ID = vec[i]->GetID();
-		res.info[index].pos = vec[i]->GetPosition();
-		res.info[index].speed = vec[i]->GetMoveSpeed();
+		infos.info[index].ID = vec[i]->GetID();
+		infos.info[index].pos = vec[i]->GetPosition();
+		infos.info[index].speed = vec[i]->GetMoveSpeed();
+
+		if (vec[i]->GetMoveState() != eMOVESTATE::STOPPED)
+		{
+			moves.move[movecount].ID = vec[i]->GetID();
+			moves.move[movecount].pos = vec[i]->GetPosition();
+			moves.move[movecount].dir = vec[i]->GetDirVector();
+			movecount++;
+		}
 
 		index++;
-		res.Loop1++;
-		if (res.Loop1 > 49)
+		infos.Loop1++;
+		if (infos.Loop1 > 49)
 		{
-			((CPlayer*)pEntity)->SendPacket(res);
+			((CPlayer*)pEntity)->SendPacket(infos);
+			ZeroMemory(&infos, sizeof(infos));
+
+			((CPlayer*)pEntity)->SendPacket(moves);
+			ZeroMemory(&moves, sizeof(moves));
+
 			index = 0;
-			ZeroMemory(&res, sizeof(res));
+			movecount = 0;
 		}
 	}
 
 	if (index > 0)
 	{
-		((CPlayer*)pEntity)->SendPacket(res);
+		((CPlayer*)pEntity)->SendPacket(infos);
+
+		if (movecount > 0)
+			((CPlayer*)pEntity)->SendPacket(moves);
 	}
 }
 

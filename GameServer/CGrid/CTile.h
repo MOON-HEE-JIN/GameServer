@@ -53,7 +53,6 @@ private:
 	void NotifyEntityTileEnterObj(CEntity* pEntity);	// 주위에 나 생성 메시지
 	void NotifyEntityTileLeaveObj(CEntity* pEntity);	// 주위에 나 삭제 메시지
 
-	void NotifyEntityTileEnterAOI(CEntity* pEntity);
 	void Broadcast(CPacket* pPacket, CEntity* pEntity = nullptr);
 
 public:

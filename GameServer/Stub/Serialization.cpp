@@ -1,4 +1,4 @@
-﻿#include "Serialization.h" 
+#include "Serialization.h" 
 #include "PacketEnumDef.h"
 #include <memory.h>
 
@@ -509,12 +509,7 @@ int UnSerialization (char* buffer, st_PlayerOtherMove& value)
 int UnSerialization (char* buffer, st_STC_AoiInPlayer& value)
 {
 	int iSize = 0;
-	memcpy(&value.Loop1, buffer + iSize, sizeof(value.Loop1));
-	iSize += sizeof(value.Loop1);
-	for(int i = 0; i < value.Loop1; ++i)
-	{
-		iSize += UnSerialization(buffer + iSize, value.info[i]);
-	}
+	iSize += UnSerialization(buffer + iSize, value.info);
 	return iSize;
 }
 

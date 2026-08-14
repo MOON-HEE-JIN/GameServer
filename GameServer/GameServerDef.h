@@ -16,22 +16,6 @@ class CPlayer;
 #define MAX_FRAME_LOOP_COUNT 6
 
 
-enum eMOVESTATE
-{
-	STOPPED,
-	MOVEING,
-	RUNNING,
-};
-
-enum eZONESTATUS
-{
-	NONE,
-	STABLE,		// 완료
-	ENTER,		// 들어가는 중
-	LEAVE,		// 나가는 중
-	RELEASE,	// 삭제
-};
-
 typedef struct st_Log
 {
 	std::string filePath;

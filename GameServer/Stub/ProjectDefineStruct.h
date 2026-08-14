@@ -1,8 +1,10 @@
 ﻿#pragma once
+#include <math.h>
+
 struct st_Header
 {
-	__int32		type;
-	__int32		size;
+	int type;
+	int size;
 };
 
 struct st_Vector3F
@@ -39,19 +41,9 @@ struct st_Vector3F
 		return *this;
 	}
 
-	st_Vector3F operator*(const int value) const
+	st_Vector3F operator*(float scalar) const
 	{
-		return st_Vector3F(X * value, Y * value, Z * value);
-	}
-
-	st_Vector3F operator*(const float value) const
-	{
-		return st_Vector3F(X * value, Y * value, Z * value);
-	}
-
-	bool operator==(const st_Vector3F& other) const
-	{
-		return this->X == other.X && this->Y == other.Y && this->Z == other.Z;
+		return st_Vector3F(X * scalar, Y * scalar, Z * scalar);
 	}
 
 	float Length() const
@@ -81,11 +73,31 @@ struct st_Vector3F
 		return st_Vector3F(0, 0, 0);
 	}
 
+	st_Vector3F& Normalization()
+	{
+		float len = Length();
+		if (len > 0)
+		{
+			X /= len;
+			Y /= len;
+			Z /= len;
+		}
+		return *this;
+	}
+
+	bool operator==(const st_Vector3F& other) const
+	{
+		return X == other.X && Y == other.Y && Z == other.Z;
+	}
+
+	bool operator!=(const st_Vector3F& other) const
+	{
+		return !(*this == other);
+	}
+
 	void Zero()
 	{
-		X = 0;
-		Y = 0;
-		Z = 0;
+		X = 0; Y = 0; Z = 0;
 	}
 };
 

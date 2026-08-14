@@ -93,7 +93,6 @@ bool CTile::AddPlayer(CEntity* pEntity)
 	{
 		m_iActive.fetch_add(1);
 		pEntity->SetTilePos(m_Coord);
-		((CPlayer*)pEntity)->AddRef();
 		
 		g_LogGame.DLog("Enter Tile[%d,%d] ActiveCount : %d", m_Coord.X, m_Coord.Z, m_iActive.load());
 #ifdef __DEBUG__
@@ -113,7 +112,7 @@ bool CTile::RemovePlayer(CEntity* pEntity)
 	if (ret)
 	{
 		m_iActive.fetch_sub(1);
-		((CPlayer*)pEntity)->ReleaseRef();
+		
 		g_LogGame.DLog("Leave Tile[%d,%d] ActiveCount : %d", m_Coord.X, m_Coord.Z, m_iActive.load());
 #ifdef __DEBUG__
 		int PlayerCount = m_vecPlayer.GetSize();
@@ -193,6 +192,7 @@ void CTile::NotifyEntityTileEnterAOI(CEntity* pEntity)
 
 	if (index > 0)
 	{
+		infos.Loop1 = index;
 		((CPlayer*)pEntity)->SendPacket(infos);
 
 		if (movecount > 0)
@@ -200,7 +200,6 @@ void CTile::NotifyEntityTileEnterAOI(CEntity* pEntity)
 			moves.Loop1 = movecount;
 			((CPlayer*)pEntity)->SendPacket(moves);
 		}
-		m_iDebugLogTime = GetTickCount();
 	}
 }
 

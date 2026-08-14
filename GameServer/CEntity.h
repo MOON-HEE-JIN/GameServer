@@ -9,6 +9,7 @@ class CEntity
 public:
 	CEntity();
 	~CEntity() {}
+
 private:
 	/*
 	* m_iRef 사용처
@@ -26,7 +27,6 @@ protected:
 	int m_iChannel;
 	std::atomic<int> m_OwnerZone;						// 처리 Zone 에 대한 id
 	eZONESTATUS m_eZoneStatus;							// 현재 Zone 에 서 의 상태
-
 	float m_fMoveSpeed = 5.0f;
 	
 	// 실제 Grid 등록 상태와 전환 중 패킷 목적지를 분리한다.

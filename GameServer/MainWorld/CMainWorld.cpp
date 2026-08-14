@@ -209,7 +209,7 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 	CGrid* pNewGrid = GetGrid(pNewTile->GetManagementGrid());
 	if (pCurGrid == nullptr || pNewGrid == nullptr)
 		return false;
-	}
+	
 
 	// 순서를 위해서 먼저 삭제 후 이동
 	pCurGrid->RemoveForTeleport(pPlayer);

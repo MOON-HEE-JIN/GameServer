@@ -48,7 +48,6 @@ public:
 		if (index < 0 || index >= static_cast<int>(m_vec.size()) || m_vec[index] != pEntity)
 			return false;
 
-		pEntity->SetVectorIndex(m_iKeyType, -1);
 		int lastIndex = static_cast<int>(m_vec.size()) - 1;
 
 		if (index != lastIndex)

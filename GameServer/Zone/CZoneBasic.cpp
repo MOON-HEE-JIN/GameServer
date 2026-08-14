@@ -52,8 +52,7 @@ void CZoneBasic::ChangeZoneProcess()
 		}
 
 		ZONE_CHANGE_JOB req = job;
-		req.time = GetTickCount();
-
+		
 		switch (job.type)
 		{
 		case NONE:
@@ -193,7 +192,6 @@ bool CZoneBasic::EnterZone(CPlayer* pPlayer)
 
 	pPlayer->SetZone(this);
 
-	pPlayer->AddRef();
 	OnEnterZone(pPlayer);
 	return true;
 }
@@ -203,20 +201,11 @@ bool CZoneBasic::LeaveZone(CPlayer* pPlayer)
 	if (pPlayer == nullptr)
 		return false;
 
-	if (m_vecEntitys.RemoveEntity(pPlayer))
-	{
-		// 교체
-		m_vecPlayers[leaveIndex] = ePlayer;
-		ePlayer->SetZoneVectorIndex(leaveIndex);
-	}
-
-	m_vecPlayers.pop_back();
-
+	if (!m_vecEntitys.RemoveEntity(pPlayer))	
+		return false;
 	
-		// 존 떠날때 이벤트
-		OnLeaveZone(pPlayer);
-		return true;
-	}
+	// 존 떠날때 이벤트
+	OnLeaveZone(pPlayer);
 	SubCount();
 	return false;
 }

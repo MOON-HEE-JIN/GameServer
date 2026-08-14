@@ -58,14 +58,6 @@ typedef struct st_PACKET_JOB
 		return *this;
 	}
 
-	st_PACKET_JOB(const st_PACKET_JOB&) = default;
-	st_PACKET_JOB& operator=(st_PACKET_JOB& job)
-	{
-		PlayerHandle = job.PlayerHandle;
-		type = job.type;
-		packet = job.packet;
-		return *this;
-	}
 
 }PROC_MSG;
 

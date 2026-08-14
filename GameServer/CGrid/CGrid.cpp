@@ -416,6 +416,21 @@ void CGrid::OnRegisterTile(CTile* pTile)
 	pTile->OnReigsterGrid(m_iID);
 }
 
+bool CGrid::DirectAddPlayer(CEntity* pEntity)
+{
+	return AddPlayer(pEntity);
+}
+
+bool CGrid::DirectRemovePlayer(CEntity* pEntity)
+{
+	CTile* pCurTile = m_parent->GetTile(pEntity->GetPosition());
+	pCurTile->RemovePlayer(pEntity);
+
+	SendRemoveAOITile(pCurTile->GetCoord(), pEntity);
+
+	return RemovePlayer(pEntity);
+}
+
 void CGrid::EnqueueProcJob(PROC_MSG& msg)
 {
 	m_queueProc.Enqueue(msg);

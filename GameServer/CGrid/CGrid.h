@@ -60,8 +60,6 @@ private:
 	bool AddPlayer(CEntity* pEntity);
 	bool RemovePlayer(CEntity* pEntity);
 
-	void SendInitAOITile(COORDINATE& pivot, CEntity* pEntity);
-	void SendRemoveAOITile(COORDINATE& pivot, CEntity* pEntity);
 public:
 	void Init(int id, CMainWorld* pParent);
 	void OnRegisterTile(CTile* pTile);

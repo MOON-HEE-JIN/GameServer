@@ -132,7 +132,7 @@ void CGrid::EntityMoveRun()
 			if (diff.X < 0)
 				MaxOutW--;
 			else if (diff.X > 0)
-				MinOutW--;
+				MinOutW++;
 
 			for (int W = MinOutW; W <= MaxOutW; W++)
 			{
@@ -151,7 +151,7 @@ void CGrid::EntityMoveRun()
 
 			// 겹치는 부분 제거
 			if (diff.X < 0)
-				MinInW--;
+				MinInW++;
 			else if (diff.X > 0)
 				MaxInW--;
 

@@ -3,8 +3,8 @@
 #include "CZoneBase.h"
 #include "../CPlayer.h"
 #include "../MemoryManager/CLockFreeQueue_FromGPT.h"
-#include <vector>
-#include <unordered_map>
+#include "../CUtill/CEntityManagmentVector.h"
+#include "../GameServerDef.h"
 
 class CZoneBasic : public CZoneBase
 {
@@ -13,7 +13,8 @@ public:
 	~CZoneBasic();
 
 protected:
-	std::vector<CPlayer*> m_vecPlayers;
+	CEntityVector m_vecEntitys;
+	st_Vector3F m_stSpawnPos;
 
 	virtual void OnEnterZone(CPlayer* pPlayer) {};
 	virtual void OnLeaveZone(CPlayer* pPlayer) {};
@@ -30,13 +31,14 @@ public:
 
 	virtual bool EnterZone(CPlayer* pPlayer);
 	virtual bool LeaveZone(CPlayer* pPlayer);
-	virtual void PushMoveVector(CEntity* pEntity) {};
+	virtual bool PushMoveVector(CEntity* pEntity) { return false; };
 	virtual void PopMoveVector(CEntity* pEntity) {};
+	virtual st_Vector3F GetSpawnPos() { return m_stSpawnPos; };
 
 	bool Enqueue(ZONE_CHANGE_JOB& job);
 	bool TryPush(CPlayer* pPlayer);
 	bool TryEnterZone();
 
-	void SendZoneCast(CPacket* pPacket, CPlayer* pPlayer = nullptr);
+	virtual void BoradCast(CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer = nullptr);
 	virtual bool SendZoneInfo(CPlayer* pPlayer) { return true; };
 };

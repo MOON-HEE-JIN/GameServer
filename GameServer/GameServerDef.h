@@ -2,6 +2,8 @@
 #include "GameServerEnumDef.h"
 #include <string>
 
+class CPlayer;
+
 #define ProcLoginThreadCnt 1
 #define ProcMainThreadCnt 1
 #define ProcSubThreadCnt 2
@@ -13,13 +15,21 @@
 #define FIXED_DELTA 0.01667f		// fps 60
 #define MAX_FRAME_LOOP_COUNT 6
 
-enum EIndexType
+
+enum eMOVESTATE
 {
-	VECTOR_INDEX_ZONE,
-	VECTOR_INDEX_GRID,
-	VECTOR_INDEX_TILE,
-	VECTOR_INDEX_MOVE,
-	VECTOR_INDEX_END
+	STOPPED,
+	MOVEING,
+	RUNNING,
+};
+
+enum eZONESTATUS
+{
+	NONE,
+	STABLE,		// 완료
+	ENTER,		// 들어가는 중
+	LEAVE,		// 나가는 중
+	RELEASE,	// 삭제
 };
 
 typedef struct st_Log
@@ -44,32 +54,23 @@ typedef struct st_Log
 
 typedef struct st_ChangeZoneJob
 {
-	unsigned int time;			// Job 입력 시간
 	eZONESTATUS type;			// Job Type
-	int handle;					// Player Handle
+	CPlayer* pPlayer;			// 작업 처리 동안 수명을 보장할 Player
 	int toID;					// 목표 ID
 	int toZone;					// 목표 Zone
 	int fromID;					// 시작 ID
 	int fromZone;				// 시작 Zone
 	bool ack;					// ack 신호
 	bool ret;					// ack 에 대한 성공 여부
-	st_ChangeZoneJob() : time(0), type(eZONESTATUS::NONE), handle(0), toID(0), toZone(0), fromID(0), fromZone(0), ack(false), ret(false) {};
-	st_ChangeZoneJob(unsigned int _time, eZONESTATUS _type, int _handle, int _toID, int _to, int _fromID, int _from, bool _ack, bool _ret)
-		: time(_time), type(_type), handle(_handle), toID(_toID), toZone(_to), fromID(_fromID), fromZone(_from), ack(_ack), ret(_ret) { }
+	st_ChangeZoneJob()
+		: type(eZONESTATUS::NONE), pPlayer(nullptr), toID(0), toZone(0),
+		fromID(0), fromZone(0), ack(false), ret(false) {};
+	st_ChangeZoneJob(eZONESTATUS _type, CPlayer* _pPlayer, int _toID, int _to,
+		int _fromID, int _from, bool _ack, bool _ret)
+		: type(_type), pPlayer(_pPlayer), toID(_toID), toZone(_to),
+		fromID(_fromID), fromZone(_from), ack(_ack), ret(_ret) { }
 
 	st_ChangeZoneJob(const st_ChangeZoneJob&) = default;
-	void operator()(unsigned int _time, eZONESTATUS _type, int _handle, int _toID, int _to, int _fromID, int _from, bool _ack, bool _ret)
-	{
-		time = _time;
-		type = _type;
-		handle = _handle;
-		toID = _toID;
-		toZone = _to;
-		fromID = _fromID;
-		fromZone = _from;
-		ack = _ack;
-		ret = _ret;
-	}
 }ZONE_CHANGE_JOB;
 
 typedef struct st_GridPos

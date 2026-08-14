@@ -1,7 +1,4 @@
 ﻿#pragma once
-#include <math.h>
-
-
 struct st_Header
 {
 	__int32		type;
@@ -50,6 +47,11 @@ struct st_Vector3F
 	st_Vector3F operator*(const float value) const
 	{
 		return st_Vector3F(X * value, Y * value, Z * value);
+	}
+
+	bool operator==(const st_Vector3F& other) const
+	{
+		return this->X == other.X && this->Y == other.Y && this->Z == other.Z;
 	}
 
 	float Length() const

@@ -5,9 +5,23 @@
 #include "../Stub/EnumDef.h"
 #include "../Log/CLog.h"
 
+namespace
+{
+	class CZoneJobRef
+	{
+	public:
+		explicit CZoneJobRef(CPlayer* pPlayer) : m_pPlayer(pPlayer) {}
+		~CZoneJobRef() { m_pPlayer->ReleaseMagRef(); }
+
+	private:
+		CPlayer* m_pPlayer;
+	};
+}
+
 CZoneBasic::CZoneBasic(int channel, int ZoneID, int ProcID, int Maximum)
 	: CZoneBase(channel, ZoneID, ProcID, Maximum)
 {
+	m_stSpawnPos.Zero();
 }
 
 CZoneBasic::~CZoneBasic()
@@ -26,10 +40,10 @@ void CZoneBasic::ChangeZoneProcess()
 
 	while (m_queue.TryDequeue(job))
 	{
-		m_vecChangeZoneJobDebug.push_back(job);
-		CPlayer* pPlayer = g_Net.GetPlayer(job.handle);
+		CPlayer* pPlayer = job.pPlayer;
 		if (pPlayer == nullptr)
 			continue;
+		CZoneJobRef jobRef(pPlayer);
 
 		// Player 가 종료 중 이라면 관련 없는 패킷 전부 Drop
 		if (pPlayer->GetRelease() && job.type != eZONESTATUS::RELEASE)
@@ -75,7 +89,7 @@ void CZoneBasic::ChangeZoneProcess()
 					// 여기서 Leave 를 처리해도 되지만 규칙성을 위해서 넣어준다
 					req.type = eZONESTATUS::LEAVE;
 					req.ack = false;
-					m_queue.Enqueue(req);
+					Enqueue(req);
 				}
 				else
 				{
@@ -118,7 +132,7 @@ void CZoneBasic::ChangeZoneProcess()
 					pack.zone = job.toZone;
 
 					pPlayer->SendPacket(pack);
-				}
+			}
 			}
 			else
 			{
@@ -135,13 +149,10 @@ void CZoneBasic::ChangeZoneProcess()
 			// ack == true 이전 Zone 관리가 아니라서 다시 보내는것
 			if (job.ack)
 			{
-				bool bRet = LeaveZone(pPlayer);
-
-				// ToZone 에서 관리 vector 전에 Release 되었을때
-				if (bRet)
+				if (LeaveZone(pPlayer))
 				{
 					//CNetServer::DecrementProcCount(m_ID);
-					SubCount();
+					g_Net.FreePlayer(pPlayer);
 				}
 				else
 				{
@@ -157,6 +168,8 @@ void CZoneBasic::ChangeZoneProcess()
 					req.ack = true;
 					EnqueueChangeJob(job.fromID, pPlayer->GetZoneID(), req);
 				}
+				else
+					g_Net.FreePlayer(pPlayer);
 			}
 		}
 		break;
@@ -173,10 +186,10 @@ void CZoneBasic::Process()
 bool CZoneBasic::EnterZone(CPlayer* pPlayer)
 {
 	pPlayer->SetZoneID(GetChannel(), GetZoneID());
-	TryChangeZone(pPlayer->GetSessionHandle(), GetProcID());
+	if(!TryChangeZone(pPlayer->GetSessionHandle(), GetProcID())) 
+		return false;
 
-	pPlayer->SetZoneVectorIndex(static_cast<int>(m_vecPlayers.size()));
-	m_vecPlayers.push_back(pPlayer);
+	m_vecEntitys.AddEntity(pPlayer);
 
 	pPlayer->SetZone(this);
 
@@ -187,20 +200,10 @@ bool CZoneBasic::EnterZone(CPlayer* pPlayer)
 
 bool CZoneBasic::LeaveZone(CPlayer* pPlayer)
 {
-	if (pPlayer == nullptr || m_vecPlayers.empty())
+	if (pPlayer == nullptr)
 		return false;
 
-	// 마지막 Player Index
-	const int leaveIndex = pPlayer->GetZoneVectorIndex();
-	if (leaveIndex < 0 || leaveIndex >= static_cast<int>(m_vecPlayers.size()))
-		return false;
-
-	pPlayer->ReleaseRef();
-	// 마지막 플레이어 가져오기
-	CPlayer* ePlayer = m_vecPlayers.back();
-
-	// 마지막 플레이어 와 같지 않다면 교체
-	if (ePlayer != pPlayer)
+	if (m_vecEntitys.RemoveEntity(pPlayer))
 	{
 		// 교체
 		m_vecPlayers[leaveIndex] = ePlayer;
@@ -210,16 +213,20 @@ bool CZoneBasic::LeaveZone(CPlayer* pPlayer)
 	m_vecPlayers.pop_back();
 
 	
-	// 존 떠날때 이벤트
-	OnLeaveZone(pPlayer);
-	return true;
+		// 존 떠날때 이벤트
+		OnLeaveZone(pPlayer);
+		return true;
+	}
+	SubCount();
+	return false;
 }
 
 bool CZoneBasic::Enqueue(ZONE_CHANGE_JOB& job)
 {
-	if (!m_bActive.load())
+	if (!m_bActive.load() || job.pPlayer == nullptr)
 		return false;
 
+	job.pPlayer->AddMagRef();
 	m_queue.Enqueue(std::move(job));
 	return true;
 }
@@ -247,14 +254,19 @@ bool CZoneBasic::TryEnterZone()
 	return GetCurCnt() < GetMaximum();
 }
 
-void CZoneBasic::SendZoneCast(CPacket* pPacket, CPlayer* pPlayer)
+void CZoneBasic::BoradCast(CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer)
 {
-	int nLoop = static_cast<int>(m_vecPlayers.size());
+	int nLoop = m_vecEntitys.GetSize();
+	const std::vector<CEntity*>& m_vecPlayers = m_vecEntitys.GetVector();
 	for (int i = 0; i < nLoop; i++)
 	{
 		if (m_vecPlayers[i] == pPlayer)
 			continue;
 
-		m_vecPlayers[i]->SendPacket(pPacket);
+		CPlayer* pSendPlayer = dynamic_cast<CPlayer*>(m_vecPlayers[i]);
+		if (pSendPlayer == nullptr)
+			continue;
+
+		pSendPlayer->SendPacket(pPacket);
 	}
 }

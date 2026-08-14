@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <string>
 #include "ProjectDefineStruct.h"
@@ -27,6 +27,12 @@ struct st_PlayerInfo
 	__int32		ID;
 	st_Vector3F		pos;
 	float		speed;
+};
+struct st_PlayerOtherMove
+{
+	__int32		ID;
+	st_Vector3F		pos;
+	st_Vector3F		dir;
 };
 struct st_CTS_ChangeZone
 {
@@ -60,6 +66,11 @@ struct st_STC_AoiInPlayer
 {
 	st_PlayerInfo		info;
 };
+struct st_STC_AoiInPlayerMoves
+{
+	__int32		Loop1;
+	st_PlayerOtherMove		move[50];
+};
 struct st_STC_AoiInPlayers
 {
 	__int32		Loop1;
@@ -79,6 +90,7 @@ struct st_STC_ChangeZone
 	__int32		ret;
 	__int32		channel;
 	__int32		zone;
+	st_Vector3F		spawn;
 };
 struct st_STC_ChangeingZone
 {
@@ -109,6 +121,13 @@ struct st_STC_MoveStop
 struct st_STC_ObserverConnect
 {
 	__int32		ret;
+};
+struct st_STC_OtherMoveStart
+{
+	__int32		type;
+	__int32		ID;
+	st_Vector3F		pos;
+	st_Vector3F		dir;
 };
 struct st_STC_Teleport
 {

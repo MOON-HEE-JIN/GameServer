@@ -5,9 +5,8 @@
 #include "../ZoneManager/CZoneManager.h"
 CSession::CSession()
 {
-	sock = 0;
+	sock = INVALID_SOCKET;
 	
-	InitializeCriticalSection(&cs);
 	InitializeCriticalSection(&m_csSendQ);
 
 	RecvQ = new CRingBuffer;
@@ -17,9 +16,12 @@ CSession::CSession()
 	SendOverlap = { 0 };
 
 	bSendFlag = false;
-	UseFlag = true;
 
-	bConnect = true;
+	bCloseing = true;
+	bConnect = false;
+	RefCnt = 0;
+	bFreeFlag = false;
+	m_iFreeTime = 0;
 
 	IOCnt = 0;
 
@@ -35,7 +37,6 @@ CSession::~CSession()
 
 	delete RecvQ;
 	delete SendQ;
-	DeleteCriticalSection(&cs);
 	DeleteCriticalSection(&m_csSendQ);
 }
 
@@ -51,10 +52,18 @@ bool CSession::SetProcID(int ProcID)
 	return true;
 }
 
+bool CSession::TryPushFreeVector()
+{
+	if (bFreeFlag.exchange(true) == false)
+	{
+		m_iFreeTime = GetTickCount64();
+		return true;
+	}
+	return false;
+}
+
 void CSession::OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key)
 {
-	UseFlag = true;
-	
 	IOCnt = 0;
 	this->sock = sock;
 	
@@ -68,20 +77,14 @@ void CSession::OnAcceptJoin(SOCKET sock, SESSION_HANDLE&& key)
 	m_ConnectPlayerHandle = -1;
 	m_ProcId = 0;
 	bCloseing = false;
-	bDisconnecting = false;
 	RefCnt = 0;
-}
-
-bool CSession::OnStartDisconnect()
-{
-	bool bf = false;
-	return bDisconnecting.compare_exchange_strong(bf, true);
+	bFreeFlag = false;
+	m_iFreeTime = 0;
 }
 
 void CSession::OnDisconnect()
 {
 	bSendFlag = false;
-	UseFlag = false;
 
 	RecvOverlap = { 0 };
 	SendOverlap = { 0 };
@@ -107,6 +110,19 @@ bool CSession::AddRef()
 		RefCnt.fetch_sub(1);
 	}
 	return false;
+}
+
+int CSession::SubRef()
+{
+	int ref = RefCnt.fetch_sub(1);
+	if (ref <= 0)
+	{
+		RefCnt.fetch_add(1);
+		g_LogRef.ELog("Session Handle %d ReleaseRef Error", GetConnectHandle());
+		return -1;
+	}
+
+	return ref - 1;
 }
 
 void CSession::CloseSocket()

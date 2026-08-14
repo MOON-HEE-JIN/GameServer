@@ -3,7 +3,7 @@
 #include "../NetWork/CNetServer.h"
 #include "../Stub/EnumDef.h"
 #include "../Log/CLog.h"
-
+#include "../CUtill/CUtill.h"
 // 
 	// MainWorld 당 MAX_MAINWORLD_THREAD_COUNT == 4 Thread 담당
 	// MainWorld 를 MAX_MAINWORLD_THREAD_COUNT * MAX_MAINWORLD_THREAD_COUNT 로 나눈다
@@ -29,6 +29,8 @@ CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
 {
 	m_bMainWorld = true;
 	m_hExit = CreateEvent(NULL, TRUE, FALSE, NULL);
+	for (int i = 0; i < MAX_MAINWORLD_THREAD_COUNT; i++)
+		m_vecThreads[i] = NULL;
 
 	m_iWidth = 1024;
 	m_iHeight = 1024;
@@ -39,24 +41,27 @@ CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
 	m_iAllTileCount = m_iTileCountH * m_iTileCountW;
 
 	// Tile 을 관리할 Grid
-	m_Grids = new CGrid[MAX_MANAGENTMENT_GRID_COUNT];
-
+	m_vecGrids.resize(MAX_MANAGENTMENT_GRID_COUNT);
 	for (int i = 0; i < MAX_MANAGENTMENT_GRID_COUNT; i++)
-		m_Grids[i].Init(i, this);
+	{
+		m_vecGrids[i] = std::make_unique<CGrid>();
+		m_vecGrids[i]->Init(i, this);
+	}
 
 	// MainWorld Tile 로 나누기
-	m_Tiles = new CTile[m_iAllTileCount];
+	m_vecTiles.resize(m_iAllTileCount);
 
 	for (int H = 0; H < m_iTileCountH; H++)
 	{
 		for (int W = 0; W < m_iTileCountW; W++)
 		{
-			m_Tiles[H * m_iTileCountW + W].Init(
-				{ W,H },
-				{ static_cast<float>(W * DEFAULT_TILE_SIZE), 0, static_cast<float>(H * DEFAULT_TILE_SIZE) },
-				{ static_cast<float>(W * DEFAULT_TILE_SIZE + DEFAULT_TILE_SIZE), 0, static_cast<float>(H * DEFAULT_TILE_SIZE + DEFAULT_TILE_SIZE) });
-		
-			m_Grids[H % MAX_MANAGENTMENT_GRID_COUNT].OnRegisterTile(&m_Tiles[H * m_iTileCountW + W]);
+			int tileID = H * m_iTileCountW + W;
+			m_vecTiles[tileID] = std::make_unique<CTile>();
+			m_vecTiles[tileID]->Init(this, { W,H });
+
+			// 인접한 Z Tile을 연속 Grid 대역에 배치해 Thread 간 Grid 전환 횟수를 줄인다.
+			int GridID = (H * MAX_MANAGENTMENT_GRID_COUNT) / m_iTileCountH;
+			m_vecGrids[GridID]->OnRegisterTile(m_vecTiles[tileID].get());
 		}
 	}
 
@@ -71,20 +76,31 @@ CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
 	//
 
 	m_vecThreadRunGrids.resize(MAX_MAINWORLD_THREAD_COUNT);
+
+	// 임시 Spawn 위치
+	m_stSpawnPos = { 32, 0, 32 };
 }
 
 CMainWorld::~CMainWorld()
 {
 	m_bActive = false;
 
+	SetEvent(m_hExit);
 	for (int i = 0; i < MAX_MAINWORLD_THREAD_COUNT; i++)
 	{
-		SetEvent(m_hExit);
+		if (m_vecThreads[i] != NULL)
+		{
+			WaitForSingleObject(m_vecThreads[i], INFINITE);
+			CloseHandle(m_vecThreads[i]);
+			m_vecThreads[i] = NULL;
+		}
 	}
 
-	WaitForMultipleObjects(MAX_MAINWORLD_THREAD_COUNT, m_vecThreads, true, INFINITE);
-
-	delete[] m_Grids;
+	if (m_hExit != NULL)
+	{
+		CloseHandle(m_hExit);
+		m_hExit = NULL;
+	}
 }
 
 unsigned __stdcall CMainWorld::WorkerThread(void* arg)
@@ -99,33 +115,53 @@ unsigned __stdcall CMainWorld::WorkerThread(void* arg)
 
 void CMainWorld::OnEnterZone(CPlayer* pPlayer)
 {
-	CTile* pTile = GetTile(pPlayer->GetPosition());
-	CGrid* pCGrid = GetGrid(pTile->GetManagementGrid());
+	if (pPlayer == nullptr)
+		return;
 
-	if (pCGrid == nullptr)
+	CTile* pTile = GetTile(pPlayer->GetPosition());
+	if (pTile == nullptr)
+	{
+		g_LogGame.ELog("ERROR Enter Main World Invalid Position");
+		return;
+	}
+
+	int GridID = pTile->GetManagementGrid();
+
+	if (!IsValidGridID(GridID))
 	{
 		g_LogGame.ELog("ERROR Enter Main World");
 		return;
 	}
-	
-	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ENTER_GRID, pPlayer);
+	CGrid* pCGrid = GetGrid(GridID);
+	// 최초 TilePos는 Grid 등록 과정에서 확정되므로 위치로 계산한 Grid에 Spawn을 위임한다.
+	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_SPAWN, pPlayer);
 	
 	//g_LogGame.ILog("Enter %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
 
 void CMainWorld::OnLeaveZone(CPlayer* pPlayer)
 {
-	CTile* pTile = GetTile(pPlayer->GetPosition());
-	CGrid* pCGrid = GetGrid(pTile->GetManagementGrid());
+	if (pPlayer == nullptr)
+		return;
 
-	if (pCGrid == nullptr)
+	// 위치 변경 중에도 실제 소유 Grid가 제거하도록 저장된 GridID를 우선 사용한다.
+	int GridID = pPlayer->GetGridID();
+	if (!IsValidGridID(GridID))
 	{
-		g_LogGame.ELog("ERROR Leave Main World");
+		CTile* pOwnedTile = GetTile(pPlayer->GetTilePos());
+		if (pOwnedTile != nullptr)
+			GridID = pOwnedTile->GetManagementGrid();
+	}
+
+	if (!IsValidGridID(GridID))
+	{
+		g_LogGame.ELog("ERROR Leave Main World Invalid Grid");
 		return;
 	}
 
-	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::LEAVE_GRID, pPlayer);
-	
+	CGrid* pCGrid = GetGrid(GridID);
+	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_LEAVE, pPlayer);
+
 	//g_LogGame.ILog("Leave %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
 
@@ -134,7 +170,7 @@ void CMainWorld::MessageRouting(std::vector<PROC_MSG>& vec)
 	int Loop = static_cast<int>(vec.size());
 	for (int i = 0; i < Loop; i++)
 	{
-		CPlayer* pPlayer = g_Net.GetPlayer(vec[i].PlayerHandle);
+		CPlayer* pPlayer = g_Net.GetPlayer(vec[i].PlayerHandle, vec[i].SessionHandle);
 		if (pPlayer == nullptr)
 			continue;
 
@@ -151,18 +187,6 @@ void CMainWorld::MessageRouting(std::vector<PROC_MSG>& vec)
 
 bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 {
-	CTile* pNewTile = GetTile(pos);
-	
-	g_LogGame.DLog("REQ Teleport Pos [%f, %f, %f]  NewTile [%d, %d]", pos.X, pos.Y, pos.Z, pNewTile->GetCoord().X, pNewTile->GetCoord().Z);
-
-	if (pNewTile == nullptr)
-		return false;
-
-	CGrid* pCurGrid = GetGrid(pPlayer->GetGridID());
-	CGrid* pNewGrid = GetGrid(pNewTile->GetManagementGrid());
-
-	CTile* pCurTile = GetTile(pPlayer->GetPosition());
-	
 	// 추후 Teleport 관련 조건 체크
 	if (0)
 	{
@@ -170,25 +194,76 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 		return false;
 	}
 
-	// 여기서 동일한게 pCurGrid 대상으로 Enqueue 를 한다면 어느 Grid 가 먼저 실행 될지 알수 없기에
-	// 먼저 pCurGrid 에서 제거 후 pNewGrid 에 추가 하는 방식으로 진행
-	pCurGrid->DirectRemovePlayer(pPlayer);
+	CTile* pNewTile = GetTile(pos);
+
+	if (pNewTile == nullptr)
+		return false;
+
+	g_LogGame.DLog("REQ Teleport Pos [%f, %f, %f]  NewTile [%d, %d]", pos.X, pos.Y, pos.Z, pNewTile->GetCoord().X, pNewTile->GetCoord().Z);
+
+	CGrid* pCurGrid = GetGrid(pPlayer->GetGridID());
+	CGrid* pNewGrid = GetGrid(pNewTile->GetManagementGrid());
+	if (pCurGrid == nullptr || pNewGrid == nullptr)
+		return false;
+
+	// 순서를 위해서 먼저 삭제 후 이동
+	pCurGrid->RemoveForTeleport(pPlayer);
 	
 	pPlayer->SetPosition(pos);
 
-	pNewGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ENTER_GRID, pPlayer);
-	
+	pNewGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_ENTER, pPlayer);
+
+	st_STC_Teleport res;
+	res.ret = 0;
+	res.pos = pos;
+	pPlayer->SendPacket(res);
+
 	return true;
 }
 
-void CMainWorld::PushMoveVector(CEntity* pEntity)
+bool CMainWorld::PushMoveVector(CEntity* pEntity)
 {
 	CGrid* pCurGrid = GetGrid(pEntity->GetGridID());
 	
 	if (pCurGrid == nullptr)
-		return;
+		return false;
+
+	if (!pCurGrid->AddMoveVector(pEntity))
+		return false;
 	
-	pCurGrid->AddMoveVector(pEntity);
+	g_LogGame.DLog("Push MoveVector EntityID : %d, GridID : %d", pEntity->GetID(), pEntity->GetGridID());
+	return true;
+}
+
+void CMainWorld::PopMoveVector(CEntity* pEntity)
+{
+	CGrid* pCurGrid = GetGrid(pEntity->GetGridID());
+
+	if (pCurGrid == nullptr)
+		return;
+
+	pCurGrid->RemoveMoveVector(pEntity);
+
+	g_LogGame.DLog("Pop MoveVector EntityID : %d, GridID : %d", pEntity->GetID(), pEntity->GetGridID());
+}
+
+void CMainWorld::BoradCast(CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer)
+{
+	// 해당 Player 에게 해당 Grid 에 있는 Player 들의 정보 보내기
+	for (int z = -AOI_VIEW_COUNT; z <= AOI_VIEW_COUNT; z++)
+	{
+		for (int x = -AOI_VIEW_COUNT; x <= AOI_VIEW_COUNT; x++)
+		{
+			CTile* pAOITile = GetTile({ pivot.X + x, pivot.Z + z });
+			if (pAOITile == nullptr)
+				continue;
+
+			if (pAOITile->GetActiveCount() == 0)
+				continue;
+
+			pAOITile->EnqueueBroadCast(pPlayer, pPacket);
+		}
+	}
 }
 
 void CMainWorld::PopMoveVector(CEntity* pEntity)
@@ -212,12 +287,42 @@ void CMainWorld::Run(int id)
 	std::vector<CGrid*> vec = m_vecThreadRunGrids[id];
 	int Loop = static_cast<int>(vec.size());
 	int ret = 0;
+	
+	double accumulatedtime = 0.0f;
+	double lasttime = CUtil::GetQPCNowTime();
+
 	while (m_bActive)
 	{
 		ret = WaitForSingleObject(m_hExit, 1);
 
+		if (ret == WAIT_OBJECT_0)
+			break;
+	
 		for (int i = 0; i < Loop; i++)
-			vec[i]->Update();
+			vec[i]->ProcessPacket();
+
+		// 지연 시간 누적
+		double nowtime = CUtil::GetQPCNowTime();
+		double frame = nowtime - lasttime;
+		lasttime = nowtime;
+
+		accumulatedtime += frame;
+
+		int nLoop = 0;
+		while (accumulatedtime >= FIXED_DELTA && nLoop < MAX_FRAME_LOOP_COUNT)
+		{
+			for (int i = 0; i < Loop; i++)
+				vec[i]->Update();
+
+			accumulatedtime -= FIXED_DELTA;
+			nLoop++;
+		}
+
+		// 너무 많은 frame 이 쌓인다면 쌓인 frame 처리하느라 더 지연 최대 frame 만큼만 돌리기
+		if (nLoop == MAX_FRAME_LOOP_COUNT)
+		{
+			accumulatedtime = 0.0f;
+		}
 	}
 }
 
@@ -228,8 +333,8 @@ void CMainWorld::Start()
 	int runid = 0;
 	for (int i = 0; i < MAX_MANAGENTMENT_GRID_COUNT; i++)
 	{
-		m_Grids[i].SetRunID(runid);
-		m_vecThreadRunGrids[runid++].push_back(&m_Grids[i]);
+		m_vecGrids[i]->SetRunID(runid);
+		m_vecThreadRunGrids[runid++].push_back(m_vecGrids[i].get());
 		if (runid >= MAX_MAINWORLD_THREAD_COUNT)
 			runid = 0;
 	}
@@ -249,12 +354,13 @@ COORDINATE CMainWorld::CalCoord(st_Vector3F pos)
 
 CTile* CMainWorld::GetTile(st_Vector3F pos)
 {
-	if (pos.X < 0 || pos.X > m_iWidth || pos.Z < 0 || pos.Z > m_iHeight)
+	// 월드 최대 좌표는 마지막 Tile의 다음 경계이므로 범위에서 제외한다.
+	if (pos.X < 0 || pos.X >= m_iWidth || pos.Z < 0 || pos.Z >= m_iHeight)
 		return nullptr;
 
 	COORDINATE coord = {static_cast<int>(pos.X) / DEFAULT_TILE_SIZE, static_cast<int>(pos.Z) / DEFAULT_TILE_SIZE };
-	
-	return &m_Tiles[coord.Z * m_iTileCountW + coord.X];
+
+	return m_vecTiles[coord.Z * m_iTileCountW + coord.X].get();
 }
 
 CTile* CMainWorld::GetTile(const COORDINATE& coord)
@@ -262,7 +368,7 @@ CTile* CMainWorld::GetTile(const COORDINATE& coord)
 	if (coord.Z < 0 || coord.Z >= m_iTileCountH || coord.X < 0 || coord.X >= m_iTileCountW)
 		return nullptr;
 
-	return &m_Tiles[coord.Z * m_iTileCountW + coord.X];
+	return m_vecTiles[coord.Z * m_iTileCountW + coord.X].get();
 }
 
 CGrid* CMainWorld::GetGrid(int id)
@@ -270,6 +376,6 @@ CGrid* CMainWorld::GetGrid(int id)
 	if(id < 0 || id >= MAX_MANAGENTMENT_GRID_COUNT)
 		return nullptr;
 
-	return &m_Grids[id];
+	return m_vecGrids[id].get();
 }
 

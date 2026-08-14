@@ -124,12 +124,12 @@ void CZoneManager::StartMainWorld()
 	}
 }
 
-void CZoneManager::SendZone(int Channel, int Zone, CPacket* pPacket, CPlayer* pPlayer)
+void CZoneManager::SendZone(int Channel, int Zone, CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer)
 {
 	if (!IsValidChannelZone(Channel, Zone))
 		return;
 
-	m_mapZones[Zone][Channel]->SendZoneCast(pPacket, pPlayer);
+	m_mapZones[Zone][Channel]->BoradCast(pPacket, pivot, pPlayer);
 }
 
 bool CZoneManager::ReqEnterLoginZone(CPlayer* pPlayer)
@@ -143,7 +143,7 @@ bool CZoneManager::ReqEnterLoginZone(CPlayer* pPlayer)
 	CZone_Login* pZone = (CZone_Login*)m_mapZones[0][pPlayer->GetChannel()];
 
 	pPlayer->SetZoneStatus(eZONESTATUS::LOGIN);
-	ZONE_CHANGE_JOB job(GetTickCount(), eZONESTATUS::LOGIN, pPlayer->GetID()
+	ZONE_CHANGE_JOB job(eZONESTATUS::LOGIN, pPlayer
 		, pPlayer->GetChannel(), 0
 		, pPlayer->GetChannel(), 0
 		, 0, 0);
@@ -199,7 +199,7 @@ bool CZoneManager::ReqEnterZone(CPlayer* pPlayer, int Channel, int ToZone)
 	}
 	else
 	{
-		ZONE_CHANGE_JOB job(GetTickCount(), eZONESTATUS::ENTER, pPlayer->GetID()
+		ZONE_CHANGE_JOB job(eZONESTATUS::ENTER, pPlayer
 			, Channel, ToZone
 			, pPlayer->GetChannel(), pPlayer->GetZoneID()
 			, 0, 0);
@@ -280,15 +280,15 @@ bool CZoneManager::LeaveZone(CPlayer* pPlayer)
 	return m_mapZones[zoneID][channel]->LeaveZone(pPlayer);
 }
 
-void CZoneManager::PushZoneMoveVector(CEntity* pEntity)
+bool CZoneManager::PushZoneMoveVector(CEntity* pEntity)
 {
 	int channel = pEntity->GetChannel();
 	int zone = pEntity->GetZoneID();
 
 	if (!IsValidChannelZone(channel, zone))
-		return;
+		return false;
 
-	m_mapZones[zone][channel]->PushMoveVector(pEntity);
+	return m_mapZones[zone][channel]->PushMoveVector(pEntity);
 }
 
 void CZoneManager::PopZoneMoveVector(CEntity* pEntity)
@@ -308,7 +308,7 @@ CZoneBasic* CZoneManager::GetZone(int Channel, int ZoneID)
 	if (m_mapZones.find(ZoneID) == m_mapZones.end())
 		return nullptr;
 
-	if (m_mapZones[ZoneID].size() <= Channel)
+	if (Channel < 0 || static_cast<size_t>(Channel) >= m_mapZones[ZoneID].size())
 		return nullptr;
 
 	return m_mapZones[ZoneID][Channel];
@@ -316,10 +316,11 @@ CZoneBasic* CZoneManager::GetZone(int Channel, int ZoneID)
 
 void CZoneManager::Log()
 {
-	if (m_iLogTime + m_iLogDelayTime > GetTickCount())
+	ULONGLONG nNow = GetTickCount64();
+	if (nNow - m_iLogTime < m_iLogDelayTime)
 		return;
 
-	m_iLogTime = GetTickCount();
+	m_iLogTime = nNow;
 
 	std::unordered_map<int, std::vector<CZoneBasic*>>::iterator biter = m_mapZones.begin();
 	std::unordered_map<int, std::vector<CZoneBasic*>>::iterator eiter = m_mapZones.end();
@@ -343,13 +344,9 @@ void CZoneManager::Log()
 
 bool EnqueueChangeJob(int id, int zone, ZONE_CHANGE_JOB& job)
 {
-	if (job.type == eZONESTATUS::LEAVE)
-	{
-		CPlayer* pPlayer = g_Net.GetPlayer(job.handle);
-		if (pPlayer == nullptr)
-			return false;
-		
-	}
+	if (job.pPlayer == nullptr)
+		return false;
+
 	CZoneBasic* pZone = g_ZoneManager.GetZone(id, zone);
 	if (pZone == nullptr)
 		return false;

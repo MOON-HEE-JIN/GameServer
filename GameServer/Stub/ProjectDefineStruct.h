@@ -52,6 +52,11 @@ struct st_Vector3F
 		return st_Vector3F(X * value, Y * value, Z * value);
 	}
 
+	bool operator==(const st_Vector3F& other) const
+	{
+		return this->X == other.X && this->Y == other.Y && this->Z == other.Z;
+	}
+
 	float Length() const
 	{
 		return static_cast<float>(sqrt(X * X + Y * Y + Z * Z));

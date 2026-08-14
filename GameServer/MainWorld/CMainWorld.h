@@ -5,6 +5,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#include <memory>
 #include <vector>
 
 #include "../MemoryManager/CLockFreeQueue_FromGPT.h"
@@ -29,9 +30,10 @@ public:
 
 private:
 	std::string m_strName = "MainWorld";
-	
+
 	st_ThreadParam params[MAX_MAINWORLD_THREAD_COUNT];
 	HANDLE m_vecThreads[MAX_MAINWORLD_THREAD_COUNT];
+	
 	std::vector<std::vector<CGrid*>> m_vecThreadRunGrids;
 	HANDLE m_hExit;
 
@@ -41,8 +43,8 @@ private:
 	int m_iTileCountH;
 	int m_iAllTileCount;
 
-	CTile* m_Tiles;
-	CGrid* m_Grids;
+	std::vector<std::unique_ptr<CGrid>> m_vecGrids;
+	std::vector<std::unique_ptr<CTile>> m_vecTiles;
 
 	static unsigned __stdcall WorkerThread(void* arg);
 protected:
@@ -53,8 +55,9 @@ public:
 	void MessageRouting(std::vector<PROC_MSG>& vec);
 	virtual bool Teleport(CPlayer* pPlayer, st_Vector3F pos) override;
 	virtual void Process() override {};
-	virtual void PushMoveVector(CEntity* pEntity) override;
+	virtual bool PushMoveVector(CEntity* pEntity) override;
 	virtual void PopMoveVector(CEntity* pEntity) override;
+	virtual void BoradCast(CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer = nullptr) override;
 	virtual bool SendZoneInfo(CPlayer* pPlayer) override;
 	void Run(int id);
 	void Start();
@@ -64,10 +67,11 @@ public:
 public:
 	int GetTileCountW() { return m_iTileCountW; }
 	int GetTileCountH() { return m_iTileCountH; }
-	int GetTileKey(COORDINATE& coord) { return coord.X * m_iTileCountW + coord.Z; }
 
 	CTile* GetTile(st_Vector3F pos);
 	CTile* GetTile(const COORDINATE& coord);
 	CGrid* GetGrid(int id);
+
+	bool IsValidGridID(int id) { return (id >= 0 && id < MAX_MANAGENTMENT_GRID_COUNT); }
 };
 

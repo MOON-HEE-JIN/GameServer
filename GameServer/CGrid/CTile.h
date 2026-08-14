@@ -4,6 +4,9 @@
 #include "../CUtill/CEntityManagmentVector.h"
 #include "../CUtill/CLockQueueh.h"
 #include "../CUtill/CPacket.h"
+#include <vector>
+
+class CMainWorld;
 
 struct st_TileJob
 {
@@ -11,39 +14,49 @@ struct st_TileJob
 	CEntity* pEntity;
 };
 
+struct st_TileBroadCast
+{
+	CEntity* pEntity;
+	CPacket packet;
+};
+
 class CTile
 {
 public:
-	CTile() {};
+	CTile() : m_iActive(0), m_iManagementID(-1) {};
 	~CTile() {};
 
 private:
+	CMainWorld* m_parent;
+
 	std::atomic<int> m_iActive;
 	int m_iManagementID;
 	COORDINATE m_Coord;
-	int m_iTileSize;
-
-	st_Vector3F m_StartPos;
-	st_Vector3F m_EndPos;
 
 	CLQueue<st_TileJob> m_queue;
+	CLQueue<st_TileBroadCast> m_queueBroadCast;
+	std::vector<st_TileJob> m_vecJobBuffer;
+	std::vector<st_TileBroadCast> m_vecBroadCastBuffer;
 
-	CEntityVector m_vecPlayer{ EIndexType::VECTOR_INDEX_TILE };
-	CEntityVector m_vecMonster{ EIndexType::VECTOR_INDEX_TILE };
-
-	int m_iDebugLogTime;
-	int m_iDebugLogDelayTime = 2 * 1000;
+	CEntityVector m_vecPlayer;
 
 private:
 	void TileJobRun();
+	void TileBroadCast();
 
-	void NotifyEntityTileEnterAOI(CEntity* pEntity);
+	void NotifyEntityTileEnterAOI(CEntity* pEntity);	// 나에게 타일 정보 생성 메시지
+	void NotifyEntityTileLeaveAOI(CEntity* pEntity);	// 나에게 타일 정보 삭제 메시지(필요한가 에 대해서 클라에서 따로 타일 관리를 하면 안되는 것인가? 생각 해보기)
+	void NotifyEntityTileEnterObj(CEntity* pEntity);	// 주위에 나 생성 메시지
+	void NotifyEntityTileLeaveObj(CEntity* pEntity);	// 주위에 나 삭제 메시지
+
 	void Broadcast(CPacket* pPacket, CEntity* pEntity = nullptr);
 
 public:
-	void Init(COORDINATE coord, st_Vector3F start, st_Vector3F end);
+	void Init(CMainWorld* parent, COORDINATE coord);
 
-	void Enqueue(int type, CEntity* pEntity);
+	void EnqueueJob(int type, CEntity* pEntity);
+	void EnqueueBroadCast(CEntity* pEntity, CPacket* Packet);
+
 	bool AddPlayer(CEntity* pEntity);
 	bool RemovePlayer(CEntity* pEntity);
 

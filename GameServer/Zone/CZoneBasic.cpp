@@ -141,7 +141,6 @@ void CZoneBasic::ChangeZoneProcess()
 				{
 					//CNetServer::DecrementProcCount(m_ID);
 					g_Net.FreePlayer(pPlayer);
-					SubCount();
 				}
 				else
 				{
@@ -197,7 +196,7 @@ bool CZoneBasic::LeaveZone(CPlayer* pPlayer)
 		OnLeaveZone(pPlayer);
 		return true;
 	}
-	
+	SubCount();
 	return false;
 }
 

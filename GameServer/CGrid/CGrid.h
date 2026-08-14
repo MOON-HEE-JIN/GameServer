@@ -5,6 +5,7 @@
 #include "../CUtill/CLockQueueh.h"
 #include "../GameServerEnumDef.h"
 #include "../CUtill/CEntityManagmentVector.h"
+#include <deque>
 
 class CMainWorld;
 class CTile;
@@ -37,7 +38,11 @@ private:
 	int m_iID;
 	int m_iRunID;
 	CLockFreeQueue_SPSC<PROC_MSG> m_queueProc;
+	// 전환 직전 기존 Grid에 들어온 패킷은 다른 Grid Worker가 재전달할 수 있다.
+	CLQueue<PROC_MSG> m_queueReroutedProc;
 	CLQueue<st_GridJob> m_queueEntity;
+	std::deque<PROC_MSG> m_deferredReroutedProc;
+	std::deque<PROC_MSG> m_deferredProc;
 	
 	std::vector<CTile*> m_vecTiles;
 
@@ -49,6 +54,8 @@ private:
 
 	void EntityMoveRun();
 	void EntityJobRun();
+	void ProcessProcJob(PROC_MSG& job, bool rerouted);
+	void RerouteProcJob(PROC_MSG& job);
 
 	void OnSpawnGrid(CEntity* pEntity);
 	bool OnEnterGrid(CEntity* pEntity);
@@ -65,6 +72,7 @@ public:
 	void OnRegisterTile(CTile* pTile);
 
 	int GetRunID() { return m_iRunID; }
+	int GetID() const { return m_iID; }
 	void SetRunID(int value) { m_iRunID = value; };
 
 	void RemoveForTeleport(CEntity* pEntity) { OnLeaveGrid(pEntity); };
@@ -78,4 +86,7 @@ public:
 
 	void ProcessPacket();
 	void Update();
+
+	void SendInitAOITile(COORDINATE& pivot, CEntity* pEntity);
+	void SendRemoveAOITile(COORDINATE& pivot, CEntity* pEntity);
 };

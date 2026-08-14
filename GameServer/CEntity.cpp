@@ -24,7 +24,8 @@ void CEntity::Reset()
     m_stDirVector.Zero();
     m_eMoveState = eMOVESTATE::STOPPED;
 
-	m_iGridID = -1;
+	m_iGridID.store(-1, std::memory_order_relaxed);
+	m_iPendingGridID.store(-1, std::memory_order_relaxed);
 	m_stTilePos = COORDINATE(-1, -1);
     m_iRef.store(0);
     m_iMagRef.store(0);

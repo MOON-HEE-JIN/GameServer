@@ -174,10 +174,12 @@ void CMainWorld::MessageRouting(std::vector<PROC_MSG>& vec)
 		if (pPlayer == nullptr)
 			continue;
 
-		CGrid* pGrid = GetGrid(pPlayer->GetGridID());
+		int RoutingGridID = pPlayer->GetRoutingGridID();
+		CGrid* pGrid = GetGrid(RoutingGridID);
 		if (pGrid == nullptr)
 		{
-			g_LogGame.ELog("ERROR MessageRouting");
+			g_LogGame.ELog("ERROR MessageRouting Player:%d RouteGrid:%d OwnerGrid:%d",
+				pPlayer->GetID(), RoutingGridID, pPlayer->GetGridID());
 			continue;
 		}
 		pGrid->EnqueueProcJob(vec[i]);
@@ -264,16 +266,6 @@ void CMainWorld::BoradCast(CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer)
 			pAOITile->EnqueueBroadCast(pPlayer, pPacket);
 		}
 	}
-}
-
-void CMainWorld::PopMoveVector(CEntity* pEntity)
-{
-	CGrid* pCurGrid = GetGrid(pEntity->GetGridID());
-
-	if (pCurGrid == nullptr)
-		return;
-
-	pCurGrid->RemoveMoveVector(pEntity);
 }
 
 bool CMainWorld::SendZoneInfo(CPlayer* pPlayer)

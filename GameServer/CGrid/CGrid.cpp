@@ -151,9 +151,9 @@ void CGrid::EntityMoveRun()
 
 			// 겹치는 부분 제거
 			if (diff.X < 0)
-				MaxInW--;
-			else if (diff.X > 0)
 				MinInW--;
+			else if (diff.X > 0)
+				MaxInW--;
 
 			for (int W = MinInW; W <= MaxInW; W++)
 			{
@@ -207,13 +207,19 @@ void CGrid::EntityMoveRun()
 			static_cast<CPlayer*>(transfer.pEntity)->GetRelease())
 			continue;
 
+		// 실제 Grid 등록이 잠시 비더라도 패킷은 대상 Grid로 계속 라우팅한다.
+		// 대상 Grid는 TRANSFER_IN 완료 전 패킷을 deferred queue에 보관한다.
+		transfer.pEntity->BeginGridTransfer(transfer.pNewGrid->GetID());
+
 		if (!transfer.pSourceTile->RemovePlayer(transfer.pEntity))
 		{
+			transfer.pEntity->CompleteGridTransfer();
 			continue;
 		}
 		if (!RemovePlayer(transfer.pEntity))
 		{
 			transfer.pSourceTile->AddPlayer(transfer.pEntity);
+			transfer.pEntity->CompleteGridTransfer();
 			continue;
 		}
 
@@ -254,9 +260,18 @@ void CGrid::EntityJobRun()
 			{
 				CGrid* pSourceGrid = m_parent->GetGrid(msg.SourceGridID);
 				if (pSourceGrid != nullptr)
+				{
+					// Rollback 완료 전에도 패킷은 원본 Grid에서 유실 없이 대기한다.
+					pEntity->BeginGridTransfer(msg.SourceGridID);
 					pSourceGrid->EnqueueEntityJob(
 						EGRID_MSG_TYPE::GRID_MSG_TRANSFER_ROLLBACK,
 						pEntity, msg.SourceGridID, msg.SourceTile);
+				}
+				else
+				{
+					g_LogGame.ELog("ERROR Transfer Source Grid Entity:%d Grid:%d",
+						pEntity->GetID(), msg.SourceGridID);
+				}
 			}
 		}
 			break;
@@ -357,7 +372,10 @@ bool CGrid::OnTransferGrid(CEntity* pEntity)
 {
 	if (pEntity->GetEntityType() == eENTITY_TYPE::ENTITY_PLAYER &&
 		static_cast<CPlayer*>(pEntity)->GetRelease())
+	{
+		pEntity->CompleteGridTransfer();
 		return true;
+	}
 
 	CTile* pTile = m_parent->GetTile(pEntity->GetPosition());
 	if (pTile == nullptr || pTile->GetManagementGrid() != m_iID)
@@ -376,6 +394,7 @@ bool CGrid::OnTransferGrid(CEntity* pEntity)
 	if (pEntity->GetMoveState() != eMOVESTATE::STOPPED)
 		AddMoveVector(pEntity);
 
+	pEntity->CompleteGridTransfer();
 	return true;
 }
 
@@ -383,7 +402,10 @@ void CGrid::OnTransferRollback(CEntity* pEntity, const COORDINATE& sourceTile)
 {
 	if (pEntity->GetEntityType() == eENTITY_TYPE::ENTITY_PLAYER &&
 		static_cast<CPlayer*>(pEntity)->GetRelease())
+	{
+		pEntity->CompleteGridTransfer();
 		return;
+	}
 
 	CTile* pTile = m_parent->GetTile(sourceTile);
 	if (pTile == nullptr || pTile->GetManagementGrid() != m_iID)
@@ -402,6 +424,8 @@ void CGrid::OnTransferRollback(CEntity* pEntity, const COORDINATE& sourceTile)
 	// 대상 Grid 등록 실패 시 원본 Grid의 관리 상태와 Move Vector를 복원한다.
 	if (pEntity->GetMoveState() != eMOVESTATE::STOPPED)
 		AddMoveVector(pEntity);
+
+	pEntity->CompleteGridTransfer();
 }
 
 void CGrid::Init(int id, CMainWorld* pParent)
@@ -416,24 +440,14 @@ void CGrid::OnRegisterTile(CTile* pTile)
 	pTile->OnReigsterGrid(m_iID);
 }
 
-bool CGrid::DirectAddPlayer(CEntity* pEntity)
-{
-	return AddPlayer(pEntity);
-}
-
-bool CGrid::DirectRemovePlayer(CEntity* pEntity)
-{
-	CTile* pCurTile = m_parent->GetTile(pEntity->GetPosition());
-	pCurTile->RemovePlayer(pEntity);
-
-	SendRemoveAOITile(pCurTile->GetCoord(), pEntity);
-
-	return RemovePlayer(pEntity);
-}
-
 void CGrid::EnqueueProcJob(PROC_MSG& msg)
 {
 	m_queueProc.Enqueue(msg);
+}
+
+void CGrid::RerouteProcJob(PROC_MSG& job)
+{
+	m_queueReroutedProc.Push(job);
 }
 
 void CGrid::PushEntityJob(int type, CEntity* pEntity, int sourceGridID, const COORDINATE& sourceTile)
@@ -461,26 +475,77 @@ void CGrid::RemoveMoveVector(CEntity* pEntity)
 	m_vecMove.RemoveEntity(pEntity);
 }
 
+void CGrid::ProcessProcJob(PROC_MSG& job, bool rerouted)
+{
+	CPlayer* pPlayer = g_Net.GetPlayer(job.PlayerHandle, job.SessionHandle);
+	if (pPlayer == nullptr)
+		return;
+	if (pPlayer->GetZoneStatus() != eZONESTATUS::STABLE)
+	{
+		st_STC_ChangeingZone res;
+		res.ret = ERROR_CODE::ZONE_CHANEING;
+		res.type = job.type;
+
+		pPlayer->SendPacket(res);
+		return;
+	}
+
+	int RoutingGridID = pPlayer->GetRoutingGridID();
+	if (RoutingGridID != m_iID)
+	{
+		CGrid* pRoutingGrid = m_parent->GetGrid(RoutingGridID);
+		if (pRoutingGrid != nullptr)
+		{
+			pRoutingGrid->RerouteProcJob(job);
+		}
+		else
+		{
+			g_LogGame.ELog("ERROR MessageRerouting Player:%d RouteGrid:%d OwnerGrid:%d",
+				pPlayer->GetID(), RoutingGridID, pPlayer->GetGridID());
+		}
+		return;
+	}
+
+	// 패킷 목적지는 이미 대상 Grid지만 실제 컨테이너 등록은 아직 진행 중이다.
+	if (pPlayer->GetGridID() != m_iID)
+	{
+		if (rerouted)
+			m_deferredReroutedProc.push_back(job);
+		else
+			m_deferredProc.push_back(job);
+		return;
+	}
+
+	proc.DO_GAME_Proc(job.type, pPlayer, job.packet);
+}
+
 void CGrid::ProcessPacket()
 {
 	PROC_MSG job;
-	while (m_queueProc.TryDequeue(job))
+
+	// Route 변경 직전에 기존 Grid로 들어간 패킷이 새 Grid로 직접 라우팅된 패킷보다
+	// 먼저 처리되도록 reroute/deferred queue를 분리한다.
+	int ReroutedDeferredLoop = static_cast<int>(m_deferredReroutedProc.size());
+	for (int i = 0; i < ReroutedDeferredLoop; i++)
 	{
-		CPlayer* pPlayer = g_Net.GetPlayer(job.PlayerHandle, job.SessionHandle);
-		if (pPlayer == nullptr)
-			continue;
-		if (pPlayer->GetZoneStatus() != eZONESTATUS::STABLE)
-		{
-			st_STC_ChangeingZone res;
-			res.ret = ERROR_CODE::ZONE_CHANEING;
-			res.type = job.type;
-
-			pPlayer->SendPacket(res);
-			continue;
-		}
-
-		proc.DO_GAME_Proc(job.type, pPlayer, job.packet);
+		job = std::move(m_deferredReroutedProc.front());
+		m_deferredReroutedProc.pop_front();
+		ProcessProcJob(job, true);
 	}
+
+	while (m_queueReroutedProc.POP(job))
+		ProcessProcJob(job, true);
+
+	int DeferredLoop = static_cast<int>(m_deferredProc.size());
+	for (int i = 0; i < DeferredLoop; i++)
+	{
+		job = std::move(m_deferredProc.front());
+		m_deferredProc.pop_front();
+		ProcessProcJob(job, false);
+	}
+
+	while (m_queueProc.TryDequeue(job))
+		ProcessProcJob(job, false);
 }
 
 void CGrid::Update()

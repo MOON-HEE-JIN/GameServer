@@ -174,12 +174,13 @@ void CTile::NotifyEntityTileEnterAOI(CEntity* pEntity)
 		}
 
 		index++;
-		infos.Loop1++;
-		if (infos.Loop1 > 49)
+		if (index > 49)
 		{
+			infos.Loop1 = index;
 			((CPlayer*)pEntity)->SendPacket(infos);
 			ZeroMemory(&infos, sizeof(infos));
 
+			moves.Loop1 = movecount;
 			((CPlayer*)pEntity)->SendPacket(moves);
 			ZeroMemory(&moves, sizeof(moves));
 
@@ -193,7 +194,10 @@ void CTile::NotifyEntityTileEnterAOI(CEntity* pEntity)
 		((CPlayer*)pEntity)->SendPacket(infos);
 
 		if (movecount > 0)
+		{
+			moves.Loop1 = movecount;
 			((CPlayer*)pEntity)->SendPacket(moves);
+		}
 	}
 }
 

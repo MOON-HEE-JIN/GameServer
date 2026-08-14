@@ -15,7 +15,8 @@ void CPlayer::Init(SESSION_HANDLE sessionID, int handle, int Channel, int Zone)
 
 	m_bRelease.store(false);
 
-	m_iGridID = -1;
+	m_iGridID.store(-1, std::memory_order_relaxed);
+	m_iPendingGridID.store(-1, std::memory_order_relaxed);
 
 	AddVarRef();
 }
@@ -29,7 +30,8 @@ void CPlayer::Clear()
 	m_iChannel = 0;
 	m_OwnerZone = 0;
 
-	m_iGridID = -1;
+	m_iGridID.store(-1, std::memory_order_relaxed);
+	m_iPendingGridID.store(-1, std::memory_order_relaxed);
 
 	m_bRelease.store(false);
 }

@@ -29,7 +29,10 @@ protected:
 
 	float m_fMoveSpeed = 5.0f;
 	
-	int m_iGridID;
+	// 실제 Grid 등록 상태와 전환 중 패킷 목적지를 분리한다.
+	// 두 값은 Proxy/Grid Thread에서 동시에 조회/갱신되므로 atomic이어야 한다.
+	std::atomic<int> m_iGridID;
+	std::atomic<int> m_iPendingGridID;
 	COORDINATE m_stTilePos;
 
 	st_Vector3F m_stPosition;
@@ -59,7 +62,12 @@ public:
 	int GetZoneID() { return m_OwnerZone.load(); }
 	virtual int GetID() = 0;
 	eZONESTATUS GetZoneStatus() { return m_eZoneStatus; }
-	const int& GetGridID() { return m_iGridID; }
+	int GetGridID() const { return m_iGridID.load(std::memory_order_acquire); }
+	int GetRoutingGridID() const
+	{
+		int PendingGridID = m_iPendingGridID.load(std::memory_order_acquire);
+		return PendingGridID >= 0 ? PendingGridID : GetGridID();
+	}
 	const COORDINATE& GetTilePos() { return m_stTilePos; }
 	st_Vector3F GetPosition() { return m_stPosition; }
 	st_Vector3F GetGoalPosition() { return m_stGoalPosition; }
@@ -70,7 +78,15 @@ public:
 
 	void SetZoneID(int channel, int zone) { m_iChannel = channel;  m_OwnerZone.store(zone); };
 	void SetZoneStatus(eZONESTATUS type) { m_eZoneStatus = type; }
-	void SetGridID(int id) { m_iGridID = id; }
+	void SetGridID(int id) { m_iGridID.store(id, std::memory_order_release); }
+	void BeginGridTransfer(int destinationGridID)
+	{
+		m_iPendingGridID.store(destinationGridID, std::memory_order_release);
+	}
+	void CompleteGridTransfer()
+	{
+		m_iPendingGridID.store(-1, std::memory_order_release);
+	}
 	void SetTilePos(COORDINATE& coord) { m_stTilePos = coord; }
 	void SetPosition(st_Vector3F pos) { m_stPosition = pos; }
 	int MoveStart(st_Vector3F goal, st_Vector3F dir);

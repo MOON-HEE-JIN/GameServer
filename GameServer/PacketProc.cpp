@@ -159,7 +159,8 @@ int PacketProc::DO_GAME_MOVESTOP(CPlayer* pTarget, CPacket& pReqPacket)
 
     st_STC_MoveStop res;
     res.ret = 0;
-	res.ID = pTarget->GetID();
+    res.type = pTarget->GetType();
+    res.ID = pTarget->GetID();
     res.pos = pTarget->GetPosition();
     pTarget->SendPacket(res);
 
@@ -190,13 +191,8 @@ int PacketProc::DO_GAME_TELEPORT(CPlayer* pTarget, CPacket& pReqPacket)
     int ret = pTarget->Teleport(req.pos);
     if (!ret)
         return ret;
+
     g_LogGame.DLog("TelePort");
-
-    st_STC_Teleport res;
-	res.ret = 0;
-	res.pos = pTarget->GetPosition();
-	pTarget->SendPacket(res);
-
     return 0;
 }
 

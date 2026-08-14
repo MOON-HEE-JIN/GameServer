@@ -123,14 +123,12 @@ int CEntity::MoveStart(st_Vector3F goal, st_Vector3F dir)
     }
 
     // 움직이는중 방향 변경
-    /*
-    if (GetMoveVectorIndex() != -1)
+    if (m_eMoveState == eMOVESTATE::MOVEING)
     {
 		m_stGoalPosition = goal;
         m_stDirVector = dir;
         return 0;
     }
-    */
 
     m_eMoveState = eMOVESTATE::MOVEING;
     m_stGoalPosition = goal;

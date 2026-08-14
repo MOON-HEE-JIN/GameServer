@@ -145,6 +145,7 @@ void CZoneBasic::ChangeZoneProcess()
 				}
 				else
 				{
+					g_Net.FreePlayer(pPlayer);
 					g_LogServer.ELog("Error Release Zone");
 				}
 			}

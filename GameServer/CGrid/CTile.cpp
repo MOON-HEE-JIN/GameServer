@@ -18,18 +18,6 @@ void CTile::TileJobRun()
 
 		switch (job.type)
 		{
-		case ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI:
-			NotifyEntityTileEnterAOI(pEntity);
-			break;
-		case ETILE_JOB_TYPE::NOTIFY_TILE_REMOVE_AOI:
-			NotifyEntityTileLeaveAOI(job.pEntity);
-			break;
-		case ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_OBJ:
-			NotifyEntityTileEnterObj(pEntity);
-			break;
-		case ETILE_JOB_TYPE::NOTIFY_TILE_REMOVE_OBJ:
-			NotifyEntityTileLeaveObj(pEntity);
-			break;
 		case ETILE_JOB_TYPE::WRONG_ENTITY_REMOVE:
 			RemovePlayer(job.pEntity);
 			break;
@@ -63,6 +51,7 @@ void CTile::Init(CMainWorld* parent, COORDINATE coord)
 	// 일반적인 소규모 작업은 추가 할당 없이 처리하도록 초기 용량을 확보한다.
 	m_vecJobBuffer.reserve(32);
 	m_vecBroadCastBuffer.reserve(32);
+	m_vecPreviousPlayers.reserve(8);
 }
 
 void CTile::EnqueueJob(int type, CEntity* pEntity)
@@ -72,7 +61,7 @@ void CTile::EnqueueJob(int type, CEntity* pEntity)
 
 	// Tile 작업이 처리될 때까지 대상 Entity의 재사용을 Queue Ref로 차단한다.
 	pEntity->AddQueRef();
-	m_queue.Push({ type, pEntity});
+	m_queue.Push({ type, pEntity });
 }
 
 void CTile::EnqueueBroadCast(CEntity* pEntity, CPacket* Packet)
@@ -88,13 +77,21 @@ void CTile::EnqueueBroadCast(CEntity* pEntity, CPacket* Packet)
 
 bool CTile::AddPlayer(CEntity* pEntity)
 {
+	if (pEntity == nullptr || m_vecPlayer.Contains(pEntity))
+		return false;
+
+	CaptureAoiSnapshot();
 	bool ret = m_vecPlayer.AddEntity(pEntity);
 	if (ret)
 	{
 		m_iActive.fetch_add(1);
 		pEntity->SetTilePos(m_Coord);
+		// 전체 AOI 검사의 실행 여부는 Debug 빌드에서만 추적한다.
+#ifdef __DEBUG__
+		m_parent->MarkAoiDirty();
+#endif
 		
-		g_LogGame.DLog("Enter Tile[%d,%d] ActiveCount : %d", m_Coord.X, m_Coord.Z, m_iActive.load());
+		//g_LogGame.DLog("Enter Tile[%d,%d] ActiveCount : %d", m_Coord.X, m_Coord.Z, m_iActive.load());
 #ifdef __DEBUG__
 		int PlayerCount = m_vecPlayer.GetSize();
 		if (m_iActive.load() != PlayerCount)
@@ -108,21 +105,10 @@ bool CTile::AddPlayer(CEntity* pEntity)
 
 bool CTile::RemovePlayer(CEntity* pEntity)
 {
-	bool ret = m_vecPlayer.RemoveEntity(pEntity);
-	if (ret)
-	{
-		m_iActive.fetch_sub(1);
-		
-		g_LogGame.DLog("Leave Tile[%d,%d] ActiveCount : %d", m_Coord.X, m_Coord.Z, m_iActive.load());
-#ifdef __DEBUG__
-		int PlayerCount = m_vecPlayer.GetSize();
-		if (m_iActive.load() != PlayerCount)
-		{
-			g_LogGame.DLog("Remove Not Equel Active[%d] != PlayerCount[%d]", m_iActive.load(), PlayerCount);
-		}
-#endif // __DEBUG__
-	}
-	else
+	if (pEntity == nullptr)
+		return false;
+
+	if (!m_vecPlayer.Contains(pEntity))
 	{
 		// 현재 자신의 타일에 없음
 		COORDINATE curTilePos = pEntity->GetTilePos();
@@ -134,8 +120,28 @@ bool CTile::RemovePlayer(CEntity* pEntity)
 			if (pTile != nullptr && pTile != this)
 				pTile->EnqueueJob(ETILE_JOB_TYPE::WRONG_ENTITY_REMOVE, pEntity);
 		}
+		return false;
 	}
 
+	CaptureAoiSnapshot();
+	bool ret = m_vecPlayer.RemoveEntity(pEntity);
+	if (ret)
+	{
+		m_iActive.fetch_sub(1);
+		// 전체 AOI 검사의 실행 여부는 Debug 빌드에서만 추적한다.
+#ifdef __DEBUG__
+		m_parent->MarkAoiDirty();
+#endif
+
+		//g_LogGame.DLog("Leave Tile[%d,%d] ActiveCount : %d", m_Coord.X, m_Coord.Z, m_iActive.load());
+#ifdef __DEBUG__
+		int PlayerCount = m_vecPlayer.GetSize();
+		if (m_iActive.load() != PlayerCount)
+		{
+			g_LogGame.DLog("Remove Not Equel Active[%d] != PlayerCount[%d]", m_iActive.load(), PlayerCount);
+		}
+#endif // __DEBUG__
+	}
 	return ret;
 }
 
@@ -145,118 +151,46 @@ void CTile::Update()
 	TileBroadCast();
 }
 
-void CTile::NotifyEntityTileEnterAOI(CEntity* pEntity)
+void CTile::CaptureAoiSnapshot()
 {
-	const std::vector<CEntity*>& vec = m_vecPlayer.GetVector();
-	int Loop = static_cast<int>(vec.size());
+	if (m_bAoiSnapshotCaptured)
+		return;
 
-	st_STC_AoiInPlayers infos;
-	st_STC_AoiInPlayerMoves moves;
-	ZeroMemory(&infos, sizeof(infos));
-	ZeroMemory(&moves, sizeof(moves));
-
-	int index = 0;
-	int movecount = 0;
-	
-	for (int i = 0; i < Loop; i++)
+	m_vecPreviousPlayers.clear();
+	const std::vector<CEntity*>& currentPlayers = m_vecPlayer.GetVector();
+	m_vecPreviousPlayers.reserve(currentPlayers.size());
+	for (CEntity* pEntity : currentPlayers)
 	{
-		if (vec[i] == pEntity)
-			continue;
-		infos.info[index].ID = vec[i]->GetID();
-		infos.info[index].pos = vec[i]->GetPosition();
-		infos.info[index].speed = vec[i]->GetMoveSpeed();
-
-		if (vec[i]->GetMoveState() != eMOVESTATE::STOPPED)
-		{
-			moves.move[movecount].ID = vec[i]->GetID();
-			moves.move[movecount].pos = vec[i]->GetPosition();
-			moves.move[movecount].dir = vec[i]->GetDirVector();
-			movecount++;
-		}
-
-		index++;
-		if (index > 49)
-		{
-			infos.Loop1 = index;
-			((CPlayer*)pEntity)->SendPacket(infos);
-			ZeroMemory(&infos, sizeof(infos));
-
-			moves.Loop1 = movecount;
-			((CPlayer*)pEntity)->SendPacket(moves);
-			ZeroMemory(&moves, sizeof(moves));
-
-			index = 0;
-			movecount = 0;
-		}
+		// AOI 단계가 끝날 때까지 이전 Tile 구성의 Entity 수명을 유지한다.
+		pEntity->AddQueRef();
+		m_vecPreviousPlayers.push_back(pEntity);
 	}
-
-	if (index > 0)
-	{
-		infos.Loop1 = index;
-		((CPlayer*)pEntity)->SendPacket(infos);
-
-		if (movecount > 0)
-		{
-			moves.Loop1 = movecount;
-			((CPlayer*)pEntity)->SendPacket(moves);
-		}
-	}
+	m_bAoiSnapshotCaptured = true;
 }
 
-void CTile::NotifyEntityTileLeaveAOI(CEntity* pEntity)
+void CTile::AppendCurrentPlayers(std::vector<CEntity*>& players) const
 {
-	const std::vector<CEntity*>& vec = m_vecPlayer.GetVector();
-	int Loop = static_cast<int>(vec.size());
-
-	st_STC_AoiOutPlayers res;
-	ZeroMemory(&res, sizeof(res));
-	int index = 0;
-	for (int i = 0; i < Loop; i++)
-	{
-		if (vec[i] == pEntity)
-			continue;
-		res.info[index].ID = vec[i]->GetID();
-		res.info[index].pos = vec[i]->GetPosition();
-		res.info[index].speed = vec[i]->GetMoveSpeed();
-
-		index++;
-		res.Loop1++;
-		if (res.Loop1 > 49)
-		{
-			((CPlayer*)pEntity)->SendPacket(res);
-			index = 0;
-			ZeroMemory(&res, sizeof(res));
-		}
-	}
-
-	if (index > 0)
-	{
-		((CPlayer*)pEntity)->SendPacket(res);
-	}
+	const std::vector<CEntity*>& tilePlayers = m_vecPlayer.GetVector();
+	players.insert(players.end(), tilePlayers.begin(), tilePlayers.end());
 }
 
-void CTile::NotifyEntityTileEnterObj(CEntity* pEntity)
+void CTile::AppendPreviousPlayers(std::vector<CEntity*>& players) const
 {
-	st_STC_AoiInPlayer res;
-	res.info.ID = pEntity->GetID();
-	res.info.pos = pEntity->GetPosition();
-	res.info.speed = pEntity->GetMoveSpeed();
-
-	CPacket cPacket;
-	cPacket << res;
-
-	Broadcast(&cPacket, pEntity);
+	const std::vector<CEntity*>& tilePlayers = m_bAoiSnapshotCaptured
+		? m_vecPreviousPlayers
+		: m_vecPlayer.GetVector();
+	players.insert(players.end(), tilePlayers.begin(), tilePlayers.end());
 }
 
-void CTile::NotifyEntityTileLeaveObj(CEntity* pEntity)
+void CTile::ClearAoiSnapshot()
 {
-	st_STC_AoiOutPlayer res;
-	res.ID = pEntity->GetID();
+	if (!m_bAoiSnapshotCaptured)
+		return;
 
-	CPacket cPacket;
-	cPacket << res;
-
-	Broadcast(&cPacket, pEntity);
+	for (CEntity* pEntity : m_vecPreviousPlayers)
+		pEntity->ReleaseQueRef();
+	m_vecPreviousPlayers.clear();
+	m_bAoiSnapshotCaptured = false;
 }
 
 void CTile::Broadcast(CPacket* pPacket, CEntity* pEntity)

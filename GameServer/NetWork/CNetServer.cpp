@@ -267,6 +267,8 @@ void CNetServer::NetLog()
 		ResetRecvOverlappedLog();
 		ResetSendOverlappedLog();
 
+		//g_ZoneManager.Log();
+
 		m_iLogTime = nNow;
 	}
 }

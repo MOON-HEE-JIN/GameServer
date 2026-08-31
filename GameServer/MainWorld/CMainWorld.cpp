@@ -25,7 +25,8 @@
 	//
 
 CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
-	:CZoneBasic(channel, zoneid, procid, maxnum)
+	:CZoneBasic(channel, zoneid, procid, maxnum),
+	m_UpdateBarrier(MAX_MAINWORLD_THREAD_COUNT)
 {
 	m_bMainWorld = true;
 	m_hExit = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -118,6 +119,10 @@ void CMainWorld::OnEnterZone(CPlayer* pPlayer)
 	if (pPlayer == nullptr)
 		return;
 
+	// Grid/Tile는 Spawn 위치를 기준으로 등록되어야 한다.
+	pPlayer->SetPosition(GetSpawnPos());
+	pPlayer->MoveStop(pPlayer->GetPosition());
+
 	CTile* pTile = GetTile(pPlayer->GetPosition());
 	if (pTile == nullptr)
 	{
@@ -135,8 +140,6 @@ void CMainWorld::OnEnterZone(CPlayer* pPlayer)
 	CGrid* pCGrid = GetGrid(GridID);
 	// 최초 TilePos는 Grid 등록 과정에서 확정되므로 위치로 계산한 Grid에 Spawn을 위임한다.
 	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_SPAWN, pPlayer);
-	
-	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ENTER_GRID, pPlayer);
 	
 	//g_LogGame.ILog("Enter %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
@@ -162,7 +165,8 @@ void CMainWorld::OnLeaveZone(CPlayer* pPlayer)
 	}
 
 	CGrid* pCGrid = GetGrid(GridID);
-	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_LEAVE, pPlayer);
+	const COORDINATE sourceTile = pPlayer->GetTilePos();
+	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_LEAVE, pPlayer, GridID, sourceTile);
 
 	//g_LogGame.ILog("Leave %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
@@ -203,25 +207,30 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 	if (pNewTile == nullptr)
 		return false;
 
-	g_LogGame.DLog("REQ Teleport Pos [%f, %f, %f]  NewTile [%d, %d]", pos.X, pos.Y, pos.Z, pNewTile->GetCoord().X, pNewTile->GetCoord().Z);
+	//g_LogGame.DLog("REQ Teleport Pos [%f, %f, %f]  NewTile [%d, %d]", pos.X, pos.Y, pos.Z, pNewTile->GetCoord().X, pNewTile->GetCoord().Z);
 
 	CGrid* pCurGrid = GetGrid(pPlayer->GetGridID());
 	CGrid* pNewGrid = GetGrid(pNewTile->GetManagementGrid());
 	if (pCurGrid == nullptr || pNewGrid == nullptr)
 		return false;
-	
+
+	const int sourceGridID = pCurGrid->GetID();
+	const COORDINATE sourceTile = pPlayer->GetTilePos();
+	const st_Vector3F sourcePosition = pPlayer->GetPosition();
+	pPlayer->MoveStop(sourcePosition);
+	pPlayer->BeginGridTransfer(pNewGrid->GetID());
 
 	// 순서를 위해서 먼저 삭제 후 이동
-	pCurGrid->RemoveForTeleport(pPlayer);
+	if (!pCurGrid->RemoveForTeleport(pPlayer))
+	{
+		pPlayer->CompleteGridTransfer();
+		return false;
+	}
 	
 	pPlayer->SetPosition(pos);
 
-	pNewGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_ENTER, pPlayer);
-
-	st_STC_Teleport res;
-	res.ret = 0;
-	res.pos = pos;
-	pPlayer->SendPacket(res);
+	pNewGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_TELEPORT, pPlayer,
+		sourceGridID, sourceTile, sourcePosition);
 
 	return true;
 }
@@ -236,7 +245,7 @@ bool CMainWorld::PushMoveVector(CEntity* pEntity)
 	if (!pCurGrid->AddMoveVector(pEntity))
 		return false;
 	
-	g_LogGame.DLog("Push MoveVector EntityID : %d, GridID : %d", pEntity->GetID(), pEntity->GetGridID());
+	//g_LogGame.DLog("Push MoveVector EntityID : %d, GridID : %d", pEntity->GetID(), pEntity->GetGridID());
 	return true;
 }
 
@@ -249,7 +258,7 @@ void CMainWorld::PopMoveVector(CEntity* pEntity)
 
 	pCurGrid->RemoveMoveVector(pEntity);
 
-	g_LogGame.DLog("Pop MoveVector EntityID : %d, GridID : %d", pEntity->GetID(), pEntity->GetGridID());
+	//g_LogGame.DLog("Pop MoveVector EntityID : %d, GridID : %d", pEntity->GetID(), pEntity->GetGridID());
 }
 
 void CMainWorld::BoradCast(CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer)
@@ -281,49 +290,90 @@ void CMainWorld::Run(int id)
 {
 	std::vector<CGrid*> vec = m_vecThreadRunGrids[id];
 	int Loop = static_cast<int>(vec.size());
-	int ret = 0;
-	
+	uint64_t completedTick = 0;
 	double accumulatedtime = 0.0f;
 	double lasttime = CUtil::GetQPCNowTime();
 
-	while (m_bActive)
+	while (true)
 	{
-		ret = WaitForSingleObject(m_hExit, 1);
-
-		if (ret == WAIT_OBJECT_0)
-			break;
-	
-		for (int i = 0; i < Loop; i++)
-			vec[i]->ProcessPacket();
-
-		// 지연 시간 누적
-		double nowtime = CUtil::GetQPCNowTime();
-		double frame = nowtime - lasttime;
-		lasttime = nowtime;
-
-		accumulatedtime += frame;
-
-		int nLoop = 0;
-		while (accumulatedtime >= FIXED_DELTA && nLoop < MAX_FRAME_LOOP_COUNT)
+		const bool stopping = WaitForSingleObject(m_hExit, 1) == WAIT_OBJECT_0;
+		if (!stopping)
 		{
 			for (int i = 0; i < Loop; i++)
-				vec[i]->Update();
-
-			accumulatedtime -= FIXED_DELTA;
-			nLoop++;
+				vec[i]->ProcessPacket();
 		}
 
-		// 너무 많은 frame 이 쌓인다면 쌓인 frame 처리하느라 더 지연 최대 frame 만큼만 돌리기
-		if (nLoop == MAX_FRAME_LOOP_COUNT)
+		// Thread 0만 공통 Fixed Tick을 발행해 Worker별 시간 오차를 제거한다.
+		if (id == 0)
 		{
-			accumulatedtime = 0.0f;
+			if (m_bActive.load(std::memory_order_acquire))
+			{
+				double nowtime = CUtil::GetQPCNowTime();
+				accumulatedtime += nowtime - lasttime;
+				lasttime = nowtime;
+
+				int updateCount = 0;
+				while (accumulatedtime >= FIXED_DELTA && updateCount < MAX_FRAME_LOOP_COUNT)
+				{
+					accumulatedtime -= FIXED_DELTA;
+					++updateCount;
+				}
+
+				if (updateCount > 0)
+					m_iPublishedUpdateTick.fetch_add(updateCount, std::memory_order_release);
+
+				if (updateCount == MAX_FRAME_LOOP_COUNT)
+					accumulatedtime = 0.0f;
+			}
+			else
+			{
+				// 종료 결정은 한 Worker만 발행해 마지막 Tick 도중 일부 Thread만 빠지는 것을 막는다.
+				m_bWorkersExit.store(true, std::memory_order_release);
+			}
 		}
+
+		const uint64_t targetTick = m_iPublishedUpdateTick.load(std::memory_order_acquire);
+		while (completedTick < targetTick)
+		{
+			for (int i = 0; i < Loop; i++)
+				vec[i]->UpdateEntity();
+
+			// 일반 이동에서 발생한 다른 Grid 인계 작업을 같은 Tick 안에 확정한다.
+			m_UpdateBarrier.arrive_and_wait();
+			for (int i = 0; i < Loop; i++)
+				vec[i]->UpdateTransfer();
+
+			// 모든 Grid/Tile 소속 변경이 끝난 안정된 상태에서 AOI 차이만 계산한다.
+			m_UpdateBarrier.arrive_and_wait();
+			for (int i = 0; i < Loop; i++)
+				vec[i]->UpdateTile();
+
+			// 다른 Grid의 이전 Tile 스냅샷 참조가 모두 끝날 때까지 보존한다.
+			m_UpdateBarrier.arrive_and_wait();
+#ifdef __DEBUG__
+			for (int i = 0; i < Loop; i++)
+				vec[i]->DebugCheckAOI();
+
+			// Debug 검사는 인접 Grid의 현재 Tile을 읽으므로 다음 Tick과 분리한다.
+			m_UpdateBarrier.arrive_and_wait();
+#endif
+			for (int i = 0; i < Loop; i++)
+				vec[i]->FinalizeAoiTick();
+
+			++completedTick;
+		}
+
+		if (m_bWorkersExit.load(std::memory_order_acquire) &&
+			completedTick >= m_iPublishedUpdateTick.load(std::memory_order_acquire))
+			break;
 	}
 }
 
 void CMainWorld::Start()
 {
 	m_bActive = true;
+	m_bWorkersExit.store(false, std::memory_order_release);
+	m_iPublishedUpdateTick.store(0, std::memory_order_release);
 
 	int runid = 0;
 	for (int i = 0; i < MAX_MANAGENTMENT_GRID_COUNT; i++)

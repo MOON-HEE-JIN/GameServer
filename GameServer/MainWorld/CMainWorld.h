@@ -5,6 +5,9 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+#include <atomic>
+#include <barrier>
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -36,6 +39,15 @@ private:
 	
 	std::vector<std::vector<CGrid*>> m_vecThreadRunGrids;
 	HANDLE m_hExit;
+
+	// Entity 변경, Grid 인계, AOI 계산을 모든 Worker가 동일한 Tick 경계에서 처리한다.
+	std::barrier<> m_UpdateBarrier;
+	std::atomic<uint64_t> m_iPublishedUpdateTick{ 0 };
+	std::atomic<bool> m_bWorkersExit{ false };
+#ifdef __DEBUG__
+	// 전체 AOI 검사는 Debug에서 Tile 구성이 바뀐 Tick에만 실행한다.
+	std::atomic<uint64_t> m_iAoiRevision{ 0 };
+#endif
 
 	//CLockFreeQueue_MPSC<PROC_MSG> m_ProcJobQueue[MAX_MAINWORLD_THREAD_COUNT];
 private:
@@ -72,6 +84,10 @@ public:
 	CTile* GetTile(st_Vector3F pos);
 	CTile* GetTile(const COORDINATE& coord);
 	CGrid* GetGrid(int id);
+#ifdef __DEBUG__
+	void MarkAoiDirty() { m_iAoiRevision.fetch_add(1, std::memory_order_release); }
+	uint64_t GetAoiRevision() const { return m_iAoiRevision.load(std::memory_order_acquire); }
+#endif
 
 	bool IsValidGridID(int id) { return (id >= 0 && id < MAX_MANAGENTMENT_GRID_COUNT); }
 };

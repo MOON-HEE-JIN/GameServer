@@ -43,15 +43,14 @@ private:
 	std::vector<st_TileBroadCast> m_vecBroadCastBuffer;
 
 	CEntityVector m_vecPlayer;
+	// 최초 변경 직전의 구성만 보존해 Tick 시작 AOI를 복원한다.
+	bool m_bAoiSnapshotCaptured = false;
+	std::vector<CEntity*> m_vecPreviousPlayers;
 
 private:
 	void TileJobRun();
 	void TileBroadCast();
-
-	void NotifyEntityTileEnterAOI(CEntity* pEntity);	// 나에게 타일 정보 생성 메시지
-	void NotifyEntityTileLeaveAOI(CEntity* pEntity);	// 나에게 타일 정보 삭제 메시지(필요한가 에 대해서 클라에서 따로 타일 관리를 하면 안되는 것인가? 생각 해보기)
-	void NotifyEntityTileEnterObj(CEntity* pEntity);	// 주위에 나 생성 메시지
-	void NotifyEntityTileLeaveObj(CEntity* pEntity);	// 주위에 나 삭제 메시지
+	void CaptureAoiSnapshot();
 
 	void Broadcast(CPacket* pPacket, CEntity* pEntity = nullptr);
 
@@ -70,6 +69,9 @@ public:
 	int GetActiveCount() { return m_iActive.load(); }
 	int GetManagementGrid() { return m_iManagementID; }
 	COORDINATE& GetCoord() { return m_Coord; }
+	void AppendCurrentPlayers(std::vector<CEntity*>& players) const;
+	void AppendPreviousPlayers(std::vector<CEntity*>& players) const;
+	void ClearAoiSnapshot();
 
 	void Update();
 };

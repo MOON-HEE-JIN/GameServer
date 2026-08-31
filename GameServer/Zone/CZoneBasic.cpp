@@ -7,6 +7,16 @@
 
 namespace
 {
+	void SendZoneChangeResult(CPlayer* pPlayer, int ret, int channel, int zone, const st_Vector3F& spawn)
+	{
+		st_STC_ChangeZone packet{};
+		packet.ret = ret;
+		packet.channel = channel;
+		packet.zone = zone;
+		packet.spawn = spawn;
+		pPlayer->SendPacket(packet);
+	}
+
 	class CZoneJobRef
 	{
 	public:
@@ -45,9 +55,20 @@ void CZoneBasic::ChangeZoneProcess()
 			continue;
 		CZoneJobRef jobRef(pPlayer);
 
-		// Player 가 종료 중 이라면 관련 없는 패킷 전부 Drop
+		// Player가 종료 중이면 전환 예약을 되돌린 뒤 관련 작업을 버린다.
 		if (pPlayer->GetRelease() && job.type != eZONESTATUS::RELEASE)
 		{
+			if (job.type == eZONESTATUS::LOGIN)
+			{
+				RollbackPush();
+			}
+			else if ((job.type == eZONESTATUS::ENTER && job.ack) ||
+				job.type == eZONESTATUS::LEAVE)
+			{
+				CZoneBasic* pToZone = g_ZoneManager.GetZone(job.toID, job.toZone);
+				if (pToZone != nullptr)
+					pToZone->RollbackPush();
+			}
 			continue;
 		}
 
@@ -60,18 +81,16 @@ void CZoneBasic::ChangeZoneProcess()
 			break;
 		case LOGIN:
 		{
-			EnterZone(pPlayer);
-
-			// 새로운 Zone 에 입장 완료
-			pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+			if (!EnterZone(pPlayer))
 			{
-				st_STC_ChangeZone pack;
-				pack.ret = 0;
-				pack.channel = job.toID;
-				pack.zone = job.toZone;
-
-				pPlayer->SendPacket(pack);
+				RollbackPush();
+				g_Net.PlayerDisConnect(pPlayer->GetSessionHandle());
+				break;
 			}
+
+			pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+			SendZoneChangeResult(pPlayer, ERROR_CODE::NOT_ERROR,
+				job.toID, job.toZone, GetSpawnPos());
 		}
 			break;
 		case ENTER:
@@ -88,20 +107,22 @@ void CZoneBasic::ChangeZoneProcess()
 					// 여기서 Leave 를 처리해도 되지만 규칙성을 위해서 넣어준다
 					req.type = eZONESTATUS::LEAVE;
 					req.ack = false;
-					Enqueue(req);
+					if (!Enqueue(req))
+					{
+						CZoneBasic* pToZone = g_ZoneManager.GetZone(job.toID, job.toZone);
+						if (pToZone != nullptr)
+							pToZone->RollbackPush();
+						pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+						SendZoneChangeResult(pPlayer, ERROR_CODE::NOT_FIND_PID,
+							job.toID, job.toZone, st_Vector3F{});
+					}
 				}
 				else
 				{
 					// Zone Enter 실패
 					pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
-					{
-						st_STC_ChangeZone pack;
-						pack.ret = ERROR_CODE::NOT_FIND_PID;
-						pack.channel = job.toID;
-						pack.zone = job.toZone;
-
-						pPlayer->SendPacket(pack);
-					}
+					SendZoneChangeResult(pPlayer, ERROR_CODE::NOT_FIND_PID,
+						job.toID, job.toZone, st_Vector3F{});
 				}
 			}
 			// From --> To Zone 으로 Enter 요청
@@ -111,7 +132,14 @@ void CZoneBasic::ChangeZoneProcess()
 				// From Zone 에서 응답 보내기
 				req.ack = true;
 				req.ret = bRet;
-				EnqueueChangeJob(job.fromID, job.fromZone, req);
+				if (!EnqueueChangeJob(job.fromID, job.fromZone, req))
+				{
+					if (bRet)
+						RollbackPush();
+					pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+					SendZoneChangeResult(pPlayer, ERROR_CODE::NOT_FIND_PID,
+						job.toID, job.toZone, st_Vector3F{});
+				}
 			}
 		}
 		break;
@@ -120,18 +148,31 @@ void CZoneBasic::ChangeZoneProcess()
 			// From Zone 에서 Leave 완료 To Zone 에 넣어주기
 			if (job.ack)
 			{
-				EnterZone(pPlayer);
-
-				// 새로운 Zone 에 입장 완료
-				pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+				if (!job.ret)
 				{
-					st_STC_ChangeZone pack;
-					pack.ret = 0;
-					pack.channel = job.toID;
-					pack.zone = job.toZone;
+					RollbackPush();
+					pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+					SendZoneChangeResult(pPlayer, ERROR_CODE::NOT_FIND_PID,
+						job.toID, job.toZone, st_Vector3F{});
+					break;
+				}
 
-					pPlayer->SendPacket(pack);
-			}
+				if (!EnterZone(pPlayer))
+				{
+					RollbackPush();
+					g_LogServer.ELog("Zone enter failed after source leave. Player:%d To:%d/%d",
+						pPlayer->GetID(), job.toID, job.toZone);
+					g_Net.PlayerDisConnect(pPlayer->GetSessionHandle());
+					break;
+				}
+
+				// MainWorld는 Grid/Tile 등록이 끝난 뒤 성공 응답과 STABLE 상태를 공개한다.
+				if (!GetMainWorld())
+				{
+					pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+					SendZoneChangeResult(pPlayer, ERROR_CODE::NOT_ERROR,
+						job.toID, job.toZone, GetSpawnPos());
+				}
 			}
 			else
 			{
@@ -139,7 +180,31 @@ void CZoneBasic::ChangeZoneProcess()
 				req.ack = true;
 				req.ret = bRet;
 				// To Zone 에게 Leave 완료를 보낸다
-				EnqueueChangeJob(job.toID, job.toZone, req);
+				if (!EnqueueChangeJob(job.toID, job.toZone, req))
+				{
+					CZoneBasic* pToZone = g_ZoneManager.GetZone(job.toID, job.toZone);
+					if (pToZone != nullptr)
+						pToZone->RollbackPush();
+
+					bool restored = !bRet;
+					if (bRet && TryPush(pPlayer))
+					{
+						restored = EnterZone(pPlayer);
+						if (!restored)
+							RollbackPush();
+					}
+
+					if (!restored)
+					{
+						g_LogServer.ELog("Zone restore failed after ack enqueue failure. Player:%d From:%d/%d",
+							pPlayer->GetID(), job.fromID, job.fromZone);
+						g_Net.PlayerDisConnect(pPlayer->GetSessionHandle());
+						break;
+					}
+					pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+					SendZoneChangeResult(pPlayer, ERROR_CODE::NOT_FIND_PID,
+						job.toID, job.toZone, st_Vector3F{});
+				}
 			}
 		}
 		break;
@@ -165,7 +230,8 @@ void CZoneBasic::ChangeZoneProcess()
 				{
 					// 해당 Zone 에서 관리하지 않음
 					req.ack = true;
-					EnqueueChangeJob(job.fromID, pPlayer->GetZoneID(), req);
+					if (!EnqueueChangeJob(job.fromID, pPlayer->GetZoneID(), req))
+						g_Net.FreePlayer(pPlayer);
 				}
 				else
 					g_Net.FreePlayer(pPlayer);
@@ -184,12 +250,19 @@ void CZoneBasic::Process()
 
 bool CZoneBasic::EnterZone(CPlayer* pPlayer)
 {
-	pPlayer->SetZoneID(GetChannel(), GetZoneID());
-	if(!TryChangeZone(pPlayer->GetSessionHandle(), GetProcID())) 
+	if (pPlayer == nullptr)
 		return false;
 
-	m_vecEntitys.AddEntity(pPlayer);
+	if (!m_vecEntitys.AddEntity(pPlayer))
+		return false;
 
+	if (!TryChangeZone(pPlayer->GetSessionHandle(), GetProcID()))
+	{
+		m_vecEntitys.RemoveEntity(pPlayer);
+		return false;
+	}
+
+	pPlayer->SetZoneID(GetChannel(), GetZoneID());
 	pPlayer->SetZone(this);
 
 	OnEnterZone(pPlayer);
@@ -203,11 +276,14 @@ bool CZoneBasic::LeaveZone(CPlayer* pPlayer)
 
 	if (!m_vecEntitys.RemoveEntity(pPlayer))	
 		return false;
+
+	pPlayer->MoveStop(pPlayer->GetPosition());
 	
 	// 존 떠날때 이벤트
 	OnLeaveZone(pPlayer);
-	SubCount();
-	return false;
+	if (!SubCount())
+		g_LogServer.ELog("Zone count underflow. Channel:%d Zone:%d", GetChannel(), GetZoneID());
+	return true;
 }
 
 bool CZoneBasic::Enqueue(ZONE_CHANGE_JOB& job)
@@ -228,13 +304,11 @@ bool CZoneBasic::TryPush(CPlayer* pPlayer)
 		return false;
 	}
 
-	if (GetCurCnt() + 1 >= GetMaximum())
+	if (!TryAddCount())
 	{
 		g_LogGame.ELog("ERROR MaximumUser %d == m_iCurCnt %d  CZoneBase::TryPush", GetMaximum(), GetCurCnt());
 		return false;
 	}
-
-	AddCount();
 	return true;
 }
 

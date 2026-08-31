@@ -14,6 +14,29 @@
 
 CZoneManager g_ZoneManager;
 
+namespace
+{
+	void SendZoneChangeResult(CPlayer* pPlayer, int ret, int channel, int zone, const st_Vector3F& spawn)
+	{
+		st_STC_ChangeZone packet{};
+		packet.ret = ret;
+		packet.channel = channel;
+		packet.zone = zone;
+		packet.spawn = spawn;
+		pPlayer->SendPacket(packet);
+	}
+
+	bool RestoreZone(CZoneBasic* pZone, CPlayer* pPlayer)
+	{
+		if (pZone == nullptr || !pZone->TryPush(pPlayer))
+			return false;
+		if (pZone->EnterZone(pPlayer))
+			return true;
+		pZone->RollbackPush();
+		return false;
+	}
+}
+
 CZoneManager::CZoneManager()
 {
 	// 해당 생성자는 임시로 작성함 나중에 Zone 에 사용될 Map 완성시 수정해야함
@@ -34,21 +57,21 @@ CZoneManager::CZoneManager()
 	// ProcThreadCnt == 4 [0 ~ 3]
 	m_maxZoneCnt = (ProcThreadCnt - 1) * 2;
 
-	for (int i = 0; i < ProcSubThreadCnt; i++)
+	// channel 0, 1
+	// zone 2,3,4,5,6,7  -  2,3,4,5,6,7
+
+	for (int channel = 0; channel < 2; channel++)
 	{
-		// MainWorld 는 proc[ProcMainThreadCnt] 까지 차지
-		for (int channel = 0; channel < 2; channel++)
+		for (int zone = 2; zone < 8; zone++)
 		{
-			for (int zone = 2; zone < 7; zone++)
-			{
-				CZoneBasic* pZone = new CZone(channel, zone, (ProcMainThreadCnt + 1) + i, 2000);
-				m_mapZones[zone].push_back(pZone);
-				g_LogServer.ILog("Create Zone channel : %d, ProcQ : %d, Max : %d", channel, (ProcMainThreadCnt + 1) + i, 100);
-			}
+			const int subProcIndex = (channel * 6 + (zone - 2)) % ProcSubThreadCnt;
+			const int procID = ProcLoginThreadCnt + ProcMainThreadCnt + subProcIndex;
+			CZoneBasic* pZone = new CZone(channel, zone, procID, 2000);
+			m_mapZones[zone].push_back(pZone);
+			g_LogServer.ILog("Create Zone channel : %d, ProcQ : %d, Zone : %d, Max : %d", channel, procID, zone, 2000);
 		}
 	}
 
-	StartMainWorld();
 }
 
 CZoneManager::~CZoneManager()
@@ -134,6 +157,9 @@ void CZoneManager::SendZone(int Channel, int Zone, CPacket* pPacket, COORDINATE 
 
 bool CZoneManager::ReqEnterLoginZone(CPlayer* pPlayer)
 {
+	if (pPlayer == nullptr)
+		return false;
+
 	if (pPlayer->GetZoneID() != 0)
 		return false;
 
@@ -141,6 +167,8 @@ bool CZoneManager::ReqEnterLoginZone(CPlayer* pPlayer)
 		return false;
 
 	CZone_Login* pZone = (CZone_Login*)m_mapZones[0][pPlayer->GetChannel()];
+	if (!pZone->TryPush(pPlayer))
+		return false;
 
 	pPlayer->SetZoneStatus(eZONESTATUS::LOGIN);
 	ZONE_CHANGE_JOB job(eZONESTATUS::LOGIN, pPlayer
@@ -148,12 +176,20 @@ bool CZoneManager::ReqEnterLoginZone(CPlayer* pPlayer)
 		, pPlayer->GetChannel(), 0
 		, 0, 0);
 
-	pZone->Enqueue(job);
+	if (!pZone->Enqueue(job))
+	{
+		pZone->RollbackPush();
+		pPlayer->SetZoneStatus(eZONESTATUS::NONE);
+		return false;
+	}
 	return true;
 }
 
 bool CZoneManager::ReqEnterZone(CPlayer* pPlayer, int Channel, int ToZone)
 {
+	if (pPlayer == nullptr)
+		return false;
+
 	if (!TryEnterZone(Channel, ToZone))
 		return false;
 
@@ -172,27 +208,29 @@ bool CZoneManager::ReqEnterZone(CPlayer* pPlayer, int Channel, int ToZone)
 	// m_queue 에 넣는 게 아니라 여기서 처리가능 하면 바로 처리
 	if (IsEqualProcZoneID(preChannel, preZone, Channel, ToZone))
 	{
-		bool ret = 0;
-		
 		if (!pFromZone->LeaveZone(pPlayer))
 			return false;
 
 		if (!pToZone->TryPush(pPlayer))
 		{
-			// 다시 돌아가기
-			pFromZone->EnterZone(pPlayer);
+			if (!RestoreZone(pFromZone, pPlayer))
+				g_Net.PlayerDisConnect(pPlayer->GetSessionHandle());
 			return false;
 		}
 		
 		if (!pToZone->EnterZone(pPlayer))
-			return false;
-		else
 		{
-			st_STC_ChangeZone pack;
-			pack.ret = 0;
-			pack.zone = ToZone;
-			pack.channel = Channel;
-			pPlayer->SendPacket(pack);
+			pToZone->RollbackPush();
+			if (!RestoreZone(pFromZone, pPlayer))
+				g_Net.PlayerDisConnect(pPlayer->GetSessionHandle());
+			return false;
+		}
+
+		if (!pToZone->GetMainWorld())
+		{
+			pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+			SendZoneChangeResult(pPlayer, ERROR_CODE::NOT_ERROR,
+				Channel, ToZone, pToZone->GetSpawnPos());
 		}
 
 		return true;
@@ -206,7 +244,11 @@ bool CZoneManager::ReqEnterZone(CPlayer* pPlayer, int Channel, int ToZone)
 
 		pPlayer->SetZoneStatus(eZONESTATUS::LEAVE);
 
-		pToZone->Enqueue(job);
+		if (!pToZone->Enqueue(job))
+		{
+			pPlayer->SetZoneStatus(eZONESTATUS::STABLE);
+			return false;
+		}
 		return true;
 	}
 }
@@ -242,6 +284,9 @@ bool CZoneManager::IsValidZoneID(int zoneid) const
 
 bool CZoneManager::IsValidChannelZone(int Channel, int ZoneID)
 {
+	if (Channel < 0)
+		return false;
+
 	if (!IsValidZoneID(ZoneID))
 		return false;
 

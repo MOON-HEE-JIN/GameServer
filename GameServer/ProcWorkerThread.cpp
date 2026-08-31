@@ -26,6 +26,11 @@ void CreateProcWorkerThread()
 
     s_ProcWorkerThreadIDs.resize(ProcThreadCnt);
 
+	// Worker가 대기하기 전에 종료 이벤트가 반드시 유효해야 한다.
+	s_hExit = CreateEvent(NULL, TRUE, FALSE, NULL);
+	if (s_hExit == NULL)
+		return;
+
     int createmainworld = 0;
 
     for (int i = 0; i < ProcThreadCnt; i++)
@@ -47,9 +52,6 @@ void CreateProcWorkerThread()
         }
         s_ProcWorkerThreadHandles.push_back(h);
     }
-
-    // manual-reset(TRUE), 초기 비신호(FALSE)
-    s_hExit = CreateEvent(NULL, TRUE, FALSE, NULL);
 }
 
 void WaitProcWorkerThread()

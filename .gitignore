@@ -21,3 +21,4 @@ x64/
 Debug/
 Release/
 GameServer/x64/
+.codex-build*/

@@ -79,6 +79,11 @@ public:
 	void SetZoneID(int channel, int zone) { m_iChannel = channel;  m_OwnerZone.store(zone); };
 	void SetZoneStatus(eZONESTATUS type) { m_eZoneStatus = type; }
 	void SetGridID(int id) { m_iGridID.store(id, std::memory_order_release); }
+	void ClearGridID(int expectedID)
+	{
+		m_iGridID.compare_exchange_strong(expectedID, -1,
+			std::memory_order_acq_rel, std::memory_order_acquire);
+	}
 	void BeginGridTransfer(int destinationGridID)
 	{
 		m_iPendingGridID.store(destinationGridID, std::memory_order_release);

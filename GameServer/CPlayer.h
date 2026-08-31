@@ -5,6 +5,9 @@
 #include "CEntity.h"
 #include "GameServerDef.h"
 #include "Zone/CZoneBase.h"
+#include <mutex>
+#include <unordered_set>
+#include <vector>
 
 class CZoneBase;
 
@@ -26,6 +29,8 @@ private:
 	std::atomic<bool> m_bRelease;						// 삭제 처리중
 
 	CZoneBase* m_pZone;
+	mutable std::mutex m_AoiLock;
+	std::unordered_set<int> m_setVisiblePlayerIDs;
 private:
 	void SessionHandleClear() { m_SessionHandle.store(SESSION_HANDLE(-1, 0)); }
 	void Clear();
@@ -60,6 +65,19 @@ public:
 		pack << value;
 		BroadCast(&pack);
 	}
+	void ResetVisiblePlayers();
+	// 변경 Player 주변의 이전/현재 AOI 차이만 반영한다.
+	void ApplyAoiDelta(
+		const std::vector<CEntity*>& previousOnly,
+		const std::vector<CEntity*>& currentOnly);
+	void NotifyAoiEnter(CEntity* pEntity);
+	void NotifyAoiLeave(int entityID);
+#ifdef __DEBUG__
+	bool DebugCheckVisiblePlayers(
+		const std::unordered_set<int>& expectedIDs,
+		int& missingCount,
+		int& staleCount) const;
+#endif
 public:
 	//Teleport
 	bool Teleport(st_Vector3F pos);

@@ -20,9 +20,9 @@ void CEntity::Reset()
 
     m_fMoveSpeed = 5.0f;
     m_stPosition.Zero();
-    m_stGoalPosition.Zero();
-    m_stDirVector.Zero();
-    m_eMoveState = eMOVESTATE::STOPPED;
+	m_stGoalPosition.Zero();
+	m_stDirVector.Zero();
+	m_eMoveState = eMOVESTATE::STOPPED;
 
 	m_iGridID.store(-1, std::memory_order_relaxed);
 	m_iPendingGridID.store(-1, std::memory_order_relaxed);
@@ -48,7 +48,7 @@ bool CEntity::MoveUpdate()
     if (remaindist <= speeddist)
     {
         m_stPosition = m_stGoalPosition;
-		//MoveComplete();
+		MoveComplete();
         return true;
     }
     else
@@ -124,11 +124,11 @@ int CEntity::MoveStart(st_Vector3F goal, st_Vector3F dir)
     }
 
     // 움직이는중 방향 변경
-    if (m_eMoveState == eMOVESTATE::MOVEING)
-    {
+	if (m_eMoveState == eMOVESTATE::MOVEING)
+	{
 		m_stGoalPosition = goal;
-        m_stDirVector = dir;
-        return 0;
+		m_stDirVector = dir;
+		return 0;
     }
 
     m_eMoveState = eMOVESTATE::MOVEING;
@@ -136,16 +136,21 @@ int CEntity::MoveStart(st_Vector3F goal, st_Vector3F dir)
     m_stDirVector = dir;
 
     if (!g_ZoneManager.PushZoneMoveVector(this))
+	{
+		m_eMoveState = eMOVESTATE::STOPPED;
+		m_stGoalPosition = m_stPosition;
+		m_stDirVector.Zero();
         return ERROR_CODE::NOT_FIND_PID;
+	}
 
-    return 0;
+	return 0;
 }
 
 void CEntity::MoveComplete()
 {
     m_eMoveState = eMOVESTATE::STOPPED;
 
-    st_STC_MoveStop res;
+	st_STC_MoveStop res{};
     res.pos = m_stPosition;
     res.type = m_nEntityType;
     res.ret = 0;
@@ -168,6 +173,8 @@ void CEntity::MoveComplete()
 int CEntity::MoveStop(st_Vector3F pos)
 {
     m_eMoveState = eMOVESTATE::STOPPED;
+	m_stGoalPosition = m_stPosition;
+	m_stDirVector.Zero();
 
     g_ZoneManager.PopZoneMoveVector(this);
 

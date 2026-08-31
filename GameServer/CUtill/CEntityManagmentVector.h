@@ -18,8 +18,10 @@ private:
 
 public:
 	const std::vector<CEntity*>& GetVector() { return m_vec; }
+	const std::vector<CEntity*>& GetVector() const { return m_vec; }
 
 	int GetSize() { return static_cast<int>(m_vec.size()); }
+	bool Contains(CEntity* pEntity) const { return m_map.find(pEntity) != m_map.end(); }
 
 	bool AddEntity(CEntity* pEntity)
 	{

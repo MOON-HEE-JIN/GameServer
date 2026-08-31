@@ -162,7 +162,7 @@ void CTile::CaptureAoiSnapshot()
 	for (CEntity* pEntity : currentPlayers)
 	{
 		// AOI 단계가 끝날 때까지 이전 Tile 구성의 Entity 수명을 유지한다.
-		pEntity->AddQueRef();
+		pEntity->AddMagRef();
 		m_vecPreviousPlayers.push_back(pEntity);
 	}
 	m_bAoiSnapshotCaptured = true;
@@ -188,7 +188,7 @@ void CTile::ClearAoiSnapshot()
 		return;
 
 	for (CEntity* pEntity : m_vecPreviousPlayers)
-		pEntity->ReleaseQueRef();
+		pEntity->ReleaseMagRef();
 	m_vecPreviousPlayers.clear();
 	m_bAoiSnapshotCaptured = false;
 }

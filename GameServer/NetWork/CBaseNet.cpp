@@ -31,6 +31,7 @@ CBaseNet::CBaseNet()
 	m_bWsaInitialized = false;
 
 	m_iConnectSessionCount.store(0);
+	m_iDelayReleaseSessionCount.store(0);
 
 	m_iRecvOverlappedCount.store(0);
 	m_iSendOverlapeedCount.store(0);
@@ -203,8 +204,11 @@ void CBaseNet::PushSessionFree(CSession* pSession)
 {
 	EnterCriticalSection(&cs_SessionFree);
 	{
-		if(pSession->TryPushFreeVector())
+		if (pSession->TryPushFreeVector())
+		{
 			m_vecSessionFree.push(pSession);
+			m_iDelayReleaseSessionCount.fetch_add(1);
+		}
 	}
 	LeaveCriticalSection(&cs_SessionFree);
 
@@ -464,6 +468,7 @@ int CBaseNet::SessionFreeRun()
 				{
 					pSession = pFront;
 					m_vecSessionFree.pop();
+					m_iDelayReleaseSessionCount.fetch_sub(1);
 				}
 				else if (nElapsed < SESSION_DELETE_DELAY)
 				{

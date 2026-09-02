@@ -23,6 +23,7 @@ void CEntity::Reset()
     m_stGoalPosition.Zero();
     m_stDirVector.Zero();
     m_eMoveState = eMOVESTATE::STOPPED;
+	m_iMoveRevision.store(0, std::memory_order_relaxed);
 
 	m_iGridID.store(-1, std::memory_order_relaxed);
 	m_iPendingGridID.store(-1, std::memory_order_relaxed);
@@ -45,10 +46,10 @@ bool CEntity::MoveUpdate()
     float speeddist = speed * speed;
     float remaindist = m_stPosition.DistanceToNSquared(m_stGoalPosition);
 	
-    if (remaindist <= speeddist)
-    {
-        m_stPosition = m_stGoalPosition;
-		//MoveComplete();
+	if (remaindist <= speeddist)
+	{
+		m_stPosition = m_stGoalPosition;
+		MoveComplete();
         return true;
     }
     else
@@ -124,28 +125,45 @@ int CEntity::MoveStart(st_Vector3F goal, st_Vector3F dir)
     }
 
     // 움직이는중 방향 변경
-    if (m_eMoveState == eMOVESTATE::MOVEING)
-    {
+	if (m_eMoveState == eMOVESTATE::MOVEING)
+	{
 		m_stGoalPosition = goal;
-        m_stDirVector = dir;
-        return 0;
+		m_stDirVector = dir;
+		m_iMoveRevision.store(s_iMoveRevision.fetch_add(1, std::memory_order_acq_rel) + 1,
+			std::memory_order_release);
+		return 0;
     }
 
     m_eMoveState = eMOVESTATE::MOVEING;
     m_stGoalPosition = goal;
     m_stDirVector = dir;
 
-    if (!g_ZoneManager.PushZoneMoveVector(this))
-        return ERROR_CODE::NOT_FIND_PID;
+	if (!g_ZoneManager.PushZoneMoveVector(this))
+	{
+		m_eMoveState = eMOVESTATE::STOPPED;
+		m_stGoalPosition = m_stPosition;
+		m_stDirVector.Zero();
+		return ERROR_CODE::NOT_FIND_PID;
+	}
+
+	m_iMoveRevision.store(s_iMoveRevision.fetch_add(1, std::memory_order_acq_rel) + 1,
+		std::memory_order_release);
 
     return 0;
+}
+
+void CEntity::StopMovement()
+{
+	m_eMoveState = eMOVESTATE::STOPPED;
+	m_stGoalPosition = m_stPosition;
+	m_stDirVector.Zero();
 }
 
 void CEntity::MoveComplete()
 {
     m_eMoveState = eMOVESTATE::STOPPED;
 
-    st_STC_MoveStop res;
+	st_STC_MoveStop res{};
     res.pos = m_stPosition;
     res.type = m_nEntityType;
     res.ret = 0;
@@ -167,7 +185,7 @@ void CEntity::MoveComplete()
 
 int CEntity::MoveStop(st_Vector3F pos)
 {
-    m_eMoveState = eMOVESTATE::STOPPED;
+	StopMovement();
 
     g_ZoneManager.PopZoneMoveVector(this);
 

@@ -19,16 +19,16 @@ void CTile::TileJobRun()
 		switch (job.type)
 		{
 		case ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_AOI:
-			NotifyEntityTileEnterAOI(pEntity);
+			NotifyEntityTileEnterAOI(pEntity, job.entityGeneration, job.moveRevision);
 			break;
 		case ETILE_JOB_TYPE::NOTIFY_TILE_REMOVE_AOI:
-			NotifyEntityTileLeaveAOI(job.pEntity);
+			NotifyEntityTileLeaveAOI(job.pEntity, job.entityGeneration);
 			break;
 		case ETILE_JOB_TYPE::NOTIFY_TILE_ENTER_OBJ:
-			NotifyEntityTileEnterObj(pEntity);
+			NotifyEntityTileEnterObj(pEntity, job.entityGeneration);
 			break;
 		case ETILE_JOB_TYPE::NOTIFY_TILE_REMOVE_OBJ:
-			NotifyEntityTileLeaveObj(pEntity);
+			NotifyEntityTileLeaveObj(pEntity, job.entityGeneration);
 			break;
 		case ETILE_JOB_TYPE::WRONG_ENTITY_REMOVE:
 			RemovePlayer(job.pEntity);
@@ -49,7 +49,7 @@ void CTile::TileBroadCast()
 	m_queueBroadCast.PopVector(m_vecBroadCastBuffer);
 	for (st_TileBroadCast& job : m_vecBroadCastBuffer)
 	{
-		Broadcast(&job.packet, job.pEntity);
+		Broadcast(&job.packet, job.pEntity, job.recipientGeneration);
 		if (job.pEntity != nullptr)
 			job.pEntity->ReleaseQueRef();
 	}
@@ -72,7 +72,9 @@ void CTile::EnqueueJob(int type, CEntity* pEntity)
 
 	// Tile 작업이 처리될 때까지 대상 Entity의 재사용을 Queue Ref로 차단한다.
 	pEntity->AddQueRef();
-	m_queue.Push({ type, pEntity});
+	m_queue.Push({ type, pEntity,
+		m_iEntityGeneration.load(std::memory_order_acquire),
+		CEntity::GetCurrentMoveRevision() });
 }
 
 void CTile::EnqueueBroadCast(CEntity* pEntity, CPacket* Packet)
@@ -83,7 +85,8 @@ void CTile::EnqueueBroadCast(CEntity* pEntity, CPacket* Packet)
 	// nullptr은 제외 대상이 없는 전체 Broadcast이므로 Entity Ref만 조건부로 획득한다.
 	if (pEntity != nullptr)
 		pEntity->AddQueRef();
-	m_queueBroadCast.Push({ pEntity, *Packet });
+	m_queueBroadCast.Push({ pEntity, *Packet,
+		m_iEntityGeneration.load(std::memory_order_acquire) });
 }
 
 bool CTile::AddPlayer(CEntity* pEntity)
@@ -91,6 +94,8 @@ bool CTile::AddPlayer(CEntity* pEntity)
 	bool ret = m_vecPlayer.AddEntity(pEntity);
 	if (ret)
 	{
+		uint64_t generation = m_iEntityGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
+		m_mapEntityGeneration[pEntity] = generation;
 		m_iActive.fetch_add(1);
 		pEntity->SetTilePos(m_Coord);
 		
@@ -111,6 +116,7 @@ bool CTile::RemovePlayer(CEntity* pEntity)
 	bool ret = m_vecPlayer.RemoveEntity(pEntity);
 	if (ret)
 	{
+		m_mapEntityGeneration.erase(pEntity);
 		m_iActive.fetch_sub(1);
 		
 		g_LogGame.DLog("Leave Tile[%d,%d] ActiveCount : %d", m_Coord.X, m_Coord.Z, m_iActive.load());
@@ -145,7 +151,13 @@ void CTile::Update()
 	TileBroadCast();
 }
 
-void CTile::NotifyEntityTileEnterAOI(CEntity* pEntity)
+bool CTile::IsVisibleAtGeneration(CEntity* pEntity, uint64_t generation) const
+{
+	auto iter = m_mapEntityGeneration.find(pEntity);
+	return iter != m_mapEntityGeneration.end() && iter->second <= generation;
+}
+
+void CTile::NotifyEntityTileEnterAOI(CEntity* pEntity, uint64_t entityGeneration, uint64_t moveRevision)
 {
 	const std::vector<CEntity*>& vec = m_vecPlayer.GetVector();
 	int Loop = static_cast<int>(vec.size());
@@ -160,13 +172,14 @@ void CTile::NotifyEntityTileEnterAOI(CEntity* pEntity)
 	
 	for (int i = 0; i < Loop; i++)
 	{
-		if (vec[i] == pEntity)
+		if (vec[i] == pEntity || !IsVisibleAtGeneration(vec[i], entityGeneration))
 			continue;
 		infos.info[index].ID = vec[i]->GetID();
 		infos.info[index].pos = vec[i]->GetPosition();
 		infos.info[index].speed = vec[i]->GetMoveSpeed();
 
-		if (vec[i]->GetMoveState() != eMOVESTATE::STOPPED)
+		if (vec[i]->GetMoveState() != eMOVESTATE::STOPPED &&
+			vec[i]->GetMoveRevision() <= moveRevision)
 		{
 			moves.move[movecount].ID = vec[i]->GetID();
 			moves.move[movecount].pos = vec[i]->GetPosition();
@@ -203,7 +216,7 @@ void CTile::NotifyEntityTileEnterAOI(CEntity* pEntity)
 	}
 }
 
-void CTile::NotifyEntityTileLeaveAOI(CEntity* pEntity)
+void CTile::NotifyEntityTileLeaveAOI(CEntity* pEntity, uint64_t entityGeneration)
 {
 	const std::vector<CEntity*>& vec = m_vecPlayer.GetVector();
 	int Loop = static_cast<int>(vec.size());
@@ -213,7 +226,7 @@ void CTile::NotifyEntityTileLeaveAOI(CEntity* pEntity)
 	int index = 0;
 	for (int i = 0; i < Loop; i++)
 	{
-		if (vec[i] == pEntity)
+		if (vec[i] == pEntity || !IsVisibleAtGeneration(vec[i], entityGeneration))
 			continue;
 		res.info[index].ID = vec[i]->GetID();
 		res.info[index].pos = vec[i]->GetPosition();
@@ -235,9 +248,9 @@ void CTile::NotifyEntityTileLeaveAOI(CEntity* pEntity)
 	}
 }
 
-void CTile::NotifyEntityTileEnterObj(CEntity* pEntity)
+void CTile::NotifyEntityTileEnterObj(CEntity* pEntity, uint64_t entityGeneration)
 {
-	st_STC_AoiInPlayer res;
+	st_STC_AoiInPlayer res{};
 	res.info.ID = pEntity->GetID();
 	res.info.pos = pEntity->GetPosition();
 	res.info.speed = pEntity->GetMoveSpeed();
@@ -245,21 +258,21 @@ void CTile::NotifyEntityTileEnterObj(CEntity* pEntity)
 	CPacket cPacket;
 	cPacket << res;
 
-	Broadcast(&cPacket, pEntity);
+	Broadcast(&cPacket, pEntity, entityGeneration);
 }
 
-void CTile::NotifyEntityTileLeaveObj(CEntity* pEntity)
+void CTile::NotifyEntityTileLeaveObj(CEntity* pEntity, uint64_t entityGeneration)
 {
-	st_STC_AoiOutPlayer res;
+	st_STC_AoiOutPlayer res{};
 	res.ID = pEntity->GetID();
 
 	CPacket cPacket;
 	cPacket << res;
 
-	Broadcast(&cPacket, pEntity);
+	Broadcast(&cPacket, pEntity, entityGeneration);
 }
 
-void CTile::Broadcast(CPacket* pPacket, CEntity* pEntity)
+void CTile::Broadcast(CPacket* pPacket, CEntity* pEntity, uint64_t recipientGeneration)
 {
 	const std::vector<CEntity*>& vec = m_vecPlayer.GetVector();
 	int Loop = static_cast<int>(vec.size());
@@ -269,7 +282,7 @@ void CTile::Broadcast(CPacket* pPacket, CEntity* pEntity)
 
 	for (int i = 0; i < Loop; i++)
 	{
-		if (vec[i] == pEntity)
+		if (vec[i] == pEntity || !IsVisibleAtGeneration(vec[i], recipientGeneration))
 			continue;
 		((CPlayer*)vec[i])->SendPacket(pPacket);
 	}

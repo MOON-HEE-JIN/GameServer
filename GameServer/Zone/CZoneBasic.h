@@ -37,6 +37,7 @@ public:
 
 	bool Enqueue(ZONE_CHANGE_JOB& job);
 	bool TryPush(CPlayer* pPlayer);
+	bool RollbackPush() { return SubCount(); }
 	bool TryEnterZone();
 
 	virtual void BoradCast(CPacket* pPacket, COORDINATE pivot, CPlayer* pPlayer = nullptr);

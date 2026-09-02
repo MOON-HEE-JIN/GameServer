@@ -103,18 +103,31 @@ std::string CLog::BuildMessage(const char* level, const char* format, va_list ar
 
 void CreateLogThread()
 {
-	s_hLogHandle = (HANDLE)_beginthreadex(NULL, 0, LogThread, 0, 0, NULL);
 	h_hExit = CreateEvent(NULL, TRUE, FALSE, NULL);
+	if (h_hExit == NULL)
+		return;
+	s_hLogHandle = (HANDLE)_beginthreadex(NULL, 0, LogThread, 0, 0, NULL);
 }
 
 void PostMessageLogThreadExit()
 {
-	SetEvent(h_hExit);
+	if (h_hExit != NULL)
+		SetEvent(h_hExit);
 }
 
 void WaitLogThread()
 {
-	WaitForSingleObject(s_hLogHandle, INFINITE);
+	if (s_hLogHandle != NULL)
+	{
+		WaitForSingleObject(s_hLogHandle, INFINITE);
+		CloseHandle(s_hLogHandle);
+		s_hLogHandle = NULL;
+	}
+	if (h_hExit != NULL)
+	{
+		CloseHandle(h_hExit);
+		h_hExit = NULL;
+	}
 }
 
 unsigned __stdcall LogThread(void* arg)

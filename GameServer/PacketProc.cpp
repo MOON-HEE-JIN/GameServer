@@ -12,10 +12,10 @@ int PacketProc::DO_GAME_LOOPBACK(CPlayer* pTarget, CPacket& pReqPacket)
     if (pTarget == nullptr)
         return ERROR_CODE::NOT_FIND_PID;
 
-    st_CTS_LoopBack data;
+    st_CTS_LoopBack data{};
     pReqPacket >> data;
     
-    st_STC_LoopBack pack;
+    st_STC_LoopBack pack{};
     pack.ret = 0;
     pack.data = data.data;
     
@@ -38,7 +38,7 @@ int PacketProc::DO_ERROR_RESULT(CPlayer* pTarget, int ret, int type)
     {
     case GAME::MOVESTART:
     {
-        st_STC_MoveStart e;
+        st_STC_MoveStart e{};
         e.ret = ret;
         e.pos = pTarget->GetPosition();
         pTarget->SendPacket(e);
@@ -46,12 +46,22 @@ int PacketProc::DO_ERROR_RESULT(CPlayer* pTarget, int ret, int type)
     }
     case GAME::MOVESTOP:
     {
-        st_STC_MoveStop e;
+        st_STC_MoveStop e{};
         e.ret = ret;
+		e.type = pTarget->GetType();
+		e.ID = pTarget->GetID();
         e.pos = pTarget->GetPosition();
         pTarget->SendPacket(e);
         break;
     }
+	case GAME::TELEPORT:
+	{
+		st_STC_Teleport e{};
+		e.ret = ret;
+		e.pos = pTarget->GetPosition();
+		pTarget->SendPacket(e);
+		break;
+	}
     default:
     {
         CPacket pack;
@@ -70,7 +80,7 @@ int PacketProc::DO_GAME_CHANGEZONE(CPlayer* pTarget, CPacket& pReqPacket)
     if (pTarget == nullptr)
         return ERROR_CODE::NOT_FIND_PID;
 
-    st_CTS_ChangeZone data;
+    st_CTS_ChangeZone data{};
     pReqPacket >> data;
     
     if (!g_ZoneManager.IsValidChannelZone(data.channel, data.zone))
@@ -80,7 +90,7 @@ int PacketProc::DO_GAME_CHANGEZONE(CPlayer* pTarget, CPacket& pReqPacket)
     if (!g_ZoneManager.IsValidZoneID(prevZoneID))
         return ERROR_CODE::NOT_FIND_PID;
 
-    if (prevZoneID == data.zone)
+    if (pTarget->GetChannel() == data.channel && prevZoneID == data.zone)
         return ERROR_CODE::EQUAL_PID;
 
     // 기존 직접 Enter -> 요청 Job 을 주는쪽으로 수정
@@ -96,8 +106,14 @@ int PacketProc::DO_GAME_CHANGEZONE(CPlayer* pTarget, CPacket& pReqPacket)
 
 int PacketProc::DO_GAME_MOVESTART(CPlayer* pTarget, CPacket& pReqPacket)
 {
-    st_CTS_MoveStart req;
+    st_CTS_MoveStart req{};
     pReqPacket >> req;
+
+	CZoneBase* pZone = g_ZoneManager.GetZone(pTarget->GetChannel(), pTarget->GetZoneID());
+	if (pZone == nullptr)
+		return ERROR_CODE::ZONE_ID;
+	if (pZone->GetWidth() > 0 && pZone->GetHeight() > 0 && !pZone->CheckPos(req.goal))
+		return ERROR_CODE::NOT_EQUAL_POSITION;
 
     float dist = pTarget->GetPosition().DistanceToNSquared(req.pos);
     if (dist > POSITION_TOLERANCE * POSITION_TOLERANCE)
@@ -122,12 +138,12 @@ int PacketProc::DO_GAME_MOVESTART(CPlayer* pTarget, CPacket& pReqPacket)
     //g_LogGame.DLog("Player[%d] MoveStart Goal[%.2f, %.2f, %.2f] Dir[%.2f, %.2f, %.2f]",
 		//pTarget->GetPlayerHandle(), req.goal.X, req.goal.Y, req.goal.Z, req.dir.X, req.dir.Y, req.dir.Z);
 
-    st_STC_MoveStart res;
+    st_STC_MoveStart res{};
     res.ret = 0;
     res.pos = pTarget->GetPosition();
     pTarget->SendPacket(res);
 
-    st_STC_OtherMoveStart othermove;
+    st_STC_OtherMoveStart othermove{};
     othermove.ID = pTarget->GetID();
     othermove.type = pTarget->GetType();
     othermove.dir = pTarget->GetDirVector();
@@ -139,7 +155,7 @@ int PacketProc::DO_GAME_MOVESTART(CPlayer* pTarget, CPacket& pReqPacket)
 
 int PacketProc::DO_GAME_MOVESTOP(CPlayer* pTarget, CPacket& pReqPacket)
 {
-    st_CTS_MoveStop req;
+    st_CTS_MoveStop req{};
     pReqPacket >> req;
     
 	float dist = pTarget->GetPosition().DistanceToNSquared(req.pos);
@@ -157,7 +173,7 @@ int PacketProc::DO_GAME_MOVESTOP(CPlayer* pTarget, CPacket& pReqPacket)
         return ret;
     }
 
-    st_STC_MoveStop res;
+    st_STC_MoveStop res{};
     res.ret = 0;
     res.type = pTarget->GetType();
     res.ID = pTarget->GetID();
@@ -176,23 +192,22 @@ int PacketProc::DO_OBSERVER_CONNET_OBSERVER(CPlayer* pTarget, CPacket& pReqPacke
 
 int PacketProc::DO_GAME_TELEPORT(CPlayer* pTarget, CPacket& pReqPacket)
 {
-    st_CTS_Teleport req;
+    st_CTS_Teleport req{};
     pReqPacket >> req;
 
     
     // 이후 에러코드 수정 해야함
     CZoneBase* pZone = g_ZoneManager.GetZone(pTarget->GetChannel(), pTarget->GetZoneID());
     if (pZone == nullptr)
-        return -1;
+		return ERROR_CODE::ZONE_ID;
     
     if (!pZone->CheckPos(req.pos))
-        return -1;
+		return ERROR_CODE::NOT_EQUAL_POSITION;
 
-    int ret = pTarget->Teleport(req.pos);
-    if (!ret)
-        return ret;
+	if (!pTarget->Teleport(req.pos))
+		return ERROR_CODE::NOT_EQUAL_POSITION;
 
     g_LogGame.DLog("TelePort");
-    return 0;
+    return ERROR_CODE::NOT_ERROR;
 }
 

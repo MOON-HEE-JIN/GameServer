@@ -207,10 +207,10 @@ void CSession::SendPost()
 				LOG_INFO("SEND_WSA_ERROR_%d\n", ret);
 			*/
 			InterlockedExchange((DWORD*)&bSendFlag, FALSE);
-			if (InterlockedDecrement((DWORD*)&IOCnt) == 0)
-			{
-				CloseSocket();
-			}
+			InterlockedDecrement((DWORD*)&IOCnt);
+			// 다른 완료 통지가 남아 있어도 즉시 종료 상태를 공개한다.
+			// 실제 Session 재사용은 IOCnt/RefCnt가 모두 0이 된 뒤 수행된다.
+			CloseSocket();
 		}
 		else
 		{
@@ -260,10 +260,9 @@ bool CSession::RecvPost()
 			{
 				//printf("-- Recv WSARecv Error %d ---\n", ret);
 			}
-			if (InterlockedDecrement(&IOCnt) == 0)
-			{
-				CloseSocket();
-			}
+			InterlockedDecrement(&IOCnt);
+			// 현재 완료 처리의 I/O 카운트가 남아 있어도 소켓은 즉시 닫아야 한다.
+			CloseSocket();
 			return false;
 		}
 	}

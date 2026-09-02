@@ -41,7 +41,7 @@ private:
 	CRITICAL_SECTION cs_SessionFree;
 
 	std::atomic<int> m_iConnectSessionCount;				// 현재 연결중인 세션
-
+	std::atomic<int> m_iDelayReleaseSessionCount;			// 지연 해제 세션
 	
 	std::atomic<int> m_iRecvOverlappedCount;
 	std::atomic<int> m_iSendOverlapeedCount;
@@ -79,6 +79,7 @@ protected:
 	int GetRecvOverlappedSize() { return m_iRecvOverlappedSize.load(); }
 	int GetSendOverlappedSize() { return m_iSendOverlappedSize.load(); }
 	int GetConnectionSessionCount() { return m_iConnectSessionCount.load(); }
+	int GetDelayReleaseSessionCount() { return m_iDelayReleaseSessionCount.load(); }
 
 	void ResetRecvOverlappedLog() { m_iRecvOverlappedCount.store(0); m_iRecvOverlappedSize.store(0); }
 	void ResetSendOverlappedLog() { m_iSendOverlapeedCount.store(0); m_iSendOverlappedSize.store(0); };

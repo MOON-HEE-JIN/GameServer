@@ -37,8 +37,8 @@ public:
 	int GetHeight() { return m_iHeight; }
 	bool GetMainWorld() { return m_bMainWorld; }
 
-	void AddCount() { m_iCount.fetch_add(1); }
-	void SubCount() { m_iCount.fetch_sub(1); }
+	bool TryAddCount();
+	bool SubCount();
 public:
 	bool CheckPos(st_Vector3F pos);
 };

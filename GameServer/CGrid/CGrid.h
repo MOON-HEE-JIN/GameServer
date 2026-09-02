@@ -16,6 +16,7 @@ struct st_GridJob
 	CEntity* pEntity;
 	int SourceGridID;
 	COORDINATE SourceTile;
+	st_Vector3F SourcePosition;
 };
 
 class CGrid
@@ -43,6 +44,7 @@ private:
 	CLQueue<st_GridJob> m_queueEntity;
 	std::deque<PROC_MSG> m_deferredReroutedProc;
 	std::deque<PROC_MSG> m_deferredProc;
+	std::deque<st_GridJob> m_deferredEntity;
 	
 	std::vector<CTile*> m_vecTiles;
 
@@ -59,10 +61,13 @@ private:
 
 	void OnSpawnGrid(CEntity* pEntity);
 	bool OnEnterGrid(CEntity* pEntity);
-	void OnLeaveGrid(CEntity* pEntity);
+	bool OnLeaveGrid(CEntity* pEntity, const COORDINATE& sourceTile);
 	bool OnTransferGrid(CEntity* pEntity);
 	void OnTransferRollback(CEntity* pEntity, const COORDINATE& sourceTile);
-	void PushEntityJob(int type, CEntity* pEntity, int sourceGridID, const COORDINATE& sourceTile);
+	void OnTeleportRollback(CEntity* pEntity, const COORDINATE& sourceTile,
+		const st_Vector3F& sourcePosition);
+	void PushEntityJob(int type, CEntity* pEntity, int sourceGridID,
+		const COORDINATE& sourceTile, const st_Vector3F& sourcePosition);
 
 	bool AddPlayer(CEntity* pEntity);
 	bool RemovePlayer(CEntity* pEntity);
@@ -75,11 +80,12 @@ public:
 	int GetID() const { return m_iID; }
 	void SetRunID(int value) { m_iRunID = value; };
 
-	void RemoveForTeleport(CEntity* pEntity) { OnLeaveGrid(pEntity); };
+	bool RemoveForTeleport(CEntity* pEntity) { return OnLeaveGrid(pEntity, pEntity->GetTilePos()); };
 
 	void EnqueueProcJob(PROC_MSG& msg);
 	void EnqueueEntityJob(int type, CEntity* pEntity, int sourceGridID = -1,
-		const COORDINATE& sourceTile = COORDINATE(-1, -1));
+		const COORDINATE& sourceTile = COORDINATE(-1, -1),
+		const st_Vector3F& sourcePosition = st_Vector3F{});
 
 	bool AddMoveVector(CEntity* pEntity);
 	void RemoveMoveVector(CEntity* pEntity);

@@ -260,10 +260,10 @@ void CNetServer::NetLog()
 	{
 		g_LogServer.ILog("================\n \
 			IO Count  Recv : %d[%d], Send : %d[%d]\n \
-			SessionCount : %d, PlayerCount : %d\n \
+			SessionCount : %d, PlayerCount : %d, DelayReleaseSessionCount : %d\n \
 			================"
 			, GetRecvOverlappedCount(), GetRecvOverlappedSize(), GetSendOverlappedCount(), GetSendOverlappedSize()
-			, GetConnectionSessionCount(), GetPlayerCount());
+			, GetConnectionSessionCount(), GetPlayerCount(), GetDelayReleaseSessionCount());
 		ResetRecvOverlappedLog();
 		ResetSendOverlappedLog();
 

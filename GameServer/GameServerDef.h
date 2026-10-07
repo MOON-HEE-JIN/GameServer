@@ -5,7 +5,7 @@
 class CPlayer;
 
 #define ProcLoginThreadCnt 1
-#define ProcMainThreadCnt 1
+#define ProcMainThreadCnt 2
 #define ProcSubThreadCnt 2
 #define ProcThreadCnt ProcLoginThreadCnt + ProcMainThreadCnt + ProcSubThreadCnt
 

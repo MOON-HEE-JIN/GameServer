@@ -118,6 +118,15 @@ void CMainWorld::OnEnterZone(CPlayer* pPlayer)
 	if (pPlayer == nullptr)
 		return;
 
+	st_Vector3F spawnPos = GetSpawnPos();
+	if (spawnPos == st_Vector3F{ 0, 0, 0 })
+	{
+		g_LogGame.ELog("ERROR SpawnPoint 0 0 0, Temp Pos 32 0 32");
+		spawnPos = st_Vector3F{ 32, 0, 32 };
+	}
+	pPlayer->StopMovement();
+	pPlayer->SetPosition(spawnPos);
+
 	CTile* pTile = GetTile(pPlayer->GetPosition());
 	if (pTile == nullptr)
 	{
@@ -135,8 +144,6 @@ void CMainWorld::OnEnterZone(CPlayer* pPlayer)
 	CGrid* pCGrid = GetGrid(GridID);
 	// 최초 TilePos는 Grid 등록 과정에서 확정되므로 위치로 계산한 Grid에 Spawn을 위임한다.
 	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_SPAWN, pPlayer);
-	
-	pCGrid->EnqueueEntityJob(EGRID_ADD_TYPE::ENTER_GRID, pPlayer);
 	
 	//g_LogGame.ILog("Enter %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
@@ -162,7 +169,8 @@ void CMainWorld::OnLeaveZone(CPlayer* pPlayer)
 	}
 
 	CGrid* pCGrid = GetGrid(GridID);
-	pCGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_LEAVE, pPlayer);
+	pCGrid->EnqueueEntityJob(
+		EGRID_MSG_TYPE::GRID_MSG_LEAVE, pPlayer, GridID, pPlayer->GetTilePos());
 
 	//g_LogGame.ILog("Leave %s World Channel : %d, ID : %d, Proc : %d ", m_strName.c_str(), GetChannel(), GetZoneID(), GetProcID());
 }
@@ -209,19 +217,23 @@ bool CMainWorld::Teleport(CPlayer* pPlayer, st_Vector3F pos)
 	CGrid* pNewGrid = GetGrid(pNewTile->GetManagementGrid());
 	if (pCurGrid == nullptr || pNewGrid == nullptr)
 		return false;
-	
 
-	// 순서를 위해서 먼저 삭제 후 이동
-	pCurGrid->RemoveForTeleport(pPlayer);
-	
+	int sourceGridID = pCurGrid->GetID();
+	COORDINATE sourceTile = pPlayer->GetTilePos();
+	st_Vector3F sourcePosition = pPlayer->GetPosition();
+	pPlayer->MoveStop(sourcePosition);
+	pPlayer->BeginGridTransfer(pNewGrid->GetID());
+
+	// 대상 Grid 등록 완료 전에는 성공 응답을 보내지 않는다.
+	if (!pCurGrid->RemoveForTeleport(pPlayer))
+	{
+		pPlayer->CompleteGridTransfer();
+		return false;
+	}
+
 	pPlayer->SetPosition(pos);
-
-	pNewGrid->EnqueueEntityJob(EGRID_MSG_TYPE::GRID_MSG_ENTER, pPlayer);
-
-	st_STC_Teleport res;
-	res.ret = 0;
-	res.pos = pos;
-	pPlayer->SendPacket(res);
+	pNewGrid->EnqueueEntityJob(
+		EGRID_MSG_TYPE::GRID_MSG_TELEPORT, pPlayer, sourceGridID, sourceTile, sourcePosition);
 
 	return true;
 }

@@ -5,6 +5,8 @@
 #include "../CUtill/CLockQueueh.h"
 #include "../CUtill/CPacket.h"
 #include <vector>
+#include <cstdint>
+#include <unordered_map>
 
 class CMainWorld;
 
@@ -12,18 +14,21 @@ struct st_TileJob
 {
 	int type;
 	CEntity* pEntity;
+	uint64_t entityGeneration;
+	uint64_t moveRevision;
 };
 
 struct st_TileBroadCast
 {
 	CEntity* pEntity;
 	CPacket packet;
+	uint64_t recipientGeneration;
 };
 
 class CTile
 {
 public:
-	CTile() : m_iActive(0), m_iManagementID(-1) {};
+	CTile() : m_iActive(0), m_iManagementID(-1), m_iEntityGeneration(0) {};
 	~CTile() {};
 
 private:
@@ -43,17 +48,20 @@ private:
 	std::vector<st_TileBroadCast> m_vecBroadCastBuffer;
 
 	CEntityVector m_vecPlayer;
+	std::atomic<uint64_t> m_iEntityGeneration;
+	std::unordered_map<CEntity*, uint64_t> m_mapEntityGeneration;
 
 private:
 	void TileJobRun();
 	void TileBroadCast();
+	bool IsVisibleAtGeneration(CEntity* pEntity, uint64_t generation) const;
 
-	void NotifyEntityTileEnterAOI(CEntity* pEntity);	// 나에게 타일 정보 생성 메시지
-	void NotifyEntityTileLeaveAOI(CEntity* pEntity);	// 나에게 타일 정보 삭제 메시지(필요한가 에 대해서 클라에서 따로 타일 관리를 하면 안되는 것인가? 생각 해보기)
-	void NotifyEntityTileEnterObj(CEntity* pEntity);	// 주위에 나 생성 메시지
-	void NotifyEntityTileLeaveObj(CEntity* pEntity);	// 주위에 나 삭제 메시지
+	void NotifyEntityTileEnterAOI(CEntity* pEntity, uint64_t entityGeneration, uint64_t moveRevision);	// 나에게 타일 정보 생성 메시지
+	void NotifyEntityTileLeaveAOI(CEntity* pEntity, uint64_t entityGeneration);	// 나에게 타일 정보 삭제 메시지(필요한가 에 대해서 클라에서 따로 타일 관리를 하면 안되는 것인가? 생각 해보기)
+	void NotifyEntityTileEnterObj(CEntity* pEntity, uint64_t entityGeneration);	// 주위에 나 생성 메시지
+	void NotifyEntityTileLeaveObj(CEntity* pEntity, uint64_t entityGeneration);	// 주위에 나 삭제 메시지
 
-	void Broadcast(CPacket* pPacket, CEntity* pEntity = nullptr);
+	void Broadcast(CPacket* pPacket, CEntity* pEntity, uint64_t recipientGeneration);
 
 public:
 	void Init(CMainWorld* parent, COORDINATE coord);

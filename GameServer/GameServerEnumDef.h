@@ -53,4 +53,7 @@ enum EGRID_MSG_TYPE
 	// Grid 소유권 변경은 대상 Grid 등록과 실패 시 원본 Grid 복구 작업으로 나눈다.
 	GRID_MSG_TRANSFER_IN,
 	GRID_MSG_TRANSFER_ROLLBACK,
+	// Teleport는 대상 Grid 등록이 끝난 뒤 응답하고, 실패 시 원본 Grid로 복구한다.
+	GRID_MSG_TELEPORT,
+	GRID_MSG_TELEPORT_ROLLBACK,
 };

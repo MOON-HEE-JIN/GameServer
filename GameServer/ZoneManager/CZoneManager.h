@@ -21,13 +21,13 @@ private:
 	std::unordered_map<int, st_IDX> m_mapZoneIDX;
 	std::vector<CZone*> m_vecTempZone;// BinFile 에서 Zone 정보를 읽어올 때 임시로 저장하는 벡터 이후 m_vecZone 대체
 	std::unordered_map<int, int> m_mapZoneIDtoIndex; // <ZoneID, m_vecZone Index>
-	int m_maxZoneCnt;
+	int m_maxZoneCnt = 0;
 	
 	std::unordered_map<int, std::vector<CZoneBasic*>> m_mapZones; // [ZoneID][Channel,CZone]
 private:
 	bool TryEnterZone(int Channel, int toZone);
-	void StartMainWorld();
 public :
+	void StartMainWorld();
 	void InsertZoneIDX(const st_IDX& idx) { m_mapZoneIDX[idx.ZoneId] = idx; }
 
 public:

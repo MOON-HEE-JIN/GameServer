@@ -3,6 +3,7 @@
 #include "GameServerDef.h"
 #include <vector>
 #include <atomic>
+#include <cstdint>
 
 class CEntity
 {
@@ -39,6 +40,8 @@ protected:
 	st_Vector3F m_stGoalPosition;
 	st_Vector3F m_stDirVector;
 	eMOVESTATE m_eMoveState;
+	std::atomic<uint64_t> m_iMoveRevision;
+	inline static std::atomic<uint64_t> s_iMoveRevision{ 0 };
 	//CZoneBase* m_pZone;
 protected:
 	void Reset();
@@ -74,11 +77,18 @@ public:
 	st_Vector3F GetDirVector() { return m_stDirVector; }
 	float GetMoveSpeed() { return m_fMoveSpeed; }
 	int GetMoveState() { return m_eMoveState; }
+	uint64_t GetMoveRevision() const { return m_iMoveRevision.load(std::memory_order_acquire); }
+	static uint64_t GetCurrentMoveRevision() { return s_iMoveRevision.load(std::memory_order_acquire); }
 	int GetType() { return m_nEntityType; }
 
 	void SetZoneID(int channel, int zone) { m_iChannel = channel;  m_OwnerZone.store(zone); };
 	void SetZoneStatus(eZONESTATUS type) { m_eZoneStatus = type; }
 	void SetGridID(int id) { m_iGridID.store(id, std::memory_order_release); }
+	void ClearGridID(int expectedID)
+	{
+		m_iGridID.compare_exchange_strong(expectedID, -1,
+			std::memory_order_acq_rel, std::memory_order_acquire);
+	}
 	void BeginGridTransfer(int destinationGridID)
 	{
 		m_iPendingGridID.store(destinationGridID, std::memory_order_release);
@@ -89,6 +99,7 @@ public:
 	}
 	void SetTilePos(COORDINATE& coord) { m_stTilePos = coord; }
 	void SetPosition(st_Vector3F pos) { m_stPosition = pos; }
+	void StopMovement();
 	int MoveStart(st_Vector3F goal, st_Vector3F dir);
 	void MoveComplete();
 	int MoveStop(st_Vector3F pos);

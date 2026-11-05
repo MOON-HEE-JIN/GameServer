@@ -182,6 +182,7 @@ unsigned __stdcall LogThread(void* arg)
 
 CLog g_LogTemp("temp.log", "TEMP");
 CLog g_LogServer("server.log", "SERVER");
+CLog g_LogChat("chat.log", "CHAT");
 CLog g_LogGame("game.log", "GAME");
 CLog g_LogThread("thread.log", "THREAD");
 CLog g_LogFile("file.log", "FILE");

@@ -71,7 +71,15 @@ private:
 	static unsigned __stdcall WorkerThread(void* arg);		// recv, send Thread
 	virtual int WorkerRun();
 	static unsigned __stdcall SessionFreeThread(void* arg);	// Session Free Thread
+
+	virtual int Initializer(int Port, int RunWorkerThreadCount) = 0;
+	
 	int SessionFreeRun();
+public:
+	virtual int Start() { StartServer(this); return 0; }
+	virtual int Wait() { WaitStopServer(); return 0; }
+	virtual int ShutDown() { ServerShutDown(); return 0; }
+
 protected:
 	HANDLE GetCICPHandle() { return CICP; };
 	int GetRecvOverlappedCount() { return m_iRecvOverlappedCount.load(); };

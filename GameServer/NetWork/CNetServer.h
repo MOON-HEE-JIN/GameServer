@@ -45,6 +45,9 @@ public:
 	void AddPlayerHandle(int handle);
 	void PlayerDisConnect(const SESSION_HANDLE& key);
 public:
+	std::string GetServerName() { return "GameServer001"; }
+	std::string GetServerIP() { return "127.0.0.1"; }
+
 	void NetLog();
 };
 

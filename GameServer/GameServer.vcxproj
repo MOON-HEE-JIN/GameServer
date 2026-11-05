@@ -188,6 +188,15 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\ThirdParty\Json;$(MSBuildProjectDirectory)\..\ThirdParty\curl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(MSBuildProjectDirectory)\..\ThirdParty\curl\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libcurl-msvc.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CEntity.cpp" />
     <ClCompile Include="CGrid\CGrid.cpp" />
@@ -198,6 +207,7 @@
     <ClCompile Include="CUtill\CPacket.cpp" />
     <ClCompile Include="CUtill\CRingBuffer.cpp" />
     <ClCompile Include="CUtill\CUtill.cpp" />
+    <ClCompile Include="Http\CHttpApiClient.cpp" />
     <ClCompile Include="Log\CLog.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainWorld\CMainWorld.cpp" />
@@ -236,6 +246,7 @@
     <ClInclude Include="CUtill\CUtill.h" />
     <ClInclude Include="GameServerDef.h" />
     <ClInclude Include="GameServerEnumDef.h" />
+    <ClInclude Include="Http\CHttpApiClient.h" />
     <ClInclude Include="Log\CLog.h" />
     <ClInclude Include="MainWorld\CMainWorld.h" />
     <ClInclude Include="MemoryManager\CHazardMemoryPool_FromGPT.h" />
@@ -269,4 +280,14 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <Target Name="GenerateCurlImportLibrary" BeforeTargets="Link"
+          Condition="'$(Platform)'=='x64'"
+          Inputs="$(MSBuildProjectDirectory)\..\ThirdParty\curl\bin\libcurl-x64.def;$(MSBuildProjectDirectory)\..\ThirdParty\curl\bin\libcurl-x64.dll"
+          Outputs="$(MSBuildProjectDirectory)\..\ThirdParty\curl\lib\libcurl-msvc.lib">
+    <Exec Command="&quot;$(VCToolsInstallDir)bin\Hostx64\x64\lib.exe&quot; /nologo /machine:x64 /name:libcurl-x64.dll /def:&quot;$(MSBuildProjectDirectory)\..\ThirdParty\curl\bin\libcurl-x64.def&quot; /out:&quot;$(MSBuildProjectDirectory)\..\ThirdParty\curl\lib\libcurl-msvc.lib&quot;" />
+  </Target>
+  <Target Name="CopyCurlRuntime" AfterTargets="Build" Condition="'$(Platform)'=='x64'">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\ThirdParty\curl\bin\libcurl-x64.dll"
+          DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

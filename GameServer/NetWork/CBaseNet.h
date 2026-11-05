@@ -64,7 +64,7 @@ public:
 
 	bool GetRun() { return m_bRun.load(); };
 	CSession* GetSession(const SESSION_HANDLE& key);
-
+	int GetPort() { return static_cast<int>(m_Port); };
 private:
 	static unsigned __stdcall AceeptThread(void* arg);		// accept() Thread
 	virtual int AcceptRun();

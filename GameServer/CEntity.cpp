@@ -1,9 +1,12 @@
 ﻿#include "CEntity.h"
 #include "ZoneManager/CZoneManager.h"
 #include "./CUtill/CUtill.h"
-#include "Stub/StructDef.h"
 #include "Log/CLog.h"
-#include "Stub/EnumDef.h"
+
+#include "Stub/GameClient.StructDef.g.h"
+#include "Stub/GameClient.EnumDef.g.h"
+
+using namespace Rpc::GameClient;
 
 CEntity::CEntity()
 {

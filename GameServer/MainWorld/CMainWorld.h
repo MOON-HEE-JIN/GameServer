@@ -13,7 +13,6 @@
 #include "../Zone/CZoneBasic.h"
 
 #define MAX_MAINWORLD_THREAD_COUNT 4
-#define MAX_MANAGENTMENT_GRID_COUNT 4
 #define DEFAULT_TILE_SIZE 64
 
 struct st_ThreadParam
@@ -39,6 +38,7 @@ private:
 
 	//CLockFreeQueue_MPSC<PROC_MSG> m_ProcJobQueue[MAX_MAINWORLD_THREAD_COUNT];
 private:
+	int m_GridCount[2] = { 4, 4 }; // X : 0, Y : 1 (월드 Z 축)
 	int m_iTileCountW;
 	int m_iTileCountH;
 	int m_iAllTileCount;
@@ -73,6 +73,6 @@ public:
 	CTile* GetTile(const COORDINATE& coord);
 	CGrid* GetGrid(int id);
 
-	bool IsValidGridID(int id) { return (id >= 0 && id < MAX_MANAGENTMENT_GRID_COUNT); }
+	bool IsValidGridID(int id) { return (id >= 0 && id < static_cast<int>(m_vecGrids.size())); }
 };
 

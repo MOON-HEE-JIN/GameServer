@@ -1,6 +1,25 @@
-#include "Serialization.h" 
-#include "PacketEnumDef.h"
+#include "GameClient.Serialization.g.h" 
+#include "GameClient.PacketEnumDef.g.h"
 #include <memory.h>
+
+namespace Rpc::GameClient
+{
+
+int Serialization (char* buffer, st_CTS_AuthCode& value)
+{
+	int hSize = 0;
+	st_Header header;
+	int iSize = sizeof(st_Header);
+	iSize += Serialization(buffer + iSize, value.ID);
+	iSize += Serialization(buffer + iSize, value.Password);
+	memcpy(buffer + iSize, &value.token, sizeof(value.token));
+	iSize += sizeof(value.token);
+
+	header.type = GAME::AUTHCODE;
+	header.size = iSize - sizeof(st_Header);
+	memcpy(buffer, &header, sizeof(st_Header));
+	return iSize;
+}
 
 int Serialization (char* buffer, st_CTS_ChangeZone& value)
 {
@@ -14,7 +33,7 @@ int Serialization (char* buffer, st_CTS_ChangeZone& value)
 
 	header.type = GAME::CHANGEZONE;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -28,7 +47,7 @@ int Serialization (char* buffer, st_CTS_LoopBack& value)
 
 	header.type = GAME::LOOPBACK;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -43,7 +62,7 @@ int Serialization (char* buffer, st_CTS_MoveStart& value)
 
 	header.type = GAME::MOVESTART;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -56,23 +75,7 @@ int Serialization (char* buffer, st_CTS_MoveStop& value)
 
 	header.type = GAME::MOVESTOP;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
-	return iSize;
-}
-
-int Serialization (char* buffer, st_CTS_ObserverConnect& value)
-{
-	int hSize = 0;
-	st_Header header;
-	int iSize = sizeof(st_Header);
-	memcpy(buffer + iSize, &value.ID, sizeof(value.ID));
-	iSize += sizeof(value.ID);
-	memcpy(buffer + iSize, &value.zone, sizeof(value.zone));
-	iSize += sizeof(value.zone);
-
-	header.type = OBSERVER::CONNET_OBSERVER;
-	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -85,7 +88,7 @@ int Serialization (char* buffer, st_CTS_Teleport& value)
 
 	header.type = GAME::TELEPORT;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -115,15 +118,6 @@ int Serialization (char* buffer, st_Header& value)
 	iSize += sizeof(value.type);
 	memcpy(buffer + iSize, &value.size, sizeof(value.size));
 	iSize += sizeof(value.size);
-	return iSize;
-}
-
-int Serialization (char* buffer, st_Msg& value)
-{
-	int iSize = 0;
-	memcpy(buffer + iSize, &value.type, sizeof(value.type));
-	iSize += sizeof(value.type);
-	iSize += Serialization(buffer + iSize, value.Message);
 	return iSize;
 }
 
@@ -157,7 +151,7 @@ int Serialization (char* buffer, st_STC_AoiInPlayer& value)
 
 	header.type = GAME::AOI_IN_PLAYER;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -175,7 +169,7 @@ int Serialization (char* buffer, st_STC_AoiInPlayerMoves& value)
 
 	header.type = GAME::AOI_IN_PLAYERS_MOVE;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -193,7 +187,7 @@ int Serialization (char* buffer, st_STC_AoiInPlayers& value)
 
 	header.type = GAME::AOI_IN_PLAYERS;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -207,7 +201,7 @@ int Serialization (char* buffer, st_STC_AoiOutPlayer& value)
 
 	header.type = GAME::AOI_OUT_PLAYER;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -225,7 +219,21 @@ int Serialization (char* buffer, st_STC_AoiOutPlayers& value)
 
 	header.type = GAME::AOI_OUT_PLAYERS;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
+	return iSize;
+}
+
+int Serialization (char* buffer, st_STC_AuthCode& value)
+{
+	int hSize = 0;
+	st_Header header;
+	int iSize = sizeof(st_Header);
+	memcpy(buffer + iSize, &value.ret, sizeof(value.ret));
+	iSize += sizeof(value.ret);
+
+	header.type = GAME::AUTHCODE;
+	header.size = iSize - sizeof(st_Header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -244,7 +252,7 @@ int Serialization (char* buffer, st_STC_ChangeZone& value)
 
 	header.type = GAME::CHANGEZONE;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -260,7 +268,7 @@ int Serialization (char* buffer, st_STC_ChangeingZone& value)
 
 	header.type = GAME::CHANGEINGZONE;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -273,7 +281,7 @@ int Serialization (char* buffer, st_STC_ConnectInfo& value)
 
 	header.type = GAME::CONNECTINFO;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -289,7 +297,7 @@ int Serialization (char* buffer, st_STC_LoopBack& value)
 
 	header.type = GAME::LOOPBACK;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -304,7 +312,7 @@ int Serialization (char* buffer, st_STC_MoveStart& value)
 
 	header.type = GAME::MOVESTART;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -323,21 +331,7 @@ int Serialization (char* buffer, st_STC_MoveStop& value)
 
 	header.type = GAME::MOVESTOP;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
-	return iSize;
-}
-
-int Serialization (char* buffer, st_STC_ObserverConnect& value)
-{
-	int hSize = 0;
-	st_Header header;
-	int iSize = sizeof(st_Header);
-	memcpy(buffer + iSize, &value.ret, sizeof(value.ret));
-	iSize += sizeof(value.ret);
-
-	header.type = OBSERVER::CONNET_OBSERVER;
-	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -355,7 +349,7 @@ int Serialization (char* buffer, st_STC_OtherMoveStart& value)
 
 	header.type = GAME::OTHERMOVESTART;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -370,7 +364,7 @@ int Serialization (char* buffer, st_STC_Teleport& value)
 
 	header.type = GAME::TELEPORT;
 	header.size = iSize - sizeof(st_Header);
-	Serialization(buffer, header);
+	memcpy(buffer, &header, sizeof(st_Header));
 	return iSize;
 }
 
@@ -393,6 +387,16 @@ int Serialization (char* buffer, st_Vector3F& value)
 	iSize += sizeof(value.Y);
 	memcpy(buffer + iSize, &value.Z, sizeof(value.Z));
 	iSize += sizeof(value.Z);
+	return iSize;
+}
+
+int UnSerialization (char* buffer, st_CTS_AuthCode& value)
+{
+	int iSize = 0;
+	iSize += UnSerialization(buffer + iSize, value.ID);
+	iSize += UnSerialization(buffer + iSize, value.Password);
+	memcpy(&value.token, buffer + iSize, sizeof(value.token));
+	iSize += sizeof(value.token);
 	return iSize;
 }
 
@@ -430,16 +434,6 @@ int UnSerialization (char* buffer, st_CTS_MoveStop& value)
 	return iSize;
 }
 
-int UnSerialization (char* buffer, st_CTS_ObserverConnect& value)
-{
-	int iSize = 0;
-	memcpy(&value.ID, buffer + iSize, sizeof(value.ID));
-	iSize += sizeof(value.ID);
-	memcpy(&value.zone, buffer + iSize, sizeof(value.zone));
-	iSize += sizeof(value.zone);
-	return iSize;
-}
-
 int UnSerialization (char* buffer, st_CTS_Teleport& value)
 {
 	int iSize = 0;
@@ -473,15 +467,6 @@ int UnSerialization (char* buffer, st_Header& value)
 	iSize += sizeof(value.type);
 	memcpy(&value.size, buffer + iSize, sizeof(value.size));
 	iSize += sizeof(value.size);
-	return iSize;
-}
-
-int UnSerialization (char* buffer, st_Msg& value)
-{
-	int iSize = 0;
-	memcpy(&value.type, buffer + iSize, sizeof(value.type));
-	iSize += sizeof(value.type);
-	iSize += UnSerialization(buffer + iSize, value.Message);
 	return iSize;
 }
 
@@ -557,6 +542,14 @@ int UnSerialization (char* buffer, st_STC_AoiOutPlayers& value)
 	return iSize;
 }
 
+int UnSerialization (char* buffer, st_STC_AuthCode& value)
+{
+	int iSize = 0;
+	memcpy(&value.ret, buffer + iSize, sizeof(value.ret));
+	iSize += sizeof(value.ret);
+	return iSize;
+}
+
 int UnSerialization (char* buffer, st_STC_ChangeZone& value)
 {
 	int iSize = 0;
@@ -619,14 +612,6 @@ int UnSerialization (char* buffer, st_STC_MoveStop& value)
 	return iSize;
 }
 
-int UnSerialization (char* buffer, st_STC_ObserverConnect& value)
-{
-	int iSize = 0;
-	memcpy(&value.ret, buffer + iSize, sizeof(value.ret));
-	iSize += sizeof(value.ret);
-	return iSize;
-}
-
 int UnSerialization (char* buffer, st_STC_OtherMoveStart& value)
 {
 	int iSize = 0;
@@ -670,3 +655,5 @@ int UnSerialization (char* buffer, st_Vector3F& value)
 	return iSize;
 }
 
+
+} // namespace Rpc::GameClient

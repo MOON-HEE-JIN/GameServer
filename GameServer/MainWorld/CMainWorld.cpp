@@ -1,28 +1,11 @@
 ﻿#include "CMainWorld.h"
 
 #include "../NetWork/CNetServer.h"
-#include "../Stub/EnumDef.h"
 #include "../Log/CLog.h"
 #include "../CUtill/CUtill.h"
-// 
-	// MainWorld 당 MAX_MAINWORLD_THREAD_COUNT == 4 Thread 담당
-	// MainWorld 를 MAX_MAINWORLD_THREAD_COUNT * MAX_MAINWORLD_THREAD_COUNT 로 나눈다
-	// 
-	// Grid 는 총 4 * 4 == 16
-	// Thread 는 Grid[h] 를 담당 총 4개의 Grid 에 Update 담당
-	// 
-	// 다시 Grid 는 임시(4 * 4) 만큼의 Tile 을 보유
-	// 1:MainWolrd(1024, 1024) -> 16:Grid(256, 256) -> 16:Tile(64, 64)
-	//
-	// 
-	// 다른 방법 생각
-	// MainWorld 를 Grid 로 나누는것이 아닌 Tile 로 나눈다
-	// 그후 Grid 에 관리 Tile 을 넣어 준다
-	// 기존 에는 MainWorld -> Grid -> Tile 을 나눴지만
-	// MainWorld->Tile , Grid 에 Tile 등록 으로 바꾼다면?
-	// 기존 방식은 이동식 tile 이동 에 있어 계산을 할려면 Grid 를 먼저 계산해야한다
-	// 그렇다면 아예 최소단위는 통으로 가지고 있고 관리를 Grid 로 한다면??
-	//
+
+// MainWorld(1024, 1024)를 X/Y 방향 4 * 4 Grid로 나눈다.
+// 각 Grid(256, 256)는 4 * 4 Tile(64, 64)을 관리한다.
 
 CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
 	:CZoneBasic(channel, zoneid, procid, maxnum)
@@ -41,8 +24,9 @@ CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
 	m_iAllTileCount = m_iTileCountH * m_iTileCountW;
 
 	// Tile 을 관리할 Grid
-	m_vecGrids.resize(MAX_MANAGENTMENT_GRID_COUNT);
-	for (int i = 0; i < MAX_MANAGENTMENT_GRID_COUNT; i++)
+	const int gridCount = m_GridCount[0] * m_GridCount[1];
+	m_vecGrids.resize(gridCount);
+	for (int i = 0; i < gridCount; i++)
 	{
 		m_vecGrids[i] = std::make_unique<CGrid>();
 		m_vecGrids[i]->Init(i, this);
@@ -59,21 +43,13 @@ CMainWorld::CMainWorld(int channel, int zoneid, int procid, int maxnum)
 			m_vecTiles[tileID] = std::make_unique<CTile>();
 			m_vecTiles[tileID]->Init(this, { W,H });
 
-			// 인접한 Z Tile을 연속 Grid 대역에 배치해 Thread 간 Grid 전환 횟수를 줄인다.
-			int GridID = (H * MAX_MANAGENTMENT_GRID_COUNT) / m_iTileCountH;
+			// Tile의 X/Y 위치로 관리 Grid를 구하고 행 우선 ID로 변환한다.
+			const int gridX = (W * m_GridCount[0]) / m_iTileCountW;
+			const int gridY = (H * m_GridCount[1]) / m_iTileCountH;
+			const int GridID = gridY * m_GridCount[0] + gridX;
 			m_vecGrids[GridID]->OnRegisterTile(m_vecTiles[tileID].get());
 		}
 	}
-
-	// 일정 크기로 Grid 에 tile 을 등록해주는 방식이라면
-	// 그러면 Grid 의 bounds 0 ~ 512  512 ~ 1024 이렇게 2 * 2 로 나누고
-	// Grid bounds 에 해당하는 tile 을 넣어준다면
-	// 지금 방식은 어느 타일이든 Grid 에 들어갈수 있고 Grid 에서 관리하는 Tile 의 규칙이 없다면
-	// 서로 다른 Grid 사이에서의 이동이 많이 일어날까  범위를 맞춘 Grid 하고 차이가 날까
-	// 범위 에 맞게 tile 이 설정된 Grid vs 임의 tile 을 가지고 있는 Grid
-	// 어느 쪽이 서로 다른 Thread 사이의 이동이 많이 일어나는가? --> 맵의 구성요소 에 따라 달라지지 않나?
-	// 일단 진행
-	//
 
 	m_vecThreadRunGrids.resize(MAX_MAINWORLD_THREAD_COUNT);
 
@@ -338,7 +314,7 @@ void CMainWorld::Start()
 	m_bActive = true;
 
 	int runid = 0;
-	for (int i = 0; i < MAX_MANAGENTMENT_GRID_COUNT; i++)
+	for (int i = 0; i < static_cast<int>(m_vecGrids.size()); i++)
 	{
 		m_vecGrids[i]->SetRunID(runid);
 		m_vecThreadRunGrids[runid++].push_back(m_vecGrids[i].get());
@@ -380,7 +356,7 @@ CTile* CMainWorld::GetTile(const COORDINATE& coord)
 
 CGrid* CMainWorld::GetGrid(int id)
 {
-	if(id < 0 || id >= MAX_MANAGENTMENT_GRID_COUNT)
+	if (!IsValidGridID(id))
 		return nullptr;
 
 	return m_vecGrids[id].get();

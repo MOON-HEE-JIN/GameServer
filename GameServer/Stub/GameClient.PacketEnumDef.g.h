@@ -1,9 +1,13 @@
 #pragma once
 
+namespace Rpc::GameClient
+{
+
 namespace GAME 
  {
 	enum GAME
 	{
+		AUTHCODE,					//login서버 에서 받은 코드값 전달
 		LOOPBACK,					//0
 		CONNECTINFO,					//1
 		CHANGEZONE,					//2
@@ -28,3 +32,4 @@ namespace OBSERVER
 	};
 };
 
+} // namespace Rpc::GameClient

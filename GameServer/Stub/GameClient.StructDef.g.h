@@ -2,6 +2,10 @@
 
 #include <string>
 #include "ProjectDefineStruct.h"
+
+namespace Rpc::GameClient
+{
+
 struct st_EntityInfo
 {
 	__int32		type;
@@ -17,11 +21,6 @@ struct st_String
 	__int16		length;
 	std::string		comment;
 };
-struct st_Msg
-{
-	__int32		type;
-	st_String		Message;
-};
 struct st_PlayerInfo
 {
 	__int32		ID;
@@ -33,6 +32,12 @@ struct st_PlayerOtherMove
 	__int32		ID;
 	st_Vector3F		pos;
 	st_Vector3F		dir;
+};
+struct st_CTS_AuthCode
+{
+	st_String		ID;
+	st_String		Password;
+	__int64		token;
 };
 struct st_CTS_ChangeZone
 {
@@ -52,11 +57,6 @@ struct st_CTS_MoveStart
 struct st_CTS_MoveStop
 {
 	st_Vector3F		pos;
-};
-struct st_CTS_ObserverConnect
-{
-	__int32		ID;
-	__int32		zone;
 };
 struct st_CTS_Teleport
 {
@@ -84,6 +84,10 @@ struct st_STC_AoiOutPlayers
 {
 	__int32		Loop1;
 	st_PlayerInfo		info[50];
+};
+struct st_STC_AuthCode
+{
+	__int32		ret;
 };
 struct st_STC_ChangeZone
 {
@@ -118,10 +122,6 @@ struct st_STC_MoveStop
 	__int32		ID;
 	st_Vector3F		pos;
 };
-struct st_STC_ObserverConnect
-{
-	__int32		ret;
-};
 struct st_STC_OtherMoveStart
 {
 	__int32		type;
@@ -134,3 +134,5 @@ struct st_STC_Teleport
 	__int32		ret;
 	st_Vector3F		pos;
 };
+
+} // namespace Rpc::GameClient

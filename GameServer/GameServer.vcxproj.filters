@@ -43,6 +43,12 @@
     <Filter Include="소스 파일\Grid">
       <UniqueIdentifier>{2742c28e-bd6c-4de1-838d-cebe610def9f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="소스 파일\Stub\Chat">
+      <UniqueIdentifier>{8cb86ca3-51c9-4064-bfa8-4849a8e96798}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일\Stub\Game">
+      <UniqueIdentifier>{2f9aa5de-5fe0-4861-93dd-80274ac884ae}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -53,12 +59,6 @@
     </ClCompile>
     <ClCompile Include="CUtill\CPacket.cpp">
       <Filter>소스 파일\CUtill</Filter>
-    </ClCompile>
-    <ClCompile Include="Stub\Serialization.cpp">
-      <Filter>소스 파일\Stub</Filter>
-    </ClCompile>
-    <ClCompile Include="Stub\SERVER_STUB.cpp">
-      <Filter>소스 파일\Stub</Filter>
     </ClCompile>
     <ClCompile Include="NetWork\CNetServer.cpp">
       <Filter>소스 파일\NetWork</Filter>
@@ -105,9 +105,6 @@
     <ClCompile Include="NetWork\CBaseNet.cpp">
       <Filter>소스 파일\NetWork</Filter>
     </ClCompile>
-    <ClCompile Include="Observer\CObserverNet.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="Zone\CZone.cpp">
       <Filter>소스 파일\Zone</Filter>
     </ClCompile>
@@ -132,6 +129,27 @@
     <ClCompile Include="Zone\CZoneBasic.cpp">
       <Filter>소스 파일\Zone</Filter>
     </ClCompile>
+    <ClCompile Include="Http\CHttpApiClient.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="NetWork\CNetChatServer.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="PacketChatProc.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Stub\ChatGame.ChatServerToGameServerStub.g.cpp">
+      <Filter>소스 파일\Stub\Chat</Filter>
+    </ClCompile>
+    <ClCompile Include="Stub\ChatGame.Serialization.g.cpp">
+      <Filter>소스 파일\Stub\Chat</Filter>
+    </ClCompile>
+    <ClCompile Include="Stub\GameClient.ClientToGameServerStub.g.cpp">
+      <Filter>소스 파일\Stub\Game</Filter>
+    </ClCompile>
+    <ClCompile Include="Stub\GameClient.Serialization.g.cpp">
+      <Filter>소스 파일\Stub\Game</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PacketProc.h">
@@ -139,21 +157,6 @@
     </ClInclude>
     <ClInclude Include="CUtill\CPacket.h">
       <Filter>소스 파일\CUtill</Filter>
-    </ClInclude>
-    <ClInclude Include="Stub\EnumDef.h">
-      <Filter>소스 파일\Stub</Filter>
-    </ClInclude>
-    <ClInclude Include="Stub\PacketEnumDef.h">
-      <Filter>소스 파일\Stub</Filter>
-    </ClInclude>
-    <ClInclude Include="Stub\Serialization.h">
-      <Filter>소스 파일\Stub</Filter>
-    </ClInclude>
-    <ClInclude Include="Stub\SERVER_STUB.h">
-      <Filter>소스 파일\Stub</Filter>
-    </ClInclude>
-    <ClInclude Include="Stub\StructDef.h">
-      <Filter>소스 파일\Stub</Filter>
     </ClInclude>
     <ClInclude Include="NetWork\CNetServer.h">
       <Filter>소스 파일\NetWork</Filter>
@@ -224,9 +227,6 @@
     <ClInclude Include="NetWork\CBaseNet.h">
       <Filter>소스 파일\NetWork</Filter>
     </ClInclude>
-    <ClInclude Include="Observer\CObserverNet.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
     <ClInclude Include="Observer\ProjectDefineStruct.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
@@ -268,6 +268,45 @@
     </ClInclude>
     <ClInclude Include="Zone\CZoneBasic.h">
       <Filter>소스 파일\Zone</Filter>
+    </ClInclude>
+    <ClInclude Include="Http\CHttpApiClient.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="NetWork\CNetChatServer.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="PacketChatProc.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub\ChatGame.ChatServerToGameServerStub.g.h">
+      <Filter>소스 파일\Stub\Chat</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub\ChatGame.EnumDef.g.h">
+      <Filter>소스 파일\Stub\Chat</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub\ChatGame.PacketEnumDef.g.h">
+      <Filter>소스 파일\Stub\Chat</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub\ChatGame.Serialization.g.h">
+      <Filter>소스 파일\Stub\Chat</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub\ChatGame.StructDef.g.h">
+      <Filter>소스 파일\Stub\Chat</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub\GameClient.ClientToGameServerStub.g.h">
+      <Filter>소스 파일\Stub\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub\GameClient.EnumDef.g.h">
+      <Filter>소스 파일\Stub\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub\GameClient.PacketEnumDef.g.h">
+      <Filter>소스 파일\Stub\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub\GameClient.Serialization.g.h">
+      <Filter>소스 파일\Stub\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub\GameClient.StructDef.g.h">
+      <Filter>소스 파일\Stub\Game</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

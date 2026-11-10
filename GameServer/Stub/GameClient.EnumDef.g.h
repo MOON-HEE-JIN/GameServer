@@ -1,5 +1,8 @@
 #pragma once
 
+namespace Rpc::GameClient
+{
+
 namespace ERROR_CODE 
  {
 	enum ERROR_CODE
@@ -14,3 +17,4 @@ namespace ERROR_CODE
 	};
 };
 
+} // namespace Rpc::GameClient

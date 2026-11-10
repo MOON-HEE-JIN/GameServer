@@ -7,7 +7,7 @@
 #include <Windows.h>
 #include <process.h>
 #include "CUtill/CUtill.h"
-#include "Stub/EnumDef.h"
+#include "Stub/GameClient.EnumDef.g.h"
 
 static std::vector<HANDLE> s_ProcWorkerThreadHandles;
 static std::vector<int> s_ProcWorkerThreadIDs;

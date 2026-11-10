@@ -1,5 +1,6 @@
 ﻿#pragma once
-#include "../Stub/Serialization.h"
+#include "../Stub/GameClient.Serialization.g.h"
+#include "../Stub/ChatGame.Serialization.g.h"
 
 class CPacket
 {

@@ -1,8 +1,7 @@
 ﻿#include "CSession.h"
 #include <WS2tcpip.h>
-#include "../Stub/StructDef.h"
 #include "../Log/CLog.h"
-#include "../ZoneManager/CZoneManager.h"
+
 CSession::CSession()
 {
 	sock = INVALID_SOCKET;
@@ -42,11 +41,6 @@ CSession::~CSession()
 
 bool CSession::SetProcID(int ProcID)
 {
-	/*
-	if (!g_ZoneManager.IsValidZoneID(zoneID))
-		return false;
-	*/
-
 	m_ProcId.store(ProcID);
 	
 	return true;

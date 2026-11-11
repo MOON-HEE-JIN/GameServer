@@ -15,6 +15,7 @@ class CPlayer;
 #define FIXED_DELTA 0.01667f		// fps 60
 #define MAX_FRAME_LOOP_COUNT 6
 
+#define __CONNECT_LOGIN_DOCKER__ 1
 
 typedef struct st_Log
 {

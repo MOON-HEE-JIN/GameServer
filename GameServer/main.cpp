@@ -6,7 +6,17 @@
 #include "./Http/CHttpApiClient.h"
 #include <cstdio>
 
+#ifdef __DEBUG__
+
+#if __CONNECT_LOGIN_DOCKER__
+CApiClient g_HttpClient("https://localhost:15080");
+#else
 CApiClient g_HttpClient("http://localhost:5080");
+#endif // __CONNECT_LOGIN_DOCKER__
+
+#else
+CApiClient g_HttpClient("https://localhost:15080");
+#endif
 
 int main()
 {

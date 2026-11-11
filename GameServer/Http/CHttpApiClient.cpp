@@ -87,6 +87,14 @@ void CApiClient::HttpSend(const std::string _url, const std::string _jsonString,
 	const std::string jsonString = _jsonString;
 
     curl_easy_setopt(curl.get(), CURLOPT_URL, url.c_str());
+#ifdef __DEBUG__
+#if __CONNECT_LOGIN_DOCKER__
+    curl_easy_setopt(curl.get(), CURLOPT_CAINFO, R"(F:\certs\loginserver.crt)");
+#endif // __CONNECT_LOGIN_DOCKER__
+#else
+    // Release 빌드 는 추후에 설정 일단 도커와 동일
+    curl_easy_setopt(curl.get(), CURLOPT_CAINFO, R"(F:\certs\loginserver.crt)");
+#endif
     curl_easy_setopt(curl.get(), CURLOPT_POST, 1L);
     curl_easy_setopt(curl.get(), CURLOPT_HTTPHEADER, headers.get());
     curl_easy_setopt(curl.get(), CURLOPT_POSTFIELDS, jsonString.c_str());

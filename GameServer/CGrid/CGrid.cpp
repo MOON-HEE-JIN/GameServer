@@ -2,12 +2,12 @@
 
 #include "../PacketProc.h"
 #include "../NetWork/CNetServer.h"
-#include "../Stub/StructDef.h"
-#include "../Stub/EnumDef.h"
 #include "../CPlayer.h"
 #include "../Log/CLog.h"
 #include "../MainWorld/CMainWorld.h"
 
+#include "../Stub/GameClient.StructDef.g.h"
+#include "../Stub/GameClient.EnumDef.g.h"
 static PacketProc proc;
 
 CGrid::CGrid()

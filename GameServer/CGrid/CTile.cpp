@@ -5,6 +5,8 @@
 #include "../CPlayer.h"
 #include "../MainWorld/CMainWorld.h"
 
+using namespace Rpc::GameClient;
+
 void CTile::TileJobRun()
 {
 	// 매 Tick마다 vector를 다시 할당하지 않도록 Tile 전용 작업 버퍼를 재사용한다.

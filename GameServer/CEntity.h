@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Stub/StructDef.h"
+#include "Stub/GameClient.StructDef.g.h"
 #include "GameServerDef.h"
 #include <vector>
 #include <atomic>

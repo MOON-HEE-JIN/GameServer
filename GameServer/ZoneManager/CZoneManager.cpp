@@ -3,14 +3,17 @@
 #include "../GameServerDef.h"
 #include "../Log/CLog.h"
 #include "../Zone/CZone_Login.h"
-#include "../Stub/PacketEnumDef.h"
-#include "../Stub/EnumDef.h"
 
 #include <sstream>
 
 #include "../Zone/CBinZoneIdx.h"
 #include "../Zone/CBinZone.h"
 #include "../NetWork/CNetServer.h"
+
+#include "../Stub/GameClient.StructDef.g.h"
+#include "../Stub/GameClient.EnumDef.g.h"
+
+using namespace Rpc::GameClient;
 
 CZoneManager g_ZoneManager;
 

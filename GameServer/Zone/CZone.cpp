@@ -1,8 +1,6 @@
 ﻿#include "CZone.h"
 #include "../NetWork/CNetServer.h"
 #include "../ZoneManager/CZoneManager.h"
-#include "../Stub/EnumDef.h"
-#include "../Stub/PacketEnumDef.h"
 
 CZone::CZone(int channel, int ZoneID, int ProcID, int Maximum)
 	: CZoneBasic(channel, ZoneID, ProcID, Maximum)

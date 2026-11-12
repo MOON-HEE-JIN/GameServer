@@ -1,9 +1,9 @@
 ﻿#include "CZoneBase.h"
 
 #include "../NetWork/CNetServer.h"
-#include "../Stub/EnumDef.h"
 #include "../ZoneManager/CZoneManager.h"
 #include "../Log/CLog.h"
+#include "../Stub/GameClient.EnumDef.g.h"
 
 CZoneBase::CZoneBase(int channel, int ZoneID, int ProcID, int Maximum)
 	: m_iChannel(channel), m_iZoneID(ZoneID), m_iProcID(ProcID),

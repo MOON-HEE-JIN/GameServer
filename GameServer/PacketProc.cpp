@@ -1,11 +1,12 @@
 ﻿#include "PacketProc.h"
-#include "Stub/PacketEnumDef.h"
 #include "NetWork/CNetServer.h"
 #include "GameServerDef.h"
-#include "Stub/EnumDef.h"
 #include "Log/CLog.h"
 #include "ZoneManager/CZoneManager.h"
 #include "CUtill/CUtill.h"
+
+#include "Stub/GameClient.EnumDef.g.h"
+#include "Stub/GameClient.StructDef.g.h"
 
 int PacketProc::DO_GAME_LOOPBACK(CPlayer* pTarget, CPacket& pReqPacket)
 {
@@ -185,11 +186,6 @@ int PacketProc::DO_GAME_MOVESTOP(CPlayer* pTarget, CPacket& pReqPacket)
     return 0;
 }
 
-int PacketProc::DO_OBSERVER_CONNET_OBSERVER(CPlayer* pTarget, CPacket& pReqPacket)
-{
-    return 0;
-}
-
 int PacketProc::DO_GAME_TELEPORT(CPlayer* pTarget, CPacket& pReqPacket)
 {
     st_CTS_Teleport req{};
@@ -208,6 +204,20 @@ int PacketProc::DO_GAME_TELEPORT(CPlayer* pTarget, CPacket& pReqPacket)
 		return ERROR_CODE::NOT_EQUAL_POSITION;
 
     g_LogGame.DLog("TelePort");
+    return ERROR_CODE::NOT_ERROR;
+}
+
+int PacketProc::DO_GAME_AUTHCODE(CPlayer* pTarget, CPacket& pReqPacket)
+{
+	st_CTS_AuthCode req{};
+	pReqPacket >> req;
+
+    req.token;
+    req.ID;
+    req.Password;
+
+	g_LogGame.DLog("AuthCode Token : %lld, ID : %s, Password : %s", req.token, req.ID.comment.c_str(), req.Password.comment.c_str());
+    
     return ERROR_CODE::NOT_ERROR;
 }
 

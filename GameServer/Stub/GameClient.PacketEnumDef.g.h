@@ -1,0 +1,35 @@
+#pragma once
+
+namespace Rpc::GameClient
+{
+
+namespace GAME 
+ {
+	enum GAME
+	{
+		AUTHCODE,					//login서버 에서 받은 코드값 전달
+		LOOPBACK,					//0
+		CONNECTINFO,					//1
+		CHANGEZONE,					//2
+		AOI_IN_PLAYER,					//AOI 안에 들어온 Player
+		AOI_IN_PLAYERS,					//AOI 안에 들어온 Players 여러 개
+		AOI_OUT_PLAYER,					//AOI 밖으로 나간 Player
+		AOI_OUT_PLAYERS,					//AOI 밖으로 나간 Players 여러 개
+		MOVESTART,					//7
+		MOVESTOP,					//8
+		CHANGEINGZONE,					//9
+		TELEPORT,					//10
+		OTHERMOVESTART,					//다른 객체 움직임 시작
+		AOI_IN_PLAYERS_MOVE,					//AOI 안에 들어온 Player Move 패킷
+	};
+};
+
+namespace OBSERVER 
+ {
+	enum OBSERVER
+	{
+		CONNET_OBSERVER = 1000001,			//100001
+	};
+};
+
+} // namespace Rpc::GameClient

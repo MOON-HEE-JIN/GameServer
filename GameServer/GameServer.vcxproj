@@ -188,6 +188,15 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Platform)'=='x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\ThirdParty\Json;$(MSBuildProjectDirectory)\..\ThirdParty\curl\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(MSBuildProjectDirectory)\..\ThirdParty\curl\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libcurl-msvc.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CEntity.cpp" />
     <ClCompile Include="CGrid\CGrid.cpp" />
@@ -198,19 +207,23 @@
     <ClCompile Include="CUtill\CPacket.cpp" />
     <ClCompile Include="CUtill\CRingBuffer.cpp" />
     <ClCompile Include="CUtill\CUtill.cpp" />
+    <ClCompile Include="Http\CHttpApiClient.cpp" />
     <ClCompile Include="Log\CLog.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainWorld\CMainWorld.cpp" />
     <ClCompile Include="MemoryManager\MemoryManager.cpp" />
     <ClCompile Include="NetWork\CBaseNet.cpp" />
     <ClCompile Include="NetWork\CGMSession.cpp" />
+    <ClCompile Include="NetWork\CNetChatServer.cpp" />
     <ClCompile Include="NetWork\CNetServer.cpp" />
     <ClCompile Include="NetWork\CSession.cpp" />
-    <ClCompile Include="Observer\CObserverNet.cpp" />
+    <ClCompile Include="PacketChatProc.cpp" />
     <ClCompile Include="PacketProc.cpp" />
     <ClCompile Include="ProcWorkerThread.cpp" />
-    <ClCompile Include="Stub\Serialization.cpp" />
-    <ClCompile Include="Stub\SERVER_STUB.cpp" />
+    <ClCompile Include="Stub\ChatGame.ChatServerToGameServerStub.g.cpp" />
+    <ClCompile Include="Stub\ChatGame.Serialization.g.cpp" />
+    <ClCompile Include="Stub\GameClient.ClientToGameServerStub.g.cpp" />
+    <ClCompile Include="Stub\GameClient.Serialization.g.cpp" />
     <ClCompile Include="ZoneManager\CZoneManager.cpp" />
     <ClCompile Include="Zone\CBinZone.cpp" />
     <ClCompile Include="Zone\CBinZoneIdx.cpp" />
@@ -236,6 +249,7 @@
     <ClInclude Include="CUtill\CUtill.h" />
     <ClInclude Include="GameServerDef.h" />
     <ClInclude Include="GameServerEnumDef.h" />
+    <ClInclude Include="Http\CHttpApiClient.h" />
     <ClInclude Include="Log\CLog.h" />
     <ClInclude Include="MainWorld\CMainWorld.h" />
     <ClInclude Include="MemoryManager\CHazardMemoryPool_FromGPT.h" />
@@ -244,19 +258,25 @@
     <ClInclude Include="MemoryManager\MemoryManager.h" />
     <ClInclude Include="NetWork\CBaseNet.h" />
     <ClInclude Include="NetWork\CGMSession.h" />
+    <ClInclude Include="NetWork\CNetChatServer.h" />
     <ClInclude Include="NetWork\CNetServer.h" />
     <ClInclude Include="NetWork\CSession.h" />
     <ClInclude Include="NetWork\NetWorkDefine.h" />
-    <ClInclude Include="Observer\CObserverNet.h" />
     <ClInclude Include="Observer\ProjectDefineStruct.h" />
+    <ClInclude Include="PacketChatProc.h" />
     <ClInclude Include="PacketProc.h" />
     <ClInclude Include="ProcWorkerThread.h" />
-    <ClInclude Include="Stub\EnumDef.h" />
-    <ClInclude Include="Stub\PacketEnumDef.h" />
+    <ClInclude Include="Stub\ChatGame.ChatServerToGameServerStub.g.h" />
+    <ClInclude Include="Stub\ChatGame.EnumDef.g.h" />
+    <ClInclude Include="Stub\ChatGame.PacketEnumDef.g.h" />
+    <ClInclude Include="Stub\ChatGame.Serialization.g.h" />
+    <ClInclude Include="Stub\ChatGame.StructDef.g.h" />
+    <ClInclude Include="Stub\GameClient.ClientToGameServerStub.g.h" />
+    <ClInclude Include="Stub\GameClient.EnumDef.g.h" />
+    <ClInclude Include="Stub\GameClient.PacketEnumDef.g.h" />
+    <ClInclude Include="Stub\GameClient.Serialization.g.h" />
+    <ClInclude Include="Stub\GameClient.StructDef.g.h" />
     <ClInclude Include="Stub\ProjectDefineStruct.h" />
-    <ClInclude Include="Stub\Serialization.h" />
-    <ClInclude Include="Stub\SERVER_STUB.h" />
-    <ClInclude Include="Stub\StructDef.h" />
     <ClInclude Include="ZoneManager\CZoneManager.h" />
     <ClInclude Include="Zone\CBinZone.h" />
     <ClInclude Include="Zone\CBinZoneIdx.h" />
@@ -269,4 +289,10 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <Target Name="GenerateCurlImportLibrary" BeforeTargets="Link" Condition="'$(Platform)'=='x64'" Inputs="$(MSBuildProjectDirectory)\..\ThirdParty\curl\bin\libcurl-x64.def;$(MSBuildProjectDirectory)\..\ThirdParty\curl\bin\libcurl-x64.dll" Outputs="$(MSBuildProjectDirectory)\..\ThirdParty\curl\lib\libcurl-msvc.lib">
+    <Exec Command="&quot;$(VCToolsInstallDir)bin\Hostx64\x64\lib.exe&quot; /nologo /machine:x64 /name:libcurl-x64.dll /def:&quot;$(MSBuildProjectDirectory)\..\ThirdParty\curl\bin\libcurl-x64.def&quot; /out:&quot;$(MSBuildProjectDirectory)\..\ThirdParty\curl\lib\libcurl-msvc.lib&quot;" />
+  </Target>
+  <Target Name="CopyCurlRuntime" AfterTargets="Build" Condition="'$(Platform)'=='x64'">
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\ThirdParty\curl\bin\libcurl-x64.dll" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

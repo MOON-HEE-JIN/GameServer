@@ -1,11 +1,13 @@
 ﻿#pragma once
-#include "Stub/SERVER_STUB.h"
-#include "Stub/SERVER_STUB.cpp"
+#include "Stub/GameClient.ClientToGameServerStub.g.h"
+#include "Stub/GameClient.ClientToGameServerStub.g.cpp"
 #include "NetWork/CSession.h"
 #include "CPlayer.h"
 #include "CUtill/CPacket.h"
 
-class PacketProc : public Stub<CPlayer, CPacket>
+using namespace Rpc::GameClient;
+
+class PacketProc : public ClientToGameServerStub<CPlayer, CPacket>
 {
 	// Stub을(를) 통해 상속됨
 	int DO_GAME_LOOPBACK(CPlayer* pTarget, CPacket& pReqPacket) override;
@@ -20,8 +22,8 @@ class PacketProc : public Stub<CPlayer, CPacket>
 	int DO_GAME_MOVESTOP(CPlayer* pTarget, CPacket& pReqPacket) override;
 
 	// Stub을(를) 통해 상속됨
-	int DO_OBSERVER_CONNET_OBSERVER(CPlayer* pTarget, CPacket& pReqPacket) override;
-
-	// Stub을(를) 통해 상속됨
 	int DO_GAME_TELEPORT(CPlayer* pTarget, CPacket& pReqPacket) override;
+
+	// ClientToGameServerStub을(를) 통해 상속됨
+	int DO_GAME_AUTHCODE(CPlayer* pTarget, CPacket& pReqPacket) override;
 };

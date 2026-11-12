@@ -64,14 +64,22 @@ public:
 
 	bool GetRun() { return m_bRun.load(); };
 	CSession* GetSession(const SESSION_HANDLE& key);
-
+	int GetPort() { return static_cast<int>(m_Port); };
 private:
 	static unsigned __stdcall AceeptThread(void* arg);		// accept() Thread
 	virtual int AcceptRun();
 	static unsigned __stdcall WorkerThread(void* arg);		// recv, send Thread
 	virtual int WorkerRun();
 	static unsigned __stdcall SessionFreeThread(void* arg);	// Session Free Thread
+
+	virtual int Initializer(int Port, int RunWorkerThreadCount) = 0;
+	
 	int SessionFreeRun();
+public:
+	virtual int Start() { StartServer(this); return 0; }
+	virtual int Wait() { WaitStopServer(); return 0; }
+	virtual int ShutDown() { ServerShutDown(); return 0; }
+
 protected:
 	HANDLE GetCICPHandle() { return CICP; };
 	int GetRecvOverlappedCount() { return m_iRecvOverlappedCount.load(); };

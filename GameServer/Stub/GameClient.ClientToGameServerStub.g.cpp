@@ -1,0 +1,42 @@
+#include "GameClient.PacketEnumDef.g.h"
+#include "GameClient.ClientToGameServerStub.g.h"
+
+namespace Rpc::GameClient
+{
+
+template<typename Object, typename Packet>
+void ClientToGameServerStub<Object,Packet>::InitRegisterFuncPointer()
+{
+	m_mapGAMEProc[GAME::AUTHCODE] = std::bind(&ClientToGameServerStub::DO_GAME_AUTHCODE, this, std::placeholders::_1, std::placeholders::_2);
+	m_mapGAMEProc[GAME::LOOPBACK] = std::bind(&ClientToGameServerStub::DO_GAME_LOOPBACK, this, std::placeholders::_1, std::placeholders::_2);
+	m_mapGAMEProc[GAME::CHANGEZONE] = std::bind(&ClientToGameServerStub::DO_GAME_CHANGEZONE, this, std::placeholders::_1, std::placeholders::_2);
+	m_mapGAMEProc[GAME::MOVESTART] = std::bind(&ClientToGameServerStub::DO_GAME_MOVESTART, this, std::placeholders::_1, std::placeholders::_2);
+	m_mapGAMEProc[GAME::MOVESTOP] = std::bind(&ClientToGameServerStub::DO_GAME_MOVESTOP, this, std::placeholders::_1, std::placeholders::_2);
+	m_mapGAMEProc[GAME::TELEPORT] = std::bind(&ClientToGameServerStub::DO_GAME_TELEPORT, this, std::placeholders::_1, std::placeholders::_2);
+}
+template<typename Object, typename Packet>
+void ClientToGameServerStub<Object,Packet>::DO_GAME_Proc(int type, Object* pTarget, Packet& cPacket)
+{
+	int ret = 0;
+	if(m_mapGAMEProc.find(type) == m_mapGAMEProc.end())
+	{
+		ret = DO_ERROR_PACKET(pTarget, cPacket);
+		return;
+	}
+	ret = m_mapGAMEProc[type](pTarget, cPacket);
+	if(ret != 0)		DO_ERROR_RESULT(pTarget, ret, type);
+}
+template<typename Object, typename Packet>
+void ClientToGameServerStub<Object,Packet>::DO_OBSERVER_Proc(int type, Object* pTarget, Packet& cPacket)
+{
+	int ret = 0;
+	if(m_mapOBSERVERProc.find(type) == m_mapOBSERVERProc.end())
+	{
+		ret = DO_ERROR_PACKET(pTarget, cPacket);
+		return;
+	}
+	ret = m_mapOBSERVERProc[type](pTarget, cPacket);
+	if(ret != 0)		DO_ERROR_RESULT(pTarget, ret, type);
+}
+
+} // namespace Rpc::GameClient

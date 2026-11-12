@@ -2,8 +2,10 @@
 
 #include "../NetWork/CNetServer.h"
 #include "../ZoneManager/CZoneManager.h"
-#include "../Stub/EnumDef.h"
 #include "../Log/CLog.h"
+#include "../Stub/GameClient.EnumDef.g.h"
+
+using namespace Rpc::GameClient;
 
 namespace
 {

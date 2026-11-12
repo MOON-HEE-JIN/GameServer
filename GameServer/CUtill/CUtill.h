@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "../Stub/StructDef.h"
 
 class CUtil
 {

@@ -1,9 +1,10 @@
 <Solution>
   <Configurations>
-    <BuildType Name="Debug2" />
+    <BuildType Name="Debug" />
+    <BuildType Name="Docker_Debug" />
+    <BuildType Name="Docker_Release" />
     <BuildType Name="Release" />
     <Platform Name="x64" />
-    <Platform Name="x86" />
   </Configurations>
   <Project Path="GameServer/GameServer.vcxproj" Id="fb8676d7-bcf7-4333-a849-6cb872f04c57" />
 </Solution>

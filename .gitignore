@@ -26,3 +26,11 @@ GameServer/x64/
 .codex-*/
 
 /Docs
+
+# Exported Docker images
+/DockerWindows/gameserver-*.tar
+/DockerWindows/gameserver-*.tar.part-*
+/docker-image-debug.bat
+/docker-image-release.bat
+/DockerContainers_등록명령어.txt
+/docker_명령어.txt

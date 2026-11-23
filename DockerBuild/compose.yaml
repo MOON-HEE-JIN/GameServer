@@ -2,16 +2,16 @@
 
 services:
   gameserver:
-    image: gameserver:debug
+    image: gameserver:release
     container_name: gameserver
 
     build:
-      context: ./x64/Debug
+      context: ./x64/Docker
       dockerfile: Dockerfile
       isolation: hyperv
 
     ports:
-     - "7788:7788"
+     - "7799:7799"
      - "7800:7800"
 
     networks:

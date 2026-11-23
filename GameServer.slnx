@@ -1,8 +1,7 @@
 <Solution>
   <Configurations>
     <BuildType Name="Debug" />
-    <BuildType Name="Docker_Debug" />
-    <BuildType Name="Docker_Release" />
+    <BuildType Name="Docker" />
     <BuildType Name="Release" />
     <Platform Name="x64" />
   </Configurations>

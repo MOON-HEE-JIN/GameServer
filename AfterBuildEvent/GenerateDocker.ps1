@@ -47,6 +47,37 @@ Get-ChildItem -LiteralPath $TargetDir -File |
     Copy-Item -Destination $outputDir -Force
 
 # 4. Dockerfile ?ùÏÑ±
+# Deploy release CRT DLLs beside the EXE; no container installer is needed.
+if ($Configuration -notmatch 'Debug') {
+    $redistRoot = $env:VCToolsRedistDir
+    if (!$redistRoot) {
+        $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+        if (!(Test-Path -LiteralPath $vswhere)) {
+            throw 'Visual Studio locator not found. Set VCToolsRedistDir to the MSVC redistributable directory.'
+        }
+        $vsInstall = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+        if (!$vsInstall) { throw 'Visual Studio C++ tools installation not found.' }
+        $redistVersions = Join-Path $vsInstall 'VC\Redist\MSVC'
+        $redistRoot = Get-ChildItem -LiteralPath $redistVersions -Directory |
+            Where-Object { $_.Name -match '^\d+\.\d+\.\d+$' } |
+            Sort-Object { [version]$_.Name } -Descending |
+            Select-Object -First 1 -ExpandProperty FullName
+    }
+    if (!$redistRoot) { throw 'MSVC redistributable directory not found.' }
+    $crtDirectory = Get-ChildItem -LiteralPath (Join-Path $redistRoot $Platform) -Directory |
+        Where-Object { $_.Name -match '^Microsoft\.VC\d+\.CRT$' } |
+        Select-Object -First 1
+    if (!$crtDirectory) { throw "Release CRT directory not found: $redistRoot ($Platform)" }
+    foreach ($requiredDll in @('msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll')) {
+        if (!(Test-Path -LiteralPath (Join-Path $crtDirectory.FullName $requiredDll))) {
+            throw "Required CRT DLL not found: $requiredDll"
+        }
+    }
+    Get-ChildItem -LiteralPath $crtDirectory.FullName -Filter '*.dll' -File |
+        Copy-Item -Destination $outputDir -Force
+    Write-Host "CRT runtime copied from: $($crtDirectory.FullName)"
+}
+
 $dockerfile = @"
 FROM mcr.microsoft.com/windows/servercore:ltsc2019
 

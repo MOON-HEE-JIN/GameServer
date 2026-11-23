@@ -1,0 +1,52 @@
+
+param(
+    [string]$TargetPath,
+    [string]$ProjectDir,
+    [string]$Configuration,
+    [string]$Platform
+)
+
+$ErrorActionPreference = "Stop"
+
+# 1. 빌드 결과물 확인
+if (!(Test-Path -LiteralPath $TargetPath)) {
+    throw "Build output not found: $TargetPath"
+}
+
+# 2. Docker 빌드 디렉터리
+$outputDir = Join-Path $ProjectDir "DockerBuild"
+$outputDir = Join-Path $outputDir $Platform
+$outputDir = Join-Path $outputDir $Configuration
+
+New-Item -ItemType Directory `
+    -Path $outputDir -Force | Out-Null
+
+# 3. EXE 복사
+$exeName = Split-Path $TargetPath -Leaf
+
+Copy-Item -LiteralPath $TargetPath `
+    -Destination $outputDir -Force
+
+# EXE와 동일한 디렉터리에 있는 DLL 복사
+$targetDir = Split-Path $TargetPath -Parent
+
+Get-ChildItem -LiteralPath $targetDir -Filter "*.dll" -File |
+    Copy-Item -Destination $outputDir -Force
+
+# 4. Dockerfile 생성
+$dockerfile = @"
+FROM mcr.microsoft.com/windows/servercore:ltsc2022
+
+WORKDIR C:/app
+
+COPY . C:/app/
+
+ENTRYPOINT ["C:/app/$exeName"]
+"@
+
+$dockerfilePath = Join-Path $outputDir "Dockerfile"
+
+Set-Content -LiteralPath $dockerfilePath `
+    -Value $dockerfile -Encoding ASCII
+
+Write-Host "Docker files generated: $outputDir"

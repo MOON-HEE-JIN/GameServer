@@ -34,7 +34,7 @@ struct st_ApiResult
 class CApiClient
 {
 public:
-	CApiClient(const std::string url) : baseUrl(url) { curl_global_init(CURL_GLOBAL_DEFAULT); }
+	CApiClient(const std::string url) : baseUrl(url), m_bConnect(false) { curl_global_init(CURL_GLOBAL_DEFAULT); }
 	~CApiClient();
 private:
 	std::string baseUrl;

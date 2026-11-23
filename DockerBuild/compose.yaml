@@ -1,0 +1,33 @@
+﻿name: gameserver
+
+services:
+  gameserver:
+    image: gameserver:release
+    container_name: gameserver
+
+    build:
+      context: ./x64/Docker
+      dockerfile: Dockerfile
+      isolation: hyperv
+
+    ports:
+     - "7799:7799"
+     - "7800:7800"
+
+    networks:
+     - dockerwindows_default
+     
+    volumes:
+     - type : bind
+       source : F:\certs
+       target : C:\app\certs
+       read_only : true
+    
+    isolation: hyperv
+
+    restart: unless-stopped
+    
+networks:
+  dockerwindows_default:
+    external: true
+    name: dockerwindows_default
